@@ -101,7 +101,82 @@ export interface ProgrammeGroup extends BaseRecord {
   groupStatus: RecordStatus;
 }
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'ARCHIVE' | 'RESTORE' | 'LINK' | 'UNLINK' | 'DELETE';
+// ─── Phase 1B Types ───────────────────────────────────────────────
+
+export type EnrolmentStatus = 'active' | 'paused' | 'completed' | 'withdrawn';
+
+export interface Enrolment extends BaseRecord {
+  learnerId: string;
+  groupId: string;
+  programmeId: string;
+  startDate: string;
+  endDate?: string;
+  enrolmentStatus: EnrolmentStatus;
+  notes?: string;
+}
+
+export type SessionType = 'lesson' | 'rehearsal' | 'workshop' | 'performance' | 'assessment' | 'audition';
+export type SessionStatus = 'scheduled' | 'completed' | 'cancelled' | 'postponed';
+
+export interface Session extends BaseRecord {
+  groupId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  venue?: string;
+  teacherIds: string[];
+  sessionType: SessionType;
+  sessionStatus: SessionStatus;
+  notes?: string;
+}
+
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+export interface Attendance extends BaseRecord {
+  sessionId: string;
+  learnerId: string;
+  attendanceStatus: AttendanceStatus;
+  arrivalTime?: string;
+  departureTime?: string;
+  notes?: string;
+  markedBy: string;
+}
+
+export type FollowUpCategory = 'attendance' | 'payment' | 'behaviour' | 'instrument' | 'consent' | 'parent_contact' | 'event' | 'general';
+export type FollowUpPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type FollowUpStatus = 'open' | 'in_progress' | 'waiting' | 'completed' | 'cancelled';
+
+export interface FollowUp extends BaseRecord {
+  learnerId?: string;
+  guardianId?: string;
+  staffId?: string;
+  sessionId?: string;
+  groupId?: string;
+  category: FollowUpCategory;
+  subject: string;
+  description: string;
+  ownerId: string;
+  dueDate?: string;
+  priority: FollowUpPriority;
+  followUpStatus: FollowUpStatus;
+  resolution?: string;
+  completedAt?: string;
+}
+
+// ─── Audit ────────────────────────────────────────────────────────
+
+export type AuditAction =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'ARCHIVE'
+  | 'RESTORE'
+  | 'LINK'
+  | 'UNLINK'
+  | 'DELETE'
+  | 'WITHDRAW'
+  | 'CANCEL'
+  | 'COMPLETE'
+  | 'MARK_ATTENDANCE';
 
 export interface AuditLog {
   id: string;

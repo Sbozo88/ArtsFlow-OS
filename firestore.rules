@@ -42,7 +42,8 @@ service cloud.firestore {
       allow delete: if false; 
     }
 
-    // Operational Collections
+    // ─── Phase 1A Collections ────────────────────────────────────
+
     match /learners/{docId} {
       allow read: if isUserInOrg(resource.data.organisationId);
       allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
@@ -85,7 +86,38 @@ service cloud.firestore {
       allow delete: if false; 
     }
 
-    // Audit Logs
+    // ─── Phase 1B Collections ────────────────────────────────────
+
+    match /enrolments/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /sessions/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /attendance/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /followUps/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    // ─── Audit Logs ──────────────────────────────────────────────
+
     match /auditLogs/{docId} {
       allow read: if isUserInOrg(resource.data.organisationId);
       allow create: if isUserInOrg(request.resource.data.organisationId);

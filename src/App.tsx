@@ -9,7 +9,13 @@ import { LearnerProfilePage } from './features/learners/LearnerProfilePage';
 import { GuardiansPage } from './features/guardians/GuardiansPage';
 import { ProgrammesPage } from './features/programmes/ProgrammesPage';
 import { GroupsPage } from './features/groups/GroupsPage';
+import { GroupDetailPage } from './features/groups/GroupDetailPage';
 import { StaffPage } from './features/staff/StaffPage';
+import { EnrolmentsPage } from './features/enrolments/EnrolmentsPage';
+import { SessionsPage } from './features/sessions/SessionsPage';
+import { SessionDetailPage } from './features/sessions/SessionDetailPage';
+import { AttendancePage } from './features/attendance/AttendancePage';
+import { FollowUpsPage } from './features/followUps/FollowUpsPage';
 import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
@@ -34,7 +40,13 @@ function App() {
               <Route path="guardians" element={<GuardiansPage />} />
               <Route path="programmes" element={<ProgrammesPage />} />
               <Route path="groups" element={<GroupsPage />} />
+              <Route path="groups/:id" element={<GroupDetailPage />} />
               <Route path="staff" element={<StaffPage />} />
+              <Route path="enrolments" element={<EnrolmentsPage />} />
+              <Route path="sessions" element={<SessionsPage />} />
+              <Route path="sessions/:id" element={<SessionDetailPage />} />
+              <Route path="attendance" element={<AttendancePage />} />
+              <Route path="follow-ups" element={<FollowUpsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>

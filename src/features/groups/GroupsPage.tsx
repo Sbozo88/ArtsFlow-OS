@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useProgrammeGroups } from '../../hooks/useProgrammeGroups';
 import { useProgrammes } from '../../hooks/useProgrammes';
 import { useStaff } from '../../hooks/useStaff';
@@ -140,7 +141,7 @@ export const GroupsPage: React.FC = () => {
                 return (
                   <tr key={g.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="p-4">
-                      <div className="font-medium text-slate-800">{g.name}</div>
+                      <Link to={`/groups/${g.id}`} className="font-medium text-indigo-600 hover:underline">{g.name}</Link>
                       <div className="text-xs text-slate-500 uppercase">{g.groupType.replace('_', ' ')}</div>
                     </td>
                     <td className="p-4 text-slate-600">{prog?.name || 'Unknown'}</td>
