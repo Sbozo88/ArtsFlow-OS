@@ -95,6 +95,7 @@ export interface ProgrammeGroup extends BaseRecord {
   name: string;
   groupType: string;
   level?: string;
+  danceLevelId?: string;
   teacherId?: string;
   venue?: string;
   capacity?: number;
@@ -262,6 +263,108 @@ export interface MusicAssessment extends BaseRecord {
   nextSteps?: string;
 }
 
+// ─── Phase 2B: Dance Operations ───────────────────────────────────
+
+export interface DanceLevel extends BaseRecord {
+  name: string;
+  description?: string;
+  sequenceOrder?: number;
+  levelStatus: RecordStatus;
+}
+
+export type ChoreographyStatus = 'planned' | 'learning' | 'rehearsing' | 'performance_ready' | 'retired';
+
+export interface Choreography extends BaseRecord {
+  title: string;
+  choreographer?: string;
+  style?: string;
+  difficulty?: Difficulty;
+  durationMinutes?: number;
+  programmeId?: string;
+  groupId?: string;
+  choreographyStatus: ChoreographyStatus;
+  musicTitle?: string;
+  musicArtist?: string;
+  notes?: string;
+}
+
+export type DanceRehearsalStatus = 'introduced' | 'learning' | 'needs_work' | 'improving' | 'performance_ready';
+
+export interface SessionChoreography extends BaseRecord {
+  sessionId: string;
+  choreographyId: string;
+  rehearsalStatus?: DanceRehearsalStatus;
+  notes?: string;
+}
+
+export type DancePracticeType = 'individual' | 'class' | 'rehearsal' | 'sectional' | 'home_practice' | 'conditioning' | 'other';
+
+export interface DancePracticeLog extends BaseRecord {
+  learnerId: string;
+  groupId?: string;
+  programmeId?: string;
+  choreographyId?: string;
+  practiceDate: string;
+  durationMinutes?: number;
+  practiceType: DancePracticeType;
+  practiceStatus?: string;
+  notes?: string;
+  teacherComment?: string;
+}
+
+export type DanceAssessmentType = 'informal' | 'class_review' | 'term_assessment' | 'audition' | 'performance_readiness' | 'end_of_cycle' | 'other';
+
+export interface DanceAssessment extends BaseRecord {
+  learnerId: string;
+  programmeId?: string;
+  groupId?: string;
+  teacherId: string;
+  assessmentDate: string;
+  assessmentType: DanceAssessmentType;
+  technique?: number;
+  timing?: number;
+  coordination?: number;
+  musicality?: number;
+  choreographyRetention?: number;
+  participation?: number;
+  performanceReadiness?: number;
+  overallScore?: number;
+  teacherComment?: string;
+  nextSteps?: string;
+}
+
+export type CostumeStatus = 'available' | 'allocated' | 'repair' | 'lost' | 'retired';
+export type CostumeCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'damaged';
+
+export interface Costume extends BaseRecord {
+  assetNumber: string;
+  costumeType: string;
+  description?: string;
+  size?: string;
+  colour?: string;
+  genderFit?: string;
+  quantity?: number;
+  condition: CostumeCondition;
+  costumeStatus: CostumeStatus;
+  storageLocation?: string;
+  notes?: string;
+}
+
+export type CostumeAllocationStatus = 'active' | 'returned' | 'overdue' | 'lost' | 'cancelled';
+
+export interface CostumeAllocation extends BaseRecord {
+  costumeId: string;
+  learnerId: string;
+  groupId?: string;
+  allocatedDate: string;
+  returnDueDate?: string;
+  returnedDate?: string;
+  conditionOut: CostumeCondition;
+  conditionReturned?: CostumeCondition;
+  allocationStatus: CostumeAllocationStatus;
+  notes?: string;
+}
+
 // ─── Audit ────────────────────────────────────────────────────────
 
 export type AuditAction =
@@ -280,7 +383,24 @@ export type AuditAction =
   | 'RETURN_INSTRUMENT'
   | 'MARK_INSTRUMENT_LOST'
   | 'LINK_SESSION_REPERTOIRE'
-  | 'ASSESS_MUSIC';
+  | 'ASSESS_MUSIC'
+  | 'CREATE_DANCE_LEVEL'
+  | 'UPDATE_DANCE_LEVEL'
+  | 'ARCHIVE_DANCE_LEVEL'
+  | 'CREATE_CHOREOGRAPHY'
+  | 'UPDATE_CHOREOGRAPHY'
+  | 'ARCHIVE_CHOREOGRAPHY'
+  | 'LINK_SESSION_CHOREOGRAPHY'
+  | 'CREATE_DANCE_PRACTICE_LOG'
+  | 'UPDATE_DANCE_PRACTICE_LOG'
+  | 'CREATE_DANCE_ASSESSMENT'
+  | 'UPDATE_DANCE_ASSESSMENT'
+  | 'CREATE_COSTUME'
+  | 'UPDATE_COSTUME'
+  | 'ARCHIVE_COSTUME'
+  | 'ALLOCATE_COSTUME'
+  | 'RETURN_COSTUME'
+  | 'MARK_COSTUME_LOST';
 
 export interface AuditLog {
   id: string;
