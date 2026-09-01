@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import {
+import { 
   LayoutDashboard,
   Users,
   GraduationCap,
@@ -8,7 +8,7 @@ import {
   LogOut,
   Music,
   Activity
-} from 'lucide-react';
+, CalendarDays } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -63,6 +63,16 @@ const navItems = [
       { name: 'Costumes', path: '/dance/costumes' },
       { name: 'Practice', path: '/dance/practice' },
       { name: 'Assessments', path: '/dance/assessments' },
+    ]
+  },
+  {
+    name: 'Events',
+    icon: CalendarDays,
+    children: [
+      { name: 'Overview', path: '/events' },
+      { name: 'Calendar / List', path: '/events/calendar' },
+      { name: 'Participants', path: '/events/participants' },
+      { name: 'Reports', path: '/events/reports' },
     ]
   },
   { name: 'Follow-Ups', path: '/follow-ups', icon: ClipboardList },

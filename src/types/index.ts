@@ -400,7 +400,24 @@ export type AuditAction =
   | 'ARCHIVE_COSTUME'
   | 'ALLOCATE_COSTUME'
   | 'RETURN_COSTUME'
-  | 'MARK_COSTUME_LOST';
+  | 'MARK_COSTUME_LOST'
+  | 'CREATE_EVENT'
+  | 'UPDATE_EVENT'
+  | 'COMPLETE_EVENT'
+  | 'CANCEL_EVENT'
+  | 'ADD_EVENT_GROUP'
+  | 'REMOVE_EVENT_GROUP'
+  | 'ADD_EVENT_PARTICIPANT'
+  | 'UPDATE_EVENT_PARTICIPANT'
+  | 'WITHDRAW_EVENT_PARTICIPANT'
+  | 'ADD_EVENT_STAFF'
+  | 'UPDATE_EVENT_STAFF'
+  | 'CREATE_EVENT_SCHEDULE_ITEM'
+  | 'UPDATE_EVENT_SCHEDULE_ITEM'
+  | 'CREATE_EVENT_PERFORMANCE_ITEM'
+  | 'UPDATE_EVENT_PERFORMANCE_ITEM'
+  | 'MARK_EVENT_ATTENDANCE'
+  | 'UPDATE_EVENT_ATTENDANCE';
 
 export interface AuditLog {
   id: string;
@@ -412,4 +429,108 @@ export interface AuditLog {
   before?: unknown;
   after?: unknown;
   timestamp: string;
+}
+
+// ─── Phase 3A: Events & Performances ──────────────────────────────
+
+export type EventType = 'concert' | 'competition' | 'festival' | 'eisteddfod' | 'showcase' | 'workshop' | 'audition' | 'camp' | 'masterclass' | 'rehearsal_day' | 'school_event' | 'community_event' | 'other';
+export type EventStatus = 'draft' | 'planning' | 'confirmed' | 'completed' | 'cancelled' | 'postponed';
+
+export interface Event extends BaseRecord {
+  name: string;
+  eventType: EventType;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  venue?: string;
+  address?: string;
+  eventStatus: EventStatus;
+  organiser?: string;
+  contactPerson?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  registrationDeadline?: string;
+  notes?: string;
+}
+
+export type EventGroupStatus = 'invited' | 'planned' | 'confirmed' | 'withdrawn' | 'completed';
+
+export interface EventGroup extends BaseRecord {
+  eventId: string;
+  programmeId?: string;
+  groupId: string;
+  participationStatus: EventGroupStatus;
+  notes?: string;
+}
+
+export type EventParticipantRole = 'performer' | 'participant' | 'soloist' | 'section_leader' | 'assistant' | 'other';
+export type EventParticipantStatus = 'planned' | 'confirmed' | 'withdrawn' | 'attended' | 'absent';
+
+export interface EventParticipant extends BaseRecord {
+  eventId: string;
+  learnerId: string;
+  groupId?: string;
+  programmeId?: string;
+  participantRole?: EventParticipantRole;
+  participationStatus: EventParticipantStatus;
+  notes?: string;
+}
+
+export type EventStaffRole = 'programme_director' | 'conductor' | 'teacher' | 'dance_teacher' | 'supervisor' | 'accompanist' | 'assistant' | 'administrator' | 'volunteer' | 'other';
+export type EventStaffStatus = 'planned' | 'confirmed' | 'withdrawn' | 'attended';
+
+export interface EventStaff extends BaseRecord {
+  eventId: string;
+  staffId: string;
+  eventRole: EventStaffRole;
+  responsibility?: string;
+  participationStatus: EventStaffStatus;
+  notes?: string;
+}
+
+export type EventScheduleType = 'arrival' | 'registration' | 'warmup' | 'rehearsal' | 'performance' | 'break' | 'meal' | 'awards' | 'departure' | 'general';
+
+export interface EventScheduleItem extends BaseRecord {
+  eventId: string;
+  title: string;
+  scheduleType: EventScheduleType;
+  startTime: string;
+  endTime?: string;
+  venueArea?: string;
+  locationNote?: string;
+  groupId?: string;
+  programmeId?: string;
+  sequenceOrder: number;
+  notes?: string;
+}
+
+export type EventPerformanceType = 'music' | 'dance' | 'combined' | 'speech' | 'presentation' | 'other';
+export type EventPerformanceStatus = 'planned' | 'confirmed' | 'ready' | 'performed' | 'cancelled';
+
+export interface EventPerformanceItem extends BaseRecord {
+  eventId: string;
+  groupId?: string;
+  programmeId?: string;
+  itemType: EventPerformanceType;
+  title: string;
+  repertoireId?: string;
+  choreographyId?: string;
+  sequenceOrder: number;
+  estimatedDurationMinutes?: number;
+  performanceStatus: EventPerformanceStatus;
+  notes?: string;
+}
+
+export type EventAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+export interface EventAttendance extends BaseRecord {
+  eventId: string;
+  learnerId: string;
+  attendanceStatus: EventAttendanceStatus;
+  arrivalTime?: string;
+  departureTime?: string;
+  notes?: string;
+  markedBy: string;
 }

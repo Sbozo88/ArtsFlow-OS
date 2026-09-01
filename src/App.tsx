@@ -31,6 +31,13 @@ import { CostumesPage } from './features/dance/CostumesPage';
 import { DanceAssessmentsPage } from './features/dance/DanceAssessmentsPage';
 import { DancePracticeLogsPage } from './features/dance/DancePracticeLogsPage';
 
+// Event Pages
+import { EventsDashboardPage } from './features/events/EventsDashboardPage';
+import { EventListPage } from './features/events/EventListPage';
+import { EventDetailPage } from './features/events/EventDetailPage';
+import { EventParticipantsPage } from './features/events/EventParticipantsPage';
+import { EventReportsPage } from './features/events/EventReportsPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -73,6 +80,14 @@ function App() {
               <Route path="dance/costumes" element={<CostumesPage />} />
               <Route path="dance/practice" element={<DancePracticeLogsPage />} />
               <Route path="dance/assessments" element={<DanceAssessmentsPage />} />
+              
+              {/* Events Module */}
+              <Route path="events" element={<EventsDashboardPage />} />
+              <Route path="events/calendar" element={<EventListPage />} />
+              <Route path="events/participants" element={<EventParticipantsPage />} />
+              <Route path="events/reports" element={<EventReportsPage />} />
+              <Route path="events/:id" element={<EventDetailPage />} />
+
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>

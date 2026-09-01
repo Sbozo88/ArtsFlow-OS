@@ -261,6 +261,62 @@
         { "fieldPath": "organisationId", "order": "ASCENDING" },
         { "fieldPath": "learnerId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "startDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventGroups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventParticipants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventStaff",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventScheduleItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventPerformanceItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventAttendance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
