@@ -143,6 +143,65 @@
         { "fieldPath": "ownerId", "order": "ASCENDING" },
         { "fieldPath": "followUpStatus", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "instruments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "assetNumber", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "instrumentAllocations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "instrumentId", "order": "ASCENDING" },
+        { "fieldPath": "allocationStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "instrumentAllocations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "repertoire",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "groupId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sessionRepertoire",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "sessionId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "practiceLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" },
+        { "fieldPath": "practiceDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "musicAssessments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" },
+        { "fieldPath": "assessmentDate", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

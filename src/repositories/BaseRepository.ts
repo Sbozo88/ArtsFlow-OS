@@ -20,7 +20,7 @@ export class BaseRepository<T extends BaseRecord> {
     this.collectionName = collectionName;
   }
 
-  protected getCollection() {
+  public getCollection() {
     return collection(db, this.collectionName);
   }
 

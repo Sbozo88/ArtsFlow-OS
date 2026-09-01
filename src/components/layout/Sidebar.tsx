@@ -39,6 +39,18 @@ const navItems = [
       { name: 'Attendance', path: '/attendance' },
     ]
   },
+  {
+    name: 'Music',
+    icon: Music,
+    children: [
+      { name: 'Overview', path: '/music' },
+      { name: 'Instruments', path: '/music/instruments' },
+      { name: 'Ensembles', path: '/music/ensembles' },
+      { name: 'Repertoire', path: '/music/repertoire' },
+      { name: 'Practice Logs', path: '/music/practice' },
+      { name: 'Assessments', path: '/music/assessments' },
+    ]
+  },
   { name: 'Follow-Ups', path: '/follow-ups', icon: ClipboardList },
 ];
 

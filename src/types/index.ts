@@ -163,6 +163,105 @@ export interface FollowUp extends BaseRecord {
   completedAt?: string;
 }
 
+// ─── Phase 2A: Music Operations ───────────────────────────────────
+
+export type InstrumentFamily = 'strings' | 'woodwind' | 'brass' | 'percussion' | 'keyboard' | 'guitar' | 'traditional' | 'other';
+export type OwnershipType = 'organisation_owned' | 'school_owned' | 'sponsored' | 'loaned_to_organisation' | 'private' | 'other';
+export type InstrumentCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'damaged';
+export type InstrumentStatus = 'available' | 'allocated' | 'repair' | 'lost' | 'retired';
+
+export interface Instrument extends BaseRecord {
+  assetNumber: string;
+  instrumentType: string;
+  instrumentFamily?: InstrumentFamily;
+  make?: string;
+  model?: string;
+  serialNumber?: string;
+  ownershipType: OwnershipType;
+  purchaseDate?: string;
+  purchasePrice?: number;
+  estimatedValue?: number;
+  condition: InstrumentCondition;
+  instrumentStatus: InstrumentStatus;
+  storageLocation?: string;
+  notes?: string;
+}
+
+export type AllocationStatus = 'active' | 'returned' | 'overdue' | 'lost' | 'cancelled';
+
+export interface InstrumentAllocation extends BaseRecord {
+  instrumentId: string;
+  learnerId: string;
+  allocatedDate: string;
+  returnDueDate?: string;
+  returnedDate?: string;
+  conditionOut: InstrumentCondition;
+  conditionReturned?: InstrumentCondition;
+  allocationStatus: AllocationStatus;
+  notes?: string;
+}
+
+export type RepertoireStatus = 'planned' | 'learning' | 'rehearsing' | 'performance_ready' | 'retired';
+export type Difficulty = 'beginner' | 'easy' | 'intermediate' | 'advanced' | 'professional';
+
+export interface Repertoire extends BaseRecord {
+  title: string;
+  composer?: string;
+  arranger?: string;
+  genre?: string;
+  difficulty?: Difficulty;
+  programmeId?: string;
+  groupId?: string;
+  repertoireStatus: RepertoireStatus;
+  durationMinutes?: number;
+  notes?: string;
+}
+
+export type RehearsalStatus = 'introduced' | 'learning' | 'needs_work' | 'improving' | 'performance_ready';
+
+export interface SessionRepertoire extends BaseRecord {
+  sessionId: string;
+  repertoireId: string;
+  rehearsalStatus?: RehearsalStatus;
+  notes?: string;
+}
+
+export type PracticeType = 'individual' | 'lesson' | 'sectional' | 'ensemble' | 'home_practice' | 'other';
+
+export interface PracticeLog extends BaseRecord {
+  learnerId: string;
+  groupId?: string;
+  programmeId?: string;
+  repertoireId?: string;
+  practiceDate: string;
+  durationMinutes?: number;
+  practiceType: PracticeType;
+  practiceStatus?: string;
+  notes?: string;
+  teacherComment?: string;
+}
+
+export type AssessmentType = 'informal' | 'lesson_review' | 'term_assessment' | 'audition' | 'performance_readiness' | 'end_of_cycle' | 'other';
+
+export interface MusicAssessment extends BaseRecord {
+  learnerId: string;
+  programmeId?: string;
+  groupId?: string;
+  teacherId: string;
+  assessmentDate: string;
+  assessmentType: AssessmentType;
+  tone?: number;
+  technique?: number;
+  rhythm?: number;
+  reading?: number;
+  musicality?: number;
+  preparation?: number;
+  participation?: number;
+  overallScore?: number;
+  teacherComment?: string;
+  nextSteps?: string;
+}
+
 // ─── Audit ────────────────────────────────────────────────────────
 
 export type AuditAction =
@@ -176,7 +275,12 @@ export type AuditAction =
   | 'WITHDRAW'
   | 'CANCEL'
   | 'COMPLETE'
-  | 'MARK_ATTENDANCE';
+  | 'MARK_ATTENDANCE'
+  | 'ALLOCATE_INSTRUMENT'
+  | 'RETURN_INSTRUMENT'
+  | 'MARK_INSTRUMENT_LOST'
+  | 'LINK_SESSION_REPERTOIRE'
+  | 'ASSESS_MUSIC';
 
 export interface AuditLog {
   id: string;
