@@ -1,77 +1,96 @@
-export type BaseRecord = {
+export type RecordStatus = 'active' | 'inactive' | 'archived' | 'deleted';
+
+export interface BaseRecord {
   id: string;
   organisationId: string;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
-  createdBy: string; // user id
-  updatedBy: string; // user id
-  status: 'active' | 'archived' | 'deleted';
-};
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
 
-export type Organisation = {
+export interface Organisation extends BaseRecord {
   id: string;
   name: string;
-  status: 'active' | 'inactive';
+  organisationType: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  status: RecordStatus;
   createdAt: string;
-};
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
 
-export type UserRole = 'Super Admin' | 'Organisation Admin' | 'Programme Director' | 'Teacher' | 'Finance' | 'Viewer';
+export type AuthRole = 'super_admin' | 'organisation_admin' | 'programme_director' | 'teacher' | 'finance' | 'viewer';
 
-export type User = BaseRecord & {
+// Auth User Record (Simplified for Context)
+export interface AuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  role?: AuthRole; // from custom claims or user doc
+}
+
+export interface Staff extends BaseRecord {
   firstName: string;
   lastName: string;
-  email: string;
-  mobile?: string;
-  role: UserRole;
+  email?: string;
+  mobileNumber?: string;
+  role: string;
   specialisation?: string;
   employmentType?: string;
   startDate?: string;
-};
+  staffStatus: RecordStatus;
+  notes?: string;
+}
 
-export type Learner = BaseRecord & {
+export interface Learner extends BaseRecord {
   firstName: string;
   lastName: string;
   preferredName?: string;
-  dob?: string; // YYYY-MM-DD
-  gender?: string;
+  dateOfBirth?: string;
   school?: string;
-  gradeClass?: string;
+  gradeOrClass?: string;
   phone?: string;
   email?: string;
   address?: string;
   emergencyInformation?: string;
   medicalNotes?: string;
-};
+  learnerStatus: RecordStatus;
+  notes?: string;
+}
 
-export type Guardian = BaseRecord & {
+export interface Guardian extends BaseRecord {
   firstName: string;
   lastName: string;
   mobileNumber: string;
-  email: string;
+  email?: string;
   address?: string;
-  communicationPreference: 'email' | 'sms' | 'whatsapp' | 'any';
+  communicationPreference?: string;
   notes?: string;
-};
+}
 
-export type LearnerGuardian = BaseRecord & {
+export interface LearnerGuardian extends BaseRecord {
   learnerId: string;
   guardianId: string;
-  relationshipType: string; // e.g., Mother, Father, Guardian
-  isPrimaryContact: boolean;
-  isEmergencyContact: boolean;
+  relationshipType: string;
+  primaryContact: boolean;
+  emergencyContact: boolean;
   receivesCommunication: boolean;
-  isFinancialContact: boolean;
-};
+  financialContact: boolean;
+}
 
-export type ProgrammeType = 'Music' | 'Dance' | 'Other';
-
-export type Programme = BaseRecord & {
+export interface Programme extends BaseRecord {
   name: string;
-  type: ProgrammeType;
+  programmeType: string;
   description?: string;
-};
+  programmeStatus: RecordStatus;
+}
 
-export type Group = BaseRecord & {
+export interface ProgrammeGroup extends BaseRecord {
   programmeId: string;
   name: string;
   groupType: string;
@@ -79,60 +98,19 @@ export type Group = BaseRecord & {
   teacherId?: string;
   venue?: string;
   capacity?: number;
-};
+  groupStatus: RecordStatus;
+}
 
-export type EnrolmentStatus = 'active' | 'paused' | 'completed' | 'withdrawn';
+export type AuditAction = 'CREATE' | 'UPDATE' | 'ARCHIVE' | 'RESTORE' | 'LINK' | 'UNLINK' | 'DELETE';
 
-export type Enrolment = BaseRecord & {
-  learnerId: string;
-  groupId: string;
-  programmeId: string;
-  startDate: string;
-  endDate?: string;
-  enrolmentStatus: EnrolmentStatus;
-  notes?: string;
-};
-
-export type SessionType = 'Lesson' | 'Rehearsal' | 'Workshop' | 'Performance' | 'Assessment' | 'Audition';
-
-export type Session = BaseRecord & {
-  groupId: string;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-  venue?: string;
-  teacherIds: string[];
-  sessionType: SessionType;
-  notes?: string;
-};
-
-export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused';
-
-export type Attendance = BaseRecord & {
-  sessionId: string;
-  learnerId: string;
-  attendanceStatus: AttendanceStatus;
-  arrivalTime?: string;
-  departureTime?: string;
-  notes?: string;
-  markedBy: string; // user id
-};
-
-export type FollowUpCategory = 'Attendance' | 'Payment' | 'Behaviour' | 'Instrument' | 'Consent' | 'Parent Contact' | 'Event' | 'General';
-export type FollowUpStatus = 'Open' | 'In Progress' | 'Waiting' | 'Completed' | 'Cancelled';
-export type FollowUpPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
-
-export type FollowUp = BaseRecord & {
-  learnerId?: string;
-  guardianId?: string;
-  staffId?: string;
-  eventId?: string;
-  category: FollowUpCategory;
-  subject: string;
-  description: string;
-  ownerId: string; // user id assigned to this
-  dueDate?: string;
-  priority: FollowUpPriority;
-  followUpStatus: FollowUpStatus;
-  resolution?: string;
-};
+export interface AuditLog {
+  id: string;
+  organisationId: string;
+  actorId: string;
+  action: AuditAction;
+  entityType: string;
+  entityId: string;
+  before?: unknown;
+  after?: unknown;
+  timestamp: string;
+}

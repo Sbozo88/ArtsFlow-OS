@@ -1,77 +1,31 @@
-import { Guardian, LearnerGuardian } from '../types';
 import { guardianRepository } from '../repositories/guardianRepository';
 import { auditService } from './auditService';
+import type { Guardian } from '../types';
 
 export const guardianService = {
   async createGuardian(
     orgId: string, 
     actorId: string, 
     data: Omit<Guardian, 'id' | 'organisationId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'status'>
-  ): Promise<string> {
-    const newId = crypto.randomUUID();
-    const now = new Date().toISOString();
-    
-    const guardian: Guardian = {
-      ...data,
-      id: newId,
-      organisationId: orgId,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: actorId,
-      updatedBy: actorId,
-      status: 'active'
-    };
-
-    await guardianRepository.create(guardian);
-    
-    await auditService.log({
-      organisationId: orgId,
-      actorId,
-      action: 'CREATE',
-      entityType: 'guardian',
-      entityId: newId,
-      after: guardian
-    });
-
-    return newId;
+  ): Promise<Guardian> {
+    const guardian = await guardianRepository.create(orgId, actorId, data);
+    await auditService.log(orgId, actorId, 'CREATE', 'guardian', guardian.id, undefined, guardian);
+    return guardian;
   },
 
   async getGuardians(orgId: string): Promise<Guardian[]> {
     return guardianRepository.getByOrganisation(orgId);
   },
 
-  async linkToLearner(
-    orgId: string,
-    actorId: string,
-    learnerId: string,
-    guardianId: string,
-    relationshipData: Pick<LearnerGuardian, 'relationshipType' | 'isPrimaryContact' | 'isEmergencyContact' | 'receivesCommunication' | 'isFinancialContact'>
-  ): Promise<void> {
-    const linkId = `${learnerId}_${guardianId}`;
-    const now = new Date().toISOString();
+  async getGuardian(orgId: string, id: string): Promise<Guardian | null> {
+    return guardianRepository.getById(orgId, id);
+  },
 
-    const link: LearnerGuardian = {
-      ...relationshipData,
-      id: linkId,
-      organisationId: orgId,
-      learnerId,
-      guardianId,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: actorId,
-      updatedBy: actorId,
-      status: 'active'
-    };
-
-    await guardianRepository.linkLearner(link);
-
-    await auditService.log({
-      organisationId: orgId,
-      actorId,
-      action: 'CREATE',
-      entityType: 'learner_guardian',
-      entityId: linkId,
-      after: link
-    });
+  async archiveGuardian(orgId: string, actorId: string, id: string): Promise<void> {
+    const before = await guardianRepository.getById(orgId, id);
+    if (!before) throw new Error('Guardian not found');
+    
+    await guardianRepository.archive(orgId, actorId, id);
+    await auditService.log(orgId, actorId, 'ARCHIVE', 'guardian', id, before, { ...before, status: 'archived' });
   }
 };
