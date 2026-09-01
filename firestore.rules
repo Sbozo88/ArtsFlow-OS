@@ -262,6 +262,60 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── Phase 3B Collections (Consent & Transport) ───────────────
+
+    match /consentTemplates/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /consentRequests/{docId} {
+      // Allow read for organization staff or direct access for guardian submission
+      allow read: if isUserInOrg(resource.data.organisationId) || resource != null;
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if (isUserInOrg(resource.data.organisationId) || resource != null) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /consentSubmissions/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if request.resource.data.organisationId != null;
+      // Verified consent evidence cannot be altered except when superseding
+      allow update: if (isUserInOrg(resource.data.organisationId) || resource != null) && isOrgUnchanged()
+                    && (resource.data.submissionStatus != 'verified' || request.resource.data.submissionStatus == 'superseded');
+      allow delete: if false; // Immutable evidence
+    }
+
+    match /transportProviders/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /transportVehicles/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /eventTransportPlans/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /transportPassengers/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
     // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {

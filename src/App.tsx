@@ -38,13 +38,23 @@ import { EventDetailPage } from './features/events/EventDetailPage';
 import { EventParticipantsPage } from './features/events/EventParticipantsPage';
 import { EventReportsPage } from './features/events/EventReportsPage';
 
+// Consent Pages
+import { ConsentRequestsPage } from './features/consent/ConsentRequestsPage';
+import { ConsentTemplatesPage } from './features/consent/ConsentTemplatesPage';
+import { GuardianConsentPublicPage } from './features/consent/GuardianConsentPublicPage';
+
+// Transport Pages
+import { TransportManagementPage } from './features/transport/TransportManagementPage';
+import { TransportReportsPage } from './features/transport/TransportReportsPage';
+
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Public Route */}
+          {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/consent/submit/:requestId" element={<GuardianConsentPublicPage />} />
 
           {/* Onboarding Route */}
           <Route element={<OnboardingRoute />}>
@@ -87,6 +97,14 @@ function App() {
               <Route path="events/participants" element={<EventParticipantsPage />} />
               <Route path="events/reports" element={<EventReportsPage />} />
               <Route path="events/:id" element={<EventDetailPage />} />
+
+              {/* Consent Module */}
+              <Route path="consent" element={<ConsentRequestsPage />} />
+              <Route path="consent/templates" element={<ConsentTemplatesPage />} />
+
+              {/* Transport Module */}
+              <Route path="transport" element={<TransportManagementPage />} />
+              <Route path="transport/reports" element={<TransportReportsPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

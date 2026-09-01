@@ -417,7 +417,28 @@ export type AuditAction =
   | 'CREATE_EVENT_PERFORMANCE_ITEM'
   | 'UPDATE_EVENT_PERFORMANCE_ITEM'
   | 'MARK_EVENT_ATTENDANCE'
-  | 'UPDATE_EVENT_ATTENDANCE';
+  | 'UPDATE_EVENT_ATTENDANCE'
+  | 'CREATE_CONSENT_TEMPLATE'
+  | 'UPDATE_CONSENT_TEMPLATE'
+  | 'CREATE_CONSENT_REQUEST'
+  | 'CANCEL_CONSENT_REQUEST'
+  | 'SUBMIT_CONSENT'
+  | 'VERIFY_CONSENT'
+  | 'DECLINE_CONSENT'
+  | 'SUPERSEDE_CONSENT'
+  | 'CREATE_TRANSPORT_PROVIDER'
+  | 'UPDATE_TRANSPORT_PROVIDER'
+  | 'CREATE_TRANSPORT_VEHICLE'
+  | 'UPDATE_TRANSPORT_VEHICLE'
+  | 'CREATE_TRANSPORT_PLAN'
+  | 'UPDATE_TRANSPORT_PLAN'
+  | 'CONFIRM_TRANSPORT_PLAN'
+  | 'ADD_TRANSPORT_PASSENGER'
+  | 'REMOVE_TRANSPORT_PASSENGER'
+  | 'MARK_PASSENGER_BOARDED'
+  | 'MARK_PASSENGER_ABSENT'
+  | 'CONFIRM_TRANSPORT_DEPARTURE'
+  | 'CONFIRM_TRANSPORT_RETURN';
 
 export interface AuditLog {
   id: string;
@@ -534,3 +555,127 @@ export interface EventAttendance extends BaseRecord {
   notes?: string;
   markedBy: string;
 }
+
+// ─── Phase 3B: Consent & Transport ────────────────────────────────
+
+export type ConsentType = 'event_participation' | 'indemnity' | 'transport' | 'medical' | 'media' | 'general';
+export type TemplateStatus = 'active' | 'inactive' | 'archived';
+
+export interface ConsentTemplate extends BaseRecord {
+  name: string;
+  consentType: ConsentType;
+  title: string;
+  description?: string;
+  bodyText?: string;
+  requiresGuardianSignature: boolean;
+  requiresEmergencyContact: boolean;
+  requiresMedicalDeclaration: boolean;
+  requiresTransportApproval: boolean;
+  requiresPhotoMediaConsent?: boolean;
+  templateStatus: TemplateStatus;
+}
+
+export type ConsentRequestStatus = 'pending' | 'sent' | 'submitted' | 'approved' | 'declined' | 'expired' | 'cancelled';
+
+export interface ConsentRequest extends BaseRecord {
+  eventId: string;
+  learnerId: string;
+  guardianId?: string;
+  templateId: string;
+  requestStatus: ConsentRequestStatus;
+  requestedAt: string;
+  dueDate?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  notes?: string;
+}
+
+export type ConsentSubmissionStatus = 'submitted' | 'verified' | 'requires_review' | 'declined' | 'superseded';
+
+export interface ConsentSubmission extends BaseRecord {
+  consentRequestId: string;
+  eventId: string;
+  learnerId: string;
+  guardianId?: string;
+  participationApproved: boolean;
+  transportApproved?: boolean;
+  medicalConditions?: string;
+  allergies?: string;
+  medication?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  indemnityAccepted: boolean;
+  mediaConsent?: boolean;
+  guardianName: string;
+  guardianRelationship?: string;
+  signatureName?: string;
+  signatureTimestamp?: string;
+  submissionStatus: ConsentSubmissionStatus;
+  notes?: string;
+}
+
+export type TransportProviderStatus = 'active' | 'inactive' | 'archived';
+
+export interface TransportProvider extends BaseRecord {
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+  providerStatus: TransportProviderStatus;
+}
+
+export type VehicleType = 'bus' | 'minibus' | 'taxi' | 'school_vehicle' | 'private_vehicle' | 'other';
+export type VehicleStatus = 'available' | 'booked' | 'inactive' | 'maintenance' | 'archived';
+
+export interface TransportVehicle extends BaseRecord {
+  providerId?: string;
+  vehicleName: string;
+  vehicleType: VehicleType;
+  registrationNumber?: string;
+  capacity: number;
+  driverName?: string;
+  driverPhone?: string;
+  vehicleStatus: VehicleStatus;
+  notes?: string;
+}
+
+export type TransportPlanStatus = 'draft' | 'planned' | 'confirmed' | 'departed' | 'arrived' | 'returning' | 'completed' | 'cancelled';
+
+export interface EventTransportPlan extends BaseRecord {
+  eventId: string;
+  providerId?: string;
+  vehicleId?: string;
+  planName: string;
+  pickupLocation: string;
+  destination: string;
+  departureDate: string;
+  departureTime: string;
+  returnDate?: string;
+  returnTime?: string;
+  meetingTime?: string;
+  driverName?: string;
+  driverPhone?: string;
+  vehicleCapacity: number;
+  transportStatus: TransportPlanStatus;
+  notes?: string;
+}
+
+export type PassengerType = 'learner' | 'staff' | 'volunteer' | 'other';
+export type BoardingStatus = 'planned' | 'boarded' | 'absent' | 'cancelled';
+export type ReturnStatus = 'pending' | 'boarded' | 'returned' | 'not_returning';
+
+export interface TransportPassenger extends BaseRecord {
+  eventTransportPlanId: string;
+  eventId: string;
+  passengerType: PassengerType;
+  learnerId?: string;
+  staffId?: string;
+  boardingStatus: BoardingStatus;
+  returnStatus?: ReturnStatus;
+  seatNumber?: string;
+  notes?: string;
+}
+
