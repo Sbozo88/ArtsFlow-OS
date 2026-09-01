@@ -23,6 +23,13 @@ import { EnsemblesPage } from './features/music/EnsemblesPage';
 import { RepertoirePage } from './features/music/RepertoirePage';
 import { PracticeLogsPage } from './features/music/PracticeLogsPage';
 import { MusicAssessmentsPage } from './features/music/MusicAssessmentsPage';
+import { DanceDashboardPage } from './features/dance/DanceDashboardPage';
+import { DanceLevelsPage } from './features/dance/DanceLevelsPage';
+import { DanceClassesPage } from './features/dance/DanceClassesPage';
+import { ChoreographyPage } from './features/dance/ChoreographyPage';
+import { CostumesPage } from './features/dance/CostumesPage';
+import { DanceAssessmentsPage } from './features/dance/DanceAssessmentsPage';
+import { DancePracticeLogsPage } from './features/dance/DancePracticeLogsPage';
 
 function App() {
   return (
@@ -59,6 +66,13 @@ function App() {
               <Route path="music/repertoire" element={<RepertoirePage />} />
               <Route path="music/practice" element={<PracticeLogsPage />} />
               <Route path="music/assessments" element={<MusicAssessmentsPage />} />
+              <Route path="dance" element={<DanceDashboardPage />} />
+              <Route path="dance/levels" element={<DanceLevelsPage />} />
+              <Route path="dance/classes" element={<DanceClassesPage />} />
+              <Route path="dance/choreography" element={<ChoreographyPage />} />
+              <Route path="dance/costumes" element={<CostumesPage />} />
+              <Route path="dance/practice" element={<DancePracticeLogsPage />} />
+              <Route path="dance/assessments" element={<DanceAssessmentsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>

@@ -160,6 +160,57 @@ service cloud.firestore {
       allow delete: if isUserInOrg(resource.data.organisationId); // service allows delete
     }
 
+    // ─── Phase 2B Collections (Dance) ────────────────────────────
+
+    match /danceLevels/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /choreography/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /sessionChoreography/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /dancePracticeLogs/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if isUserInOrg(resource.data.organisationId);
+    }
+
+    match /danceAssessments/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if isUserInOrg(resource.data.organisationId);
+    }
+
+    match /costumes/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /costumeAllocations/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
     // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {

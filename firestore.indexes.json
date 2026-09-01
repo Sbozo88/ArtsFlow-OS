@@ -202,6 +202,65 @@
         { "fieldPath": "learnerId", "order": "ASCENDING" },
         { "fieldPath": "assessmentDate", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "choreography",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "groupId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sessionChoreography",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "sessionId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "dancePracticeLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" },
+        { "fieldPath": "practiceDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "danceAssessments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" },
+        { "fieldPath": "assessmentDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "costumes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "assetNumber", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "costumeAllocations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "costumeId", "order": "ASCENDING" },
+        { "fieldPath": "allocationStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "costumeAllocations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

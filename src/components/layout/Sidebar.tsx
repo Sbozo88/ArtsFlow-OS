@@ -6,7 +6,8 @@ import {
   CalendarCheck,
   ClipboardList,
   LogOut,
-  Music
+  Music,
+  Activity
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -49,6 +50,19 @@ const navItems = [
       { name: 'Repertoire', path: '/music/repertoire' },
       { name: 'Practice Logs', path: '/music/practice' },
       { name: 'Assessments', path: '/music/assessments' },
+    ]
+  },
+  {
+    name: 'Dance',
+    icon: Activity,
+    children: [
+      { name: 'Overview', path: '/dance' },
+      { name: 'Levels', path: '/dance/levels' },
+      { name: 'Classes', path: '/dance/classes' },
+      { name: 'Choreography', path: '/dance/choreography' },
+      { name: 'Costumes', path: '/dance/costumes' },
+      { name: 'Practice', path: '/dance/practice' },
+      { name: 'Assessments', path: '/dance/assessments' },
     ]
   },
   { name: 'Follow-Ups', path: '/follow-ups', icon: ClipboardList },
