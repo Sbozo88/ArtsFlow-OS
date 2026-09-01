@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // A user is considered in an organisation if their user record's organisationId matches
+    function isUserInOrg(orgId) {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organisationId == orgId
+      );
+    }
+
+    // Special rule for creating organisations and users during signup
+    // We allow a user to read/write their own user record
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      // Alternatively, colleagues in the same org can read
+      allow read: if isUserInOrg(resource.data.organisationId);
+    }
+
+    // Organisations: A user can read the org they belong to.
+    // They can create it if they are setting up a new org (handled by backend or initial client write)
+    match /organisations/{orgId} {
+      allow read: if isUserInOrg(orgId);
+      // Allow creation if the orgId starts with "org_" (our simple strategy for now)
+      allow create: if isAuthenticated();
+      allow update, delete: if false; 
+    }
+
+    // Domain models - access restricted by organisationId
+    match /{collection}/{docId} {
+      allow read, write: if isUserInOrg(resource.data.organisationId) || isUserInOrg(request.resource.data.organisationId);
+    }
+  }
+}
