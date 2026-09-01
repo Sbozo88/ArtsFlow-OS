@@ -1,16 +1,15 @@
-import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { Session } from '../types';
+import { BaseRepository } from './BaseRepository';
+import type { Session } from '../types';
+import { query, where, getDocs } from 'firebase/firestore';
 
-export const sessionRepository = {
-  async create(session: Session): Promise<void> {
-    const docRef = doc(db, 'sessions', session.id);
-    await setDoc(docRef, session);
-  },
+class SessionRepository extends BaseRepository<Session> {
+  constructor() {
+    super('sessions');
+  }
 
-  async getByGroup(orgId: string, groupId: string): Promise<Session[]> {
+  async getByGroupId(orgId: string, groupId: string): Promise<Session[]> {
     const q = query(
-      collection(db, 'sessions'), 
+      this.getCollection(),
       where('organisationId', '==', orgId),
       where('groupId', '==', groupId),
       where('status', '!=', 'deleted')
@@ -18,4 +17,28 @@ export const sessionRepository = {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Session);
   }
-};
+
+  async getByDate(orgId: string, date: string): Promise<Session[]> {
+    const q = query(
+      this.getCollection(),
+      where('organisationId', '==', orgId),
+      where('date', '==', date),
+      where('status', '!=', 'deleted')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as Session);
+  }
+
+  async getByDateRange(orgId: string, startDate: string, endDate: string): Promise<Session[]> {
+    const q = query(
+      this.getCollection(),
+      where('organisationId', '==', orgId),
+      where('date', '>=', startDate),
+      where('date', '<=', endDate)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as Session);
+  }
+}
+
+export const sessionRepository = new SessionRepository();

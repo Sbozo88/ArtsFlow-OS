@@ -1,32 +1,26 @@
-import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { organisationRepository } from '../repositories/organisationRepository';
+import { auditService } from './auditService';
 import type { Organisation } from '../types';
 
 export const organisationService = {
-  async createOrganisation(orgId: string, name: string): Promise<Organisation> {
-    const orgRef = doc(collection(db, 'organisations'), orgId);
+  async createOrganisation(orgId: string, actorId: string, data: Omit<Organisation, 'id' | 'organisationId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'status'>): Promise<Organisation> {
+    // We override create here because Organisation doesn't have an organisationId itself usually, 
+    // or it's its own ID. We will set orgId = orgId.
     
-    // Check if it already exists to avoid overwriting
-    const snap = await getDoc(orgRef);
-    if (snap.exists()) {
-      return snap.data() as Organisation;
-    }
+    // Check if exists
+    const existing = await organisationRepository.getById(orgId, orgId);
+    if (existing) return existing;
 
-    const now = new Date().toISOString();
-    const org: Organisation = {
-      id: orgId,
-      name,
-      status: 'active',
-      createdAt: now
-    };
+    const org = await organisationRepository.create(orgId, actorId, {
+      ...data,
+      id: orgId // Ensure ID matches
+    } as Parameters<typeof organisationRepository.create>[2]);
 
-    await setDoc(orgRef, org);
+    await auditService.log(orgId, actorId, 'CREATE', 'organisation', orgId, undefined, org);
     return org;
   },
 
   async getOrganisation(orgId: string): Promise<Organisation | null> {
-    const orgRef = doc(db, 'organisations', orgId);
-    const snap = await getDoc(orgRef);
-    return snap.exists() ? snap.data() as Organisation : null;
+    return organisationRepository.getById(orgId, orgId);
   }
 };

@@ -1,30 +1,29 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'ARCHIVE';
-
-export interface AuditLogPayload {
-  organisationId: string;
-  actorId: string;
-  action: AuditAction;
-  entityType: string;
-  entityId: string;
-  before?: Record<string, unknown>;
-  after?: Record<string, unknown>;
-}
+import { auditLogRepository } from '../repositories/auditLogRepository';
+import type { AuditAction } from '../types';
 
 export const auditService = {
-  async log(payload: AuditLogPayload): Promise<void> {
+  async log(
+    organisationId: string,
+    actorId: string,
+    action: AuditAction,
+    entityType: string,
+    entityId: string,
+    before?: unknown,
+    after?: unknown
+  ) {
     try {
-      const auditRef = collection(db, 'audit_logs');
-      await addDoc(auditRef, {
-        ...payload,
-        timestamp: serverTimestamp(),
+      await auditLogRepository.log({
+        organisationId,
+        actorId,
+        action,
+        entityType,
+        entityId,
+        before,
+        after
       });
-      console.info(`Audit Log: [${payload.action}] ${payload.entityType} (${payload.entityId})`);
     } catch (error) {
-      console.error('Failed to write audit log:', error);
-      // In production, might want to handle this differently to ensure compliance
+      console.error('Failed to write audit log', error);
+      // We log but don't crash the main operation if audit fails
     }
   }
 };

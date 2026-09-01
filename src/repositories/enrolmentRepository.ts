@@ -1,27 +1,26 @@
-import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { Enrolment } from '../types';
+import { BaseRepository } from './BaseRepository';
+import type { Enrolment } from '../types';
+import { query, where, getDocs } from 'firebase/firestore';
 
-export const enrolmentRepository = {
-  async create(enrolment: Enrolment): Promise<void> {
-    const docRef = doc(db, 'enrolments', enrolment.id);
-    await setDoc(docRef, enrolment);
-  },
+class EnrolmentRepository extends BaseRepository<Enrolment> {
+  constructor() {
+    super('enrolments');
+  }
 
-  async getByLearner(orgId: string, learnerId: string): Promise<Enrolment[]> {
+  async getByLearnerId(orgId: string, learnerId: string): Promise<Enrolment[]> {
     const q = query(
-      collection(db, 'enrolments'), 
+      this.getCollection(),
       where('organisationId', '==', orgId),
       where('learnerId', '==', learnerId),
       where('status', '!=', 'deleted')
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Enrolment);
-  },
+  }
 
-  async getByGroup(orgId: string, groupId: string): Promise<Enrolment[]> {
+  async getByGroupId(orgId: string, groupId: string): Promise<Enrolment[]> {
     const q = query(
-      collection(db, 'enrolments'), 
+      this.getCollection(),
       where('organisationId', '==', orgId),
       where('groupId', '==', groupId),
       where('status', '!=', 'deleted')
@@ -29,4 +28,29 @@ export const enrolmentRepository = {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Enrolment);
   }
-};
+
+  async getActiveByGroupId(orgId: string, groupId: string): Promise<Enrolment[]> {
+    const q = query(
+      this.getCollection(),
+      where('organisationId', '==', orgId),
+      where('groupId', '==', groupId),
+      where('enrolmentStatus', '==', 'active')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as Enrolment);
+  }
+
+  async getActiveDuplicate(orgId: string, learnerId: string, groupId: string): Promise<Enrolment | null> {
+    const q = query(
+      this.getCollection(),
+      where('organisationId', '==', orgId),
+      where('learnerId', '==', learnerId),
+      where('groupId', '==', groupId),
+      where('enrolmentStatus', '==', 'active')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.length > 0 ? (snapshot.docs[0].data() as Enrolment) : null;
+  }
+}
+
+export const enrolmentRepository = new EnrolmentRepository();

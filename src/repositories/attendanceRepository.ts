@@ -1,29 +1,45 @@
-import { collection, doc, setDoc, getDocs, query, where, writeBatch } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { Attendance } from '../types';
+import { BaseRepository } from './BaseRepository';
+import type { Attendance } from '../types';
+import { query, where, getDocs } from 'firebase/firestore';
 
-export const attendanceRepository = {
-  async upsert(attendance: Attendance): Promise<void> {
-    const docRef = doc(db, 'attendance', attendance.id);
-    await setDoc(docRef, attendance);
-  },
+class AttendanceRepository extends BaseRepository<Attendance> {
+  constructor() {
+    super('attendance');
+  }
 
-  async getBySession(orgId: string, sessionId: string): Promise<Attendance[]> {
+  async getBySessionId(orgId: string, sessionId: string): Promise<Attendance[]> {
     const q = query(
-      collection(db, 'attendance'), 
+      this.getCollection(),
       where('organisationId', '==', orgId),
-      where('sessionId', '==', sessionId)
+      where('sessionId', '==', sessionId),
+      where('status', '!=', 'deleted')
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Attendance);
-  },
-
-  async markAll(attendances: Attendance[]): Promise<void> {
-    const batch = writeBatch(db);
-    attendances.forEach(att => {
-      const docRef = doc(db, 'attendance', att.id);
-      batch.set(docRef, att);
-    });
-    await batch.commit();
   }
-};
+
+  async getByLearnerId(orgId: string, learnerId: string): Promise<Attendance[]> {
+    const q = query(
+      this.getCollection(),
+      where('organisationId', '==', orgId),
+      where('learnerId', '==', learnerId),
+      where('status', '!=', 'deleted')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as Attendance);
+  }
+
+  async getDuplicate(orgId: string, sessionId: string, learnerId: string): Promise<Attendance | null> {
+    const q = query(
+      this.getCollection(),
+      where('organisationId', '==', orgId),
+      where('sessionId', '==', sessionId),
+      where('learnerId', '==', learnerId),
+      where('status', '!=', 'deleted')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.length > 0 ? (snapshot.docs[0].data() as Attendance) : null;
+  }
+}
+
+export const attendanceRepository = new AttendanceRepository();

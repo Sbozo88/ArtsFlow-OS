@@ -1,75 +1,77 @@
-# React + TypeScript + Vite
+# ArtsFlow OS
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Purpose
+ArtsFlow OS is a comprehensive management system specifically designed for Arts Projects, Music Schools, Dance Schools, and Community Arts Programmes. It provides a robust, scalable architecture for managing learners, guardians, staff, and arts programmes with strict organisation-level data isolation.
 
-Currently, two official plugins are available:
+## Phase 1A Scope
+Phase 1A establishes the reliable core foundation for ArtsFlow OS.
+It implements the following workflows:
+- First-user Organisation Onboarding
+- Role-based Authentication
+- Learner & Guardian Management with relationship linking
+- Staff Directory
+- Programme & Group/Class setup
+- Real-time Firestore synchronisation
+- Comprehensive Audit Logging
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
+- **Frontend**: React 19, TypeScript, Vite
+- **Routing**: React Router
+- **Backend & Database**: Firebase Authentication, Cloud Firestore
+- **Styling**: Tailwind CSS, Lucide React Icons
+- **Infrastructure**: Firebase Hosting & Storage
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+### 1. Repository
+```bash
+gh repo clone Sbozo88/ArtsFlow-OS
+cd ArtsFlow-OS
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+### 2. Environment Variables
+Create a `.env.local` file based on `.env.example`:
 ```
+VITE_FIREBASE_API_KEY="your-api-key"
+VITE_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+VITE_FIREBASE_PROJECT_ID="your-project-id"
+VITE_FIREBASE_STORAGE_BUCKET="your-project.appspot.com"
+VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
+VITE_FIREBASE_APP_ID="your-app-id"
+```
+
+### 3. Development Commands
+- Start dev server: `npm run dev`
+- Type checking: `npm run typecheck`
+- Linting: `npm run lint`
+- Production build: `npm run build`
+
+## Architecture
+ArtsFlow uses a strictly layered architecture to separate concerns and enforce business rules:
+`Type → Repository → Service → Hook → UI → Rules → Index → Audit`
+No direct Firestore calls are made in the UI layer. All mutations pass through services to ensure Audit Logs are written and Organisation rules are enforced.
+
+## Collections
+- `organisations`: Tenant profiles.
+- `users`: Auth profiles bridging Firebase Auth and the tenant.
+- `staff`: Operational staff profiles and roles.
+- `learners`: Student profiles.
+- `guardians`: Parent/guardian profiles.
+- `learnerGuardians`: Link records between learners and guardians.
+- `programmes`: High-level arts programmes (Music, Dance, etc).
+- `programmeGroups`: Specific classes, ensembles, or groups.
+- `auditLogs`: Immutable ledger of mutations.
+
+## Security Overview
+- **Deny-by-default**: All collections require explicit rules.
+- **Strict Isolation**: A user can only access records where `organisationId` matches their `users` document.
+- **Audit Immutability**: `auditLogs` can only be created, never updated or deleted by normal users.
+- **Ownership Verification**: `createdBy` is strictly enforced on creation.
+
+## Current Status
+- Phase 1A Core Foundation: **Complete**
+- Fully deployed on Firebase Hosting.
+
+## Next Phase
+- Phase 1B: Enrolments, Sessions, Attendance, Follow-Ups.

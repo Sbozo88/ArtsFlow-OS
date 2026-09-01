@@ -4,7 +4,7 @@ import {
   Users,
   GraduationCap,
   CalendarCheck,
-  CheckSquare,
+  ClipboardList,
   LogOut,
   Music
 } from 'lucide-react';
@@ -26,9 +26,9 @@ const navItems = [
     name: 'Programmes',
     icon: GraduationCap,
     children: [
-      { name: 'Music', path: '/programmes/music' },
-      { name: 'Dance', path: '/programmes/dance' },
+      { name: 'All Programmes', path: '/programmes' },
       { name: 'Groups & Classes', path: '/groups' },
+      { name: 'Enrolments', path: '/enrolments' },
     ]
   },
   {
@@ -36,9 +36,22 @@ const navItems = [
     icon: CalendarCheck,
     children: [
       { name: 'Sessions', path: '/sessions' },
+      { name: 'Attendance', path: '/attendance' },
     ]
   },
-  { name: 'Attendance', path: '/attendance', icon: CheckSquare },
+  {
+    name: 'Music',
+    icon: Music,
+    children: [
+      { name: 'Overview', path: '/music' },
+      { name: 'Instruments', path: '/music/instruments' },
+      { name: 'Ensembles', path: '/music/ensembles' },
+      { name: 'Repertoire', path: '/music/repertoire' },
+      { name: 'Practice Logs', path: '/music/practice' },
+      { name: 'Assessments', path: '/music/assessments' },
+    ]
+  },
+  { name: 'Follow-Ups', path: '/follow-ups', icon: ClipboardList },
 ];
 
 export function Sidebar() {
