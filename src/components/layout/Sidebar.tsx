@@ -7,8 +7,11 @@ import {
   ClipboardList,
   LogOut,
   Music,
-  Activity
-, CalendarDays } from 'lucide-react';
+  Activity,
+  CalendarDays,
+  FileCheck,
+  Bus
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -73,6 +76,22 @@ const navItems = [
       { name: 'Calendar / List', path: '/events/calendar' },
       { name: 'Participants', path: '/events/participants' },
       { name: 'Reports', path: '/events/reports' },
+    ]
+  },
+  {
+    name: 'Consent',
+    icon: FileCheck,
+    children: [
+      { name: 'Requests & Status', path: '/consent' },
+      { name: 'Consent Templates', path: '/consent/templates' },
+    ]
+  },
+  {
+    name: 'Transport',
+    icon: Bus,
+    children: [
+      { name: 'Fleet & Providers', path: '/transport' },
+      { name: 'Transport Reports', path: '/transport/reports' },
     ]
   },
   { name: 'Follow-Ups', path: '/follow-ups', icon: ClipboardList },

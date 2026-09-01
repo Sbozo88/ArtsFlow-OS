@@ -8,7 +8,10 @@ import { useEventSchedule } from '../../hooks/useEventSchedule';
 import { useEventPerformanceItems } from '../../hooks/useEventPerformanceItems';
 import { useEventAttendance } from '../../hooks/useEventAttendance';
 
-type Tab = 'overview' | 'participants' | 'groups' | 'staff' | 'schedule' | 'performances' | 'attendance' | 'notes';
+import { EventConsentTab } from './components/EventConsentTab';
+import { EventTransportTab } from './components/EventTransportTab';
+
+type Tab = 'overview' | 'participants' | 'groups' | 'staff' | 'schedule' | 'performances' | 'attendance' | 'consent' | 'transport' | 'notes';
 
 export const EventDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +39,7 @@ export const EventDetailPage = () => {
 
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
-          {(['overview', 'participants', 'groups', 'staff', 'schedule', 'performances', 'attendance', 'notes'] as Tab[]).map((tab) => (
+          {(['overview', 'participants', 'groups', 'staff', 'schedule', 'performances', 'attendance', 'consent', 'transport', 'notes'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -112,6 +115,14 @@ export const EventDetailPage = () => {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Event Attendance ({attendance.length})</h3>
             <p className="text-gray-500 text-sm">Attendance marking interface goes here.</p>
           </div>
+        )}
+
+        {activeTab === 'consent' && (
+          <EventConsentTab eventId={event.id} />
+        )}
+
+        {activeTab === 'transport' && (
+          <EventTransportTab eventId={event.id} />
         )}
 
         {activeTab === 'notes' && (

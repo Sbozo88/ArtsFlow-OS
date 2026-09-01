@@ -7,6 +7,9 @@ import { useProgrammeGroups } from '../../hooks/useProgrammeGroups';
 import { useEnrolments } from '../../hooks/useEnrolments';
 import { useSessions } from '../../hooks/useSessions';
 import { useFollowUps } from '../../hooks/useFollowUps';
+import { useConsentRequests } from '../../hooks/useConsentRequests';
+import { useEventTransportPlans } from '../../hooks/useEventTransportPlans';
+import { useTransportPassengers } from '../../hooks/useTransportPassengers';
 import { 
   Users, 
   UserSquare2, 
@@ -16,7 +19,9 @@ import {
   CalendarCheck,
   ClipboardList,
   AlertTriangle,
-  Plus
+  Plus,
+  FileCheck,
+  Bus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -29,6 +34,9 @@ export const DashboardPage: React.FC = () => {
   const { enrolments, loading: loadingEnrolments } = useEnrolments();
   const { sessions, loading: loadingSessions } = useSessions();
   const { followUps, loading: loadingFollowUps } = useFollowUps();
+  const { requests: consentRequests } = useConsentRequests();
+  const { plans: transportPlans } = useEventTransportPlans();
+  const { passengers: allPassengers } = useTransportPassengers();
 
   const loading = loadingLearners || loadingGuardians || loadingStaff || loadingProgrammes || loadingGroups || loadingEnrolments || loadingSessions || loadingFollowUps;
 
@@ -41,6 +49,14 @@ export const DashboardPage: React.FC = () => {
   const todaySessions = sessions.filter(s => s.date === today && s.sessionStatus !== 'cancelled');
   const openFollowUps = followUps.filter(f => f.followUpStatus === 'open' || f.followUpStatus === 'in_progress');
   const urgentFollowUps = followUps.filter(f => (f.followUpStatus === 'open' || f.followUpStatus === 'in_progress') && f.priority === 'urgent');
+
+  // Phase 3B Indicators
+  const pendingConsentCount = consentRequests.filter(r => ['pending', 'sent', 'submitted'].includes(r.requestStatus)).length;
+  const upcomingTransportPlans = transportPlans.filter(p => p.departureDate >= today && p.transportStatus !== 'completed' && p.transportStatus !== 'cancelled');
+  const transportIssues = transportPlans.filter(p => {
+    const passengerCount = allPassengers.filter(pass => pass.eventTransportPlanId === p.id).length;
+    return passengerCount > p.vehicleCapacity;
+  });
 
   const upcomingSessions = sessions
     .filter(s => s.date >= today && s.sessionStatus === 'scheduled')
@@ -64,7 +80,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard title="Active Learners" value={learners.length} icon={<Users className="w-6 h-6 text-blue-500" />} />
         <StatCard title="Guardians" value={guardians.length} icon={<UserSquare2 className="w-6 h-6 text-green-500" />} />
         <StatCard title="Staff Members" value={staff.length} icon={<Briefcase className="w-6 h-6 text-purple-500" />} />
@@ -73,7 +89,25 @@ export const DashboardPage: React.FC = () => {
         <StatCard title="Active Enrolments" value={activeEnrolments.length} icon={<Activity className="w-6 h-6 text-emerald-500" />} />
         <StatCard title="Sessions Today" value={todaySessions.length} icon={<CalendarCheck className="w-6 h-6 text-sky-500" />} />
         <StatCard title="Open Follow-Ups" value={openFollowUps.length} icon={<ClipboardList className="w-6 h-6 text-rose-500" />} />
+        <StatCard title="Pending Consent" value={pendingConsentCount} icon={<FileCheck className="w-6 h-6 text-amber-500" />} />
+        <StatCard title="Upcoming Transport" value={upcomingTransportPlans.length} icon={<Bus className="w-6 h-6 text-sky-500" />} />
       </div>
+
+      {/* Transport Warnings */}
+      {transportIssues.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <h3 className="text-md font-medium text-amber-800 mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600" /> Transport Issues Requiring Attention
+          </h3>
+          <div className="space-y-2">
+            {transportIssues.map(p => (
+              <div key={p.id} className="p-2 bg-white rounded border border-amber-100 text-sm text-amber-900">
+                <span className="font-semibold">{p.planName}</span> is currently <strong>over vehicle capacity</strong>.
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Urgent Follow-Ups */}
       {urgentFollowUps.length > 0 && (

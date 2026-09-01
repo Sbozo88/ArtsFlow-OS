@@ -317,6 +317,80 @@
         { "fieldPath": "organisationId", "order": "ASCENDING" },
         { "fieldPath": "eventId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "consentRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
+        { "fieldPath": "requestStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "consentRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "consentSubmissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
+        { "fieldPath": "submissionStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "consentSubmissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventTransportPlans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventTransportPlans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "departureDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transportPassengers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "eventTransportPlanId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transportPassengers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "learnerId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "transportVehicles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "vehicleStatus", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
