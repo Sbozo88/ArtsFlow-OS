@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { ProtectedRoute, OnboardingRoute } from './components/layout/AuthRoutes';
 import { LoginPage } from './features/auth/LoginPage';
@@ -130,6 +130,7 @@ import { GuardianReceiptViewPage } from './features/portal/pages/GuardianReceipt
 import { GuardianDocumentsPage } from './features/portal/pages/GuardianDocumentsPage';
 import { GuardianMessagesPage } from './features/portal/pages/GuardianMessagesPage';
 import { GuardianProfilePage } from './features/portal/pages/GuardianProfilePage';
+import { NotFoundPage } from './components/layout/NotFoundPage';
 
 function App() {
   return (
@@ -276,9 +277,13 @@ function App() {
               <Route path="settings/system" element={<SystemSettingsPage />} />
               <Route path="settings/audit" element={<SettingsAuditPage />} />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* In-app 404 Catch-all */}
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Route>
+
+          {/* Global 404 Catch-all */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
     </AuthProvider>

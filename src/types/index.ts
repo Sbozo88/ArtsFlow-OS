@@ -24,7 +24,7 @@ export interface Organisation extends BaseRecord {
   updatedBy: string;
 }
 
-export type AuthRole = 'super_admin' | 'organisation_admin' | 'programme_director' | 'teacher' | 'finance' | 'viewer' | 'guardian';
+export type AuthRole = 'super_admin' | 'organisation_admin' | 'programme_director' | 'teacher' | 'finance' | 'viewer' | 'guardian' | 'learner';
 
 // Auth User Record (Simplified for Context)
 export interface AuthUser {
@@ -1788,15 +1788,23 @@ export interface OrganisationMembership extends BaseRecord {
 export type Permission =
   | 'learners.read'
   | 'learners.write'
+  | 'learners.archive'
   | 'attendance.read'
   | 'attendance.write'
   | 'finance.read'
   | 'finance.write'
+  | 'finance.reverse'
+  | 'events.read'
   | 'events.manage'
+  | 'staff.read'
   | 'staff.verify_timesheets'
   | 'staff.approve_timesheets'
-  | 'automation.manage'
+  | 'settings.read'
   | 'settings.manage'
+  | 'automation.read'
+  | 'automation.manage'
+  | 'platform.read'
+  | 'platform.manage'
   | 'users.manage';
 
 // ─── Phase 7A: Guardian Portal & External Access ────────────────────

@@ -49,6 +49,10 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
     guardian: {
       title: 'Guardian (External Portal)',
       desc: 'Self-service family access for linked learners only. Managed directly via the Guardians section.'
+    },
+    learner: {
+      title: 'Learner (External Portal)',
+      desc: 'Student self-service access for timetables, practice, and repertoire. Managed directly via the Learners section.'
     }
   };
 

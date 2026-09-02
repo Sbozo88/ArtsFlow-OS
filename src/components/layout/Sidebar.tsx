@@ -181,6 +181,7 @@ const navItems = [
       { name: 'Programmes & Classes', path: '/settings/programmes' },
       { name: 'Attendance Rules', path: '/settings/attendance' },
       { name: 'Finance & Invoicing', path: '/settings/finance' },
+      { name: 'Portal Settings', path: '/settings/portal' },
       { name: 'Staff & Timesheets', path: '/settings/staff' },
       { name: 'Communication', path: '/settings/communication' },
       { name: 'Automation Defaults', path: '/settings/automation' },

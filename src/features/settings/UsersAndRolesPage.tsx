@@ -100,7 +100,8 @@ export const UsersAndRolesPage: React.FC = () => {
     finance: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     teacher: 'bg-blue-50 text-blue-700 border-blue-200',
     viewer: 'bg-slate-50 text-slate-700 border-slate-200',
-    guardian: 'bg-amber-50 text-amber-700 border-amber-200'
+    guardian: 'bg-amber-50 text-amber-700 border-amber-200',
+    learner: 'bg-teal-50 text-teal-700 border-teal-200'
   };
 
   return (

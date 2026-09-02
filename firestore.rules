@@ -272,8 +272,9 @@ service cloud.firestore {
     }
 
     match /consentRequests/{docId} {
-      // Allow read for organization staff or direct access for guardian submission
-      allow read: if isUserInOrg(resource.data.organisationId) || resource != null;
+      // Allow direct document get for guardian submission token, but restrict listing to organization members
+      allow get: if isUserInOrg(resource.data.organisationId) || resource != null;
+      allow list: if isUserInOrg(resource.data.organisationId);
       allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
       allow update: if (isUserInOrg(resource.data.organisationId) || resource != null) && isOrgUnchanged();
       allow delete: if false;
@@ -555,7 +556,25 @@ service cloud.firestore {
     }
 
     match /guardianInvitations/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId) || true; // Allow lookup by token prior to auth
+      allow get: if isUserInOrg(resource.data.organisationId) || resource != null; // Allow direct token lookup prior to auth
+      allow list: if isUserInOrg(resource.data.organisationId); // Prevent public enumeration of invitations
+      allow create: if isUserInOrg(request.resource.data.organisationId);
+      allow update: if isUserInOrg(resource.data.organisationId) || request.auth != null;
+      allow delete: if false;
+    }
+
+    // ─── Phase 7B Collections: Learner Portal & External Access ────
+
+    match /learnerPortalAccess/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if isUserInOrg(request.resource.data.organisationId) || request.auth != null;
+      allow update: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow delete: if false;
+    }
+
+    match /learnerInvitations/{docId} {
+      allow get: if isUserInOrg(resource.data.organisationId) || resource != null;
+      allow list: if isUserInOrg(resource.data.organisationId);
       allow create: if isUserInOrg(request.resource.data.organisationId);
       allow update: if isUserInOrg(resource.data.organisationId) || request.auth != null;
       allow delete: if false;

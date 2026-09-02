@@ -20,8 +20,9 @@ import { DocumentUploadModal } from '../documents/components/DocumentUploadModal
 import { CommunicationDetailModal } from '../communication/components/CommunicationDetailModal';
 import { learnerGuardianService } from '../../services/learnerGuardianService';
 import { enrolmentService } from '../../services/enrolmentService';
+import { metricCalculations } from '../../services/analytics/metricCalculations';
 // Enrolment types used transitively via service
-import { ArrowLeft, User, Phone, Mail, MapPin, Plus, Trash2, GraduationCap, CheckCircle2, XCircle, Clock, ShieldCheck, CreditCard, Receipt, MessageSquare, FolderArchive, Download } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, MapPin, Plus, Trash2, GraduationCap, CheckCircle2, XCircle, Clock, ShieldCheck, CreditCard, Receipt, MessageSquare, FolderArchive, Download, Music, Activity } from 'lucide-react';
 
 export const LearnerProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -135,7 +136,7 @@ export const LearnerProfilePage: React.FC = () => {
   const absentCount = attendanceRecords.filter(r => r.attendanceStatus === 'absent').length;
   const lateCount = attendanceRecords.filter(r => r.attendanceStatus === 'late').length;
   const excusedCount = attendanceRecords.filter(r => r.attendanceStatus === 'excused').length;
-  const attendanceRate = totalSessions > 0 ? Math.round(((presentCount + lateCount) / totalSessions) * 100) : 0;
+  const attendanceRate = metricCalculations.calculateAttendanceRate(attendanceRecords);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -155,8 +156,17 @@ export const LearnerProfilePage: React.FC = () => {
             {learner.preferredName && (
               <p className="text-indigo-200 text-lg">"{learner.preferredName}"</p>
             )}
-            <div className="mt-2 flex gap-4 text-indigo-100 text-sm">
-              <span className="bg-indigo-700 px-2 py-1 rounded-full uppercase">{learner.status}</span>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-indigo-100 text-xs">
+              <span className="bg-indigo-700 px-2.5 py-1 rounded-full uppercase font-bold">{learner.status}</span>
+              <Link to="/music/instruments" className="bg-indigo-500/80 hover:bg-indigo-400 text-white px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors font-medium">
+                <Music className="w-3 h-3" /> Instruments
+              </Link>
+              <Link to="/music/practice" className="bg-indigo-500/80 hover:bg-indigo-400 text-white px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors font-medium">
+                <Music className="w-3 h-3" /> Practice
+              </Link>
+              <Link to="/dance/practice" className="bg-indigo-500/80 hover:bg-indigo-400 text-white px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors font-medium">
+                <Activity className="w-3 h-3" /> Dance
+              </Link>
             </div>
           </div>
         </div>
@@ -239,7 +249,13 @@ export const LearnerProfilePage: React.FC = () => {
               return (
                 <li key={e.id} className="p-4 flex justify-between items-center hover:bg-slate-50">
                   <div>
-                    <p className="text-sm font-medium text-slate-800">{programme?.name} — {group?.name}</p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {programme?.name} — {group ? (
+                        <Link to={`/groups/${group.id}`} className="text-indigo-600 hover:text-indigo-800 hover:underline font-semibold">
+                          {group.name}
+                        </Link>
+                      ) : 'Group'}
+                    </p>
                     <p className="text-xs text-slate-500">Since {e.startDate}</p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${

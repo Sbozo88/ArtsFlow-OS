@@ -3,15 +3,23 @@ import type { AuthUser, AuthRole, Permission } from '../types';
 export const ALL_PERMISSIONS: Permission[] = [
   'learners.read',
   'learners.write',
+  'learners.archive',
   'attendance.read',
   'attendance.write',
   'finance.read',
   'finance.write',
+  'finance.reverse',
+  'events.read',
   'events.manage',
+  'staff.read',
   'staff.verify_timesheets',
   'staff.approve_timesheets',
-  'automation.manage',
+  'settings.read',
   'settings.manage',
+  'automation.read',
+  'automation.manage',
+  'platform.read',
+  'platform.manage',
   'users.manage'
 ];
 
@@ -23,25 +31,36 @@ export const ROLE_PERMISSIONS: Record<AuthRole, Permission[]> = {
     'learners.write',
     'attendance.read',
     'attendance.write',
+    'events.read',
     'events.manage',
-    'staff.verify_timesheets'
+    'staff.read',
+    'staff.verify_timesheets',
+    'settings.read',
+    'automation.read'
   ],
   finance: [
     'finance.read',
     'finance.write',
-    'learners.read'
+    'finance.reverse',
+    'learners.read',
+    'settings.read'
   ],
   teacher: [
     'learners.read',
     'attendance.read',
-    'attendance.write'
+    'attendance.write',
+    'events.read'
   ],
   viewer: [
     'learners.read',
     'attendance.read',
-    'finance.read'
+    'finance.read',
+    'events.read',
+    'staff.read',
+    'settings.read'
   ],
-  guardian: []
+  guardian: [],
+  learner: []
 };
 
 export const permissionService = {

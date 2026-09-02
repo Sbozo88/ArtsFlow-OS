@@ -5,9 +5,66 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Organisation-isolated storage bucket paths
-    match /organisations/{orgId}/{allPaths=**} {
-      allow read, write: if isAuthenticated();
+    function isSafeFileType() {
+      // Disallow executable and script binaries
+      return !request.resource.contentType.matches('application/x-msdownload')
+          && !request.resource.contentType.matches('application/x-sh')
+          && !request.resource.contentType.matches('application/x-php')
+          && !request.resource.contentType.matches('application/javascript')
+          && !request.resource.contentType.matches('text/html');
+    }
+
+    function isStandardFileSize() {
+      // Maximum 25MB standard document/audio size
+      return request.resource.size < 25 * 1024 * 1024;
+    }
+
+    function isImageFileSize() {
+      // Maximum 5MB for logos and images
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Default deny for root or unmanaged paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Organisation-isolated storage hierarchies
+    match /organisations/{orgId} {
+      
+      // Branding assets (logos, badges)
+      match /branding/{fileName} {
+        allow read: if true; // Publicly visible for invoice headers and portal branding
+        allow write: if isAuthenticated() && isImageFileSize() && isSafeFileType();
+      }
+
+      // Operational document repository
+      match /documents/{docPath=**} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && isStandardFileSize() && isSafeFileType();
+      }
+
+      // Learner documents & recordings
+      match /learners/{learnerId}/{docPath=**} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && isStandardFileSize() && isSafeFileType();
+      }
+
+      // Guardian documents & consent evidence
+      match /guardians/{guardianId}/{docPath=**} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && isStandardFileSize() && isSafeFileType();
+      }
+
+      // Organisation data exports
+      match /exports/{exportFile} {
+        allow read, write: if isAuthenticated() && isSafeFileType();
+      }
+
+      // Temporary upload scratch area
+      match /temp/{tempFile} {
+        allow read, write: if isAuthenticated() && isStandardFileSize() && isSafeFileType();
+      }
     }
   }
 }
