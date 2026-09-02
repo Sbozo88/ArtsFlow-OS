@@ -177,6 +177,7 @@ export function AutomationRulesPage() {
             <option value="active">Active</option>
             <option value="paused">Paused</option>
             <option value="disabled">Disabled</option>
+            <option value="archived">Archived</option>
           </select>
         </div>
       </div>
