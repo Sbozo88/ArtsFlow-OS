@@ -316,6 +316,65 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── Phase 4A Collections: Finance & Payments ─────────────────
+
+    match /chargeTypes/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Archive only
+    }
+
+    match /charges/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Cannot delete charges, waive/cancel only
+    }
+
+    match /invoices/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Invoices are permanent financial records
+    }
+
+    match /invoiceLineItems/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /payments/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Payments cannot be deleted, reverse only
+    }
+
+    match /paymentAllocations/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if isUserInOrg(resource.data.organisationId); // Allowed during payment reversal rollback
+    }
+
+    match /financeAdjustments/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /invoiceCounters/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /paymentCounters/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
     // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {

@@ -9,10 +9,15 @@ import { useProgrammes } from '../../hooks/useProgrammes';
 import { useProgrammeGroups } from '../../hooks/useProgrammeGroups';
 import { useSessions } from '../../hooks/useSessions';
 import { useAuth } from '../../contexts/AuthContext';
+import { useInvoices } from '../../hooks/useInvoices';
+import { usePayments } from '../../hooks/usePayments';
+import { formatMoney } from '../../lib/money';
+import { InvoiceDetailModal } from '../finance/components/InvoiceDetailModal';
+import { ReceiptModal } from '../finance/components/ReceiptModal';
 import { learnerGuardianService } from '../../services/learnerGuardianService';
 import { enrolmentService } from '../../services/enrolmentService';
 // Enrolment types used transitively via service
-import { ArrowLeft, User, Phone, Mail, MapPin, Plus, Trash2, GraduationCap, CheckCircle2, XCircle, Clock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, MapPin, Plus, Trash2, GraduationCap, CheckCircle2, XCircle, Clock, ShieldCheck, CreditCard, Receipt } from 'lucide-react';
 
 export const LearnerProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,10 +26,15 @@ export const LearnerProfilePage: React.FC = () => {
   const { links, loading: loadingLinks } = useLearnerGuardians(id);
   const { enrolments, loading: loadingEnrolments } = useLearnerEnrolments(id);
   const { records: attendanceRecords, loading: loadingAttendance } = useLearnerAttendance(id);
+  const { invoices, refresh: refreshInvoices } = useInvoices({ learnerId: id });
+  const { payments } = usePayments({ learnerId: id });
   const { programmes } = useProgrammes();
   const { groups } = useProgrammeGroups();
   const { sessions } = useSessions();
   const { authUser, organisationId } = useAuth();
+
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [selectedReceiptPaymentId, setSelectedReceiptPaymentId] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedGuardianId, setSelectedGuardianId] = useState('');
@@ -318,6 +328,162 @@ export const LearnerProfilePage: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Finance & Fee Ledger */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-indigo-600" /> Finance & Fee Ledger
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Invoices, payment allocations, and outstanding balances.</p>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              to={`/finance/payments?record=true`}
+              className="btn btn-secondary text-xs flex items-center gap-1"
+            >
+              <CreditCard className="w-3.5 h-3.5" /> Record Payment
+            </Link>
+          </div>
+        </div>
+
+        {/* Financial KPIs */}
+        {(() => {
+          const activeInvoices = invoices.filter(i => i.invoiceStatus !== 'cancelled');
+          const totalInvoiced = activeInvoices.reduce((sum, i) => sum + i.total, 0);
+          const totalPaid = activeInvoices.reduce((sum, i) => sum + i.amountPaid, 0);
+          const currentBalance = activeInvoices.reduce((sum, i) => sum + i.balance, 0);
+
+          return (
+            <div className="grid grid-cols-3 gap-3 p-4 bg-slate-50 border-b border-gray-200 text-center">
+              <div>
+                <p className="text-xs text-slate-500 font-semibold uppercase">Total Invoiced</p>
+                <p className="text-base font-bold text-slate-800 mt-0.5">{formatMoney(totalInvoiced)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-semibold uppercase">Total Paid</p>
+                <p className="text-base font-bold text-emerald-700 mt-0.5">{formatMoney(totalPaid)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-semibold uppercase">Balance Due</p>
+                <p className={`text-base font-extrabold mt-0.5 ${currentBalance > 0 ? 'text-rose-700' : 'text-slate-700'}`}>
+                  {formatMoney(currentBalance)}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Invoices List */}
+        <div className="p-4 space-y-4">
+          <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Learner Invoices</h4>
+          {invoices.length === 0 ? (
+            <p className="text-xs text-slate-400">No invoices issued for this learner yet.</p>
+          ) : (
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-600 font-semibold uppercase">
+                  <tr>
+                    <th className="py-2 px-3">Invoice #</th>
+                    <th className="py-2 px-3">Due Date</th>
+                    <th className="py-2 px-3 text-right">Total</th>
+                    <th className="py-2 px-3 text-right">Paid</th>
+                    <th className="py-2 px-3 text-right">Balance</th>
+                    <th className="py-2 px-3 text-center">Status</th>
+                    <th className="py-2 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {invoices.map(inv => (
+                    <tr key={inv.id} className="hover:bg-slate-50">
+                      <td className="py-2 px-3 font-mono font-bold text-slate-900">{inv.invoiceNumber}</td>
+                      <td className="py-2 px-3 text-slate-600">{inv.dueDate}</td>
+                      <td className="py-2 px-3 text-right text-slate-700">{formatMoney(inv.total, inv.currency)}</td>
+                      <td className="py-2 px-3 text-right text-emerald-700 font-medium">{formatMoney(inv.amountPaid, inv.currency)}</td>
+                      <td className="py-2 px-3 text-right font-bold text-rose-700">{formatMoney(inv.balance, inv.currency)}</td>
+                      <td className="py-2 px-3 text-center capitalize">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          inv.invoiceStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' :
+                          inv.invoiceStatus === 'overdue' ? 'bg-rose-100 text-rose-800' :
+                          inv.invoiceStatus === 'partially_paid' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {inv.invoiceStatus}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <button
+                          onClick={() => setSelectedInvoiceId(inv.id)}
+                          className="text-indigo-600 hover:text-indigo-800 font-semibold"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Payments List */}
+          <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider pt-2">Recorded Payments & Receipts</h4>
+          {payments.length === 0 ? (
+            <p className="text-xs text-slate-400">No payments recorded for this learner yet.</p>
+          ) : (
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-600 font-semibold uppercase">
+                  <tr>
+                    <th className="py-2 px-3">Date</th>
+                    <th className="py-2 px-3">Payment #</th>
+                    <th className="py-2 px-3">Method</th>
+                    <th className="py-2 px-3 text-right">Amount</th>
+                    <th className="py-2 px-3 text-center">Status</th>
+                    <th className="py-2 px-3 text-right">Receipt</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {payments.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50">
+                      <td className="py-2 px-3 text-slate-600">{p.paymentDate}</td>
+                      <td className="py-2 px-3 font-mono font-bold text-slate-900">{p.paymentNumber}</td>
+                      <td className="py-2 px-3 capitalize text-slate-600">{p.paymentMethod.replace('_', ' ')}</td>
+                      <td className="py-2 px-3 text-right font-bold text-emerald-700">{formatMoney(p.amount, p.currency)}</td>
+                      <td className="py-2 px-3 text-center capitalize">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                          {p.paymentStatus.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <button
+                          onClick={() => setSelectedReceiptPaymentId(p.id)}
+                          className="text-indigo-600 hover:text-indigo-800 font-semibold inline-flex items-center gap-1"
+                        >
+                          <Receipt className="w-3.5 h-3.5" /> Receipt
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Invoice Detail Modal */}
+      <InvoiceDetailModal
+        invoiceId={selectedInvoiceId}
+        onClose={() => setSelectedInvoiceId(null)}
+        onInvoiceUpdated={() => refreshInvoices()}
+      />
+
+      {/* Receipt Modal */}
+      <ReceiptModal
+        paymentId={selectedReceiptPaymentId}
+        onClose={() => setSelectedReceiptPaymentId(null)}
+      />
 
       {/* Link Guardian Modal */}
       {isModalOpen && (
