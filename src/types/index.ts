@@ -481,7 +481,22 @@ export type AuditAction =
   | 'DISMISS_OPERATIONAL_ALERT'
   | 'RESOLVE_OPERATIONAL_ALERT'
   | 'CREATE_FOLLOW_UP_FROM_ALERT'
-  | 'EXPORT_REPORT';
+  | 'EXPORT_REPORT'
+  // Phase 5B: Workflow Automation & Notifications
+  | 'CREATE_AUTOMATION_RULE'
+  | 'UPDATE_AUTOMATION_RULE'
+  | 'ENABLE_AUTOMATION_RULE'
+  | 'DISABLE_AUTOMATION_RULE'
+  | 'PAUSE_AUTOMATION_RULE'
+  | 'ARCHIVE_AUTOMATION_RULE'
+  | 'RUN_AUTOMATION_RULE'
+  | 'RETRY_AUTOMATION_EXECUTION'
+  | 'CREATE_NOTIFICATION'
+  | 'MARK_NOTIFICATION_READ'
+  | 'DISMISS_NOTIFICATION'
+  | 'CREATE_FOLLOW_UP_FROM_AUTOMATION'
+  | 'PREPARE_COMMUNICATION_FROM_AUTOMATION'
+  | 'UPDATE_NOTIFICATION_PREFERENCES';
 
 export interface AuditLog {
   id: string;
@@ -1164,6 +1179,163 @@ export interface OperationalReportRow {
   [key: string]: string | number | boolean | null | undefined;
 }
 
+// ─── Phase 5B: Workflow Automation & Notifications ──────────────────
 
+export type RuleCategory =
+  | 'attendance'
+  | 'finance'
+  | 'consent'
+  | 'transport'
+  | 'event'
+  | 'instrument'
+  | 'costume'
+  | 'communication'
+  | 'follow_up'
+  | 'programme'
+  | 'general';
 
+export type TriggerType =
+  | 'record_created'
+  | 'record_updated'
+  | 'status_changed'
+  | 'date_reached'
+  | 'date_approaching'
+  | 'threshold_reached'
+  | 'pattern_detected'
+  | 'scheduled_check'
+  | 'manual_run';
 
+export type AutomationActionType =
+  | 'create_follow_up'
+  | 'create_notification'
+  | 'prepare_communication'
+  | 'assign_owner'
+  | 'change_attention_state'
+  | 'create_operational_alert'
+  | 'schedule_recheck';
+
+export type RuleStatus = 'active' | 'paused' | 'disabled' | 'archived';
+export type RulePriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface TriggerConfig {
+  daysBefore?: number;
+  thresholdPercent?: number;
+  consecutiveCount?: number;
+  targetStatus?: string;
+  field?: string;
+  scheduleFrequency?: 'hourly' | 'daily' | 'weekly';
+  minSessions?: number;
+  overdueDays?: number;
+  cooldownHours?: number;
+  [key: string]: unknown;
+}
+
+export interface ConditionPredicate {
+  field: string;
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'in' | 'contains' | 'is_empty' | 'is_not_empty';
+  value?: unknown;
+}
+
+export interface AutomationAction {
+  actionType: AutomationActionType;
+  target?: string;
+  category?: string;
+  priority?: RulePriority;
+  dueDaysFromNow?: number;
+  titleTemplate?: string;
+  messageTemplate?: string;
+  channel?: CommunicationChannel;
+  autoSend?: boolean;
+  config?: Record<string, unknown>;
+}
+
+export interface AutomationRule extends BaseRecord {
+  name: string;
+  description?: string;
+  ruleCategory: RuleCategory;
+  triggerType: TriggerType;
+  triggerConfig: TriggerConfig;
+  conditions: ConditionPredicate[];
+  actions: AutomationAction[];
+  priority: RulePriority;
+  ruleStatus: RuleStatus;
+  cooldownMinutes?: number;
+  deduplicationWindowHours?: number;
+  lastEvaluatedAt?: string;
+  lastTriggeredAt?: string;
+  isTemplate?: boolean;
+}
+
+export type ExecutionStatus = 'triggered' | 'completed' | 'partially_completed' | 'failed' | 'skipped';
+
+export interface AutomationExecutionDetail {
+  conditionsMatched?: boolean;
+  affectedEntitiesCount?: number;
+  actionsTaken?: Array<{
+    actionType: AutomationActionType;
+    targetId?: string;
+    targetType?: string;
+    status: 'success' | 'failed' | 'skipped';
+    summary?: string;
+    error?: string;
+  }>;
+}
+
+export interface AutomationExecution extends BaseRecord {
+  automationRuleId: string;
+  ruleName: string;
+  ruleCategory: RuleCategory;
+  triggeredAt: string;
+  triggerEntityType?: string;
+  triggerEntityId?: string;
+  executionStatus: ExecutionStatus;
+  actionsAttempted: number;
+  actionsCompleted: number;
+  actionsFailed: number;
+  deduplicationKey?: string;
+  errorMessage?: string;
+  isDryRun?: boolean;
+  executionDetails?: AutomationExecutionDetail;
+}
+
+export type NotificationType =
+  | 'attendance'
+  | 'finance'
+  | 'consent'
+  | 'transport'
+  | 'event'
+  | 'asset'
+  | 'communication'
+  | 'follow_up'
+  | 'system';
+
+export type NotificationStatus = 'unread' | 'read' | 'dismissed';
+
+export interface AppNotification extends BaseRecord {
+  recipientUserId: string;
+  recipientRole?: AuthRole;
+  notificationType: NotificationType;
+  title: string;
+  message: string;
+  severity: AlertSeverity; // 'info' | 'attention' | 'urgent' | 'critical'
+  relatedEntityType?: string;
+  relatedEntityId?: string;
+  actionUrl?: string;
+  notificationStatus: NotificationStatus;
+  readAt?: string;
+  dismissedAt?: string;
+  automationRuleId?: string;
+  automationExecutionId?: string;
+}
+
+export interface NotificationPreference extends BaseRecord {
+  userId: string;
+  attendance: boolean;
+  finance: boolean;
+  events: boolean;
+  consent: boolean;
+  transport: boolean;
+  assets: boolean;
+  followUps: boolean;
+  communication: boolean;
+}

@@ -14,13 +14,24 @@ import {
   CreditCard,
   MessageSquare,
   FolderArchive,
-  BarChart3
+  BarChart3,
+  Zap
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  {
+    name: 'Automation',
+    icon: Zap,
+    children: [
+      { name: 'Overview', path: '/automation' },
+      { name: 'Rules', path: '/automation/rules' },
+      { name: 'Activity Log', path: '/automation/activity' },
+      { name: 'Notifications', path: '/notifications' },
+    ]
+  },
   {
     name: 'Analytics',
     icon: BarChart3,

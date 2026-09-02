@@ -15,6 +15,7 @@ import { useDocuments } from '../../hooks/useDocuments';
 import { useOperationalAlerts } from '../../hooks/useOperationalAlerts';
 import { NeedsAttentionWidget } from '../analytics/components/NeedsAttentionWidget';
 import { formatMoney } from '../../lib/money';
+import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 import { 
   Users, 
   UserSquare2, 
@@ -30,7 +31,9 @@ import {
   CreditCard,
   MessageSquare,
   FolderArchive,
-  BarChart3
+  BarChart3,
+  Zap,
+  Bell
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -57,6 +60,7 @@ export const DashboardPage: React.FC = () => {
     dismissAlert, 
     createFollowUp 
   } = useOperationalAlerts();
+  const { unreadCount } = useUnreadNotifications();
 
   const loading = loadingLearners || loadingGuardians || loadingStaff || loadingProgrammes || loadingGroups || loadingEnrolments || loadingSessions || loadingFollowUps;
 
@@ -88,7 +92,10 @@ export const DashboardPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
         <div className="flex gap-2">
-          <Link to="/analytics" className="btn btn-secondary text-sm flex items-center gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+          <Link to="/automation" className="btn btn-secondary text-sm flex items-center gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <Zap className="w-4 h-4 text-indigo-600" /> Automation Rules
+          </Link>
+          <Link to="/analytics" className="btn btn-secondary text-sm flex items-center gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50">
             <BarChart3 className="w-4 h-4 text-indigo-600" /> Executive Analytics
           </Link>
           <Link to="/communication/compose" className="btn btn-secondary text-sm flex items-center gap-1">
@@ -134,6 +141,11 @@ export const DashboardPage: React.FC = () => {
           title="Payments (This Month)" 
           value={formatMoney(financeMetrics?.paymentsThisMonth || 0)} 
           icon={<CreditCard className="w-6 h-6 text-emerald-500" />} 
+        />
+        <StatCard 
+          title="Unread Alerts" 
+          value={unreadCount} 
+          icon={<Bell className="w-6 h-6 text-rose-500" />} 
         />
       </div>
 

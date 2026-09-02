@@ -77,6 +77,13 @@ import { EventAnalyticsPage } from './features/analytics/EventAnalyticsPage';
 import { FinanceAnalyticsPage } from './features/analytics/FinanceAnalyticsPage';
 import { ReportsPage } from './features/analytics/ReportsPage';
 
+// Automation & Notification Pages
+import { AutomationOverviewPage } from './features/automation/AutomationOverviewPage';
+import { AutomationRulesPage } from './features/automation/AutomationRulesPage';
+import { AutomationRuleDetailPage } from './features/automation/AutomationRuleDetailPage';
+import { AutomationActivityPage } from './features/automation/AutomationActivityPage';
+import { NotificationsPage } from './features/notifications/NotificationsPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -165,6 +172,13 @@ function App() {
               <Route path="analytics/events" element={<EventAnalyticsPage />} />
               <Route path="analytics/finance" element={<FinanceAnalyticsPage />} />
               <Route path="analytics/reports" element={<ReportsPage />} />
+
+              {/* Automation Module */}
+              <Route path="automation" element={<AutomationOverviewPage />} />
+              <Route path="automation/rules" element={<AutomationRulesPage />} />
+              <Route path="automation/rules/:id" element={<AutomationRuleDetailPage />} />
+              <Route path="automation/activity" element={<AutomationActivityPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
