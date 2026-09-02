@@ -13,13 +13,27 @@ import {
   Bus,
   CreditCard,
   MessageSquare,
-  FolderArchive
+  FolderArchive,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  {
+    name: 'Analytics',
+    icon: BarChart3,
+    children: [
+      { name: 'Overview', path: '/analytics' },
+      { name: 'Learners', path: '/analytics/learners' },
+      { name: 'Programmes', path: '/analytics/programmes' },
+      { name: 'Attendance', path: '/analytics/attendance' },
+      { name: 'Events', path: '/analytics/events' },
+      { name: 'Finance', path: '/analytics/finance' },
+      { name: 'Reports', path: '/analytics/reports' },
+    ]
+  },
   {
     name: 'People',
     icon: Users,

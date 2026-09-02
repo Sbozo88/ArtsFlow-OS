@@ -433,6 +433,15 @@ service cloud.firestore {
       allow delete: if isUserInOrg(resource.data.organisationId); // Allowed for unlinking documents
     }
 
+    // ─── Phase 5A Collections (Operational Intelligence) ──────────
+
+    match /operationalAlerts/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
     // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {
