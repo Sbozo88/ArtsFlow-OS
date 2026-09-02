@@ -442,6 +442,35 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── Phase 5B Collections (Workflow Automation & Notifications) ─
+
+    match /automationRules/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if isUserInOrg(resource.data.organisationId);
+    }
+
+    match /automationExecutions/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update, delete: if false; // Immutable execution history & system evidence
+    }
+
+    match /notifications/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Dismiss only
+    }
+
+    match /notificationPreferences/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
     // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {

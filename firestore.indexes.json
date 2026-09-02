@@ -511,6 +511,49 @@
         { "fieldPath": "organisationId", "order": "ASCENDING" },
         { "fieldPath": "detectedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "automationRules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "ruleStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "automationRules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "ruleCategory", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "automationExecutions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "triggeredAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "automationExecutions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "automationRuleId", "order": "ASCENDING" },
+        { "fieldPath": "triggeredAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "recipientUserId", "order": "ASCENDING" },
+        { "fieldPath": "notificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
