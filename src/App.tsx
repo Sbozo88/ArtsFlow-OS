@@ -68,6 +68,15 @@ import { DocumentDetailPage } from './features/documents/DocumentDetailPage';
 import { DocumentTemplatesPage } from './features/documents/DocumentTemplatesPage';
 import { GeneratedDocumentsPage } from './features/documents/GeneratedDocumentsPage';
 
+// Analytics Pages
+import { AnalyticsOverviewPage } from './features/analytics/AnalyticsOverviewPage';
+import { LearnerAnalyticsPage } from './features/analytics/LearnerAnalyticsPage';
+import { ProgrammeAnalyticsPage } from './features/analytics/ProgrammeAnalyticsPage';
+import { AttendanceAnalyticsPage } from './features/analytics/AttendanceAnalyticsPage';
+import { EventAnalyticsPage } from './features/analytics/EventAnalyticsPage';
+import { FinanceAnalyticsPage } from './features/analytics/FinanceAnalyticsPage';
+import { ReportsPage } from './features/analytics/ReportsPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -147,6 +156,15 @@ function App() {
               <Route path="documents/generated" element={<GeneratedDocumentsPage />} />
               <Route path="documents/templates" element={<DocumentTemplatesPage />} />
               <Route path="documents/:id" element={<DocumentDetailPage />} />
+
+              {/* Analytics Module */}
+              <Route path="analytics" element={<AnalyticsOverviewPage />} />
+              <Route path="analytics/learners" element={<LearnerAnalyticsPage />} />
+              <Route path="analytics/programmes" element={<ProgrammeAnalyticsPage />} />
+              <Route path="analytics/attendance" element={<AttendanceAnalyticsPage />} />
+              <Route path="analytics/events" element={<EventAnalyticsPage />} />
+              <Route path="analytics/finance" element={<FinanceAnalyticsPage />} />
+              <Route path="analytics/reports" element={<ReportsPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

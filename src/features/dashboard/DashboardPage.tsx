@@ -9,10 +9,11 @@ import { useSessions } from '../../hooks/useSessions';
 import { useFollowUps } from '../../hooks/useFollowUps';
 import { useConsentRequests } from '../../hooks/useConsentRequests';
 import { useEventTransportPlans } from '../../hooks/useEventTransportPlans';
-import { useTransportPassengers } from '../../hooks/useTransportPassengers';
 import { useFinanceDashboard } from '../../hooks/useFinanceDashboard';
 import { useCommunications } from '../../hooks/useCommunications';
 import { useDocuments } from '../../hooks/useDocuments';
+import { useOperationalAlerts } from '../../hooks/useOperationalAlerts';
+import { NeedsAttentionWidget } from '../analytics/components/NeedsAttentionWidget';
 import { formatMoney } from '../../lib/money';
 import { 
   Users, 
@@ -22,14 +23,14 @@ import {
   Activity,
   CalendarCheck,
   ClipboardList,
-  AlertTriangle,
   Plus,
   FileCheck,
   Bus,
   DollarSign,
   CreditCard,
   MessageSquare,
-  FolderArchive
+  FolderArchive,
+  BarChart3
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -44,10 +45,18 @@ export const DashboardPage: React.FC = () => {
   const { followUps, loading: loadingFollowUps } = useFollowUps();
   const { requests: consentRequests } = useConsentRequests();
   const { plans: transportPlans } = useEventTransportPlans();
-  const { passengers: allPassengers } = useTransportPassengers();
   const { metrics: financeMetrics } = useFinanceDashboard('this_month');
   const { communications } = useCommunications();
   const { documents } = useDocuments();
+  const { 
+    alerts, 
+    loading: loadingAlerts, 
+    scanning, 
+    scanNow, 
+    acknowledgeAlert, 
+    dismissAlert, 
+    createFollowUp 
+  } = useOperationalAlerts();
 
   const loading = loadingLearners || loadingGuardians || loadingStaff || loadingProgrammes || loadingGroups || loadingEnrolments || loadingSessions || loadingFollowUps;
 
@@ -59,15 +68,10 @@ export const DashboardPage: React.FC = () => {
   const activeEnrolments = enrolments.filter(e => e.enrolmentStatus === 'active');
   const todaySessions = sessions.filter(s => s.date === today && s.sessionStatus !== 'cancelled');
   const openFollowUps = followUps.filter(f => f.followUpStatus === 'open' || f.followUpStatus === 'in_progress');
-  const urgentFollowUps = followUps.filter(f => (f.followUpStatus === 'open' || f.followUpStatus === 'in_progress') && f.priority === 'urgent');
 
   // Phase 3B Indicators
   const pendingConsentCount = consentRequests.filter(r => ['pending', 'sent', 'submitted'].includes(r.requestStatus)).length;
   const upcomingTransportPlans = transportPlans.filter(p => p.departureDate >= today && p.transportStatus !== 'completed' && p.transportStatus !== 'cancelled');
-  const transportIssues = transportPlans.filter(p => {
-    const passengerCount = allPassengers.filter(pass => pass.eventTransportPlanId === p.id).length;
-    return passengerCount > p.vehicleCapacity;
-  });
 
   // Phase 4B Indicators
   const messagesToday = communications.filter(c => c.createdAt.startsWith(today)).length;
@@ -84,6 +88,9 @@ export const DashboardPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
         <div className="flex gap-2">
+          <Link to="/analytics" className="btn btn-secondary text-sm flex items-center gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <BarChart3 className="w-4 h-4 text-indigo-600" /> Executive Analytics
+          </Link>
           <Link to="/communication/compose" className="btn btn-secondary text-sm flex items-center gap-1">
             <MessageSquare className="w-4 h-4 text-indigo-600" /> Compose Message
           </Link>
@@ -130,41 +137,17 @@ export const DashboardPage: React.FC = () => {
         />
       </div>
 
-      {/* Transport Warnings */}
-      {transportIssues.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <h3 className="text-md font-medium text-amber-800 mb-2 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-600" /> Transport Issues Requiring Attention
-          </h3>
-          <div className="space-y-2">
-            {transportIssues.map(p => (
-              <div key={p.id} className="p-2 bg-white rounded border border-amber-100 text-sm text-amber-900">
-                <span className="font-semibold">{p.planName}</span> is currently <strong>over vehicle capacity</strong>.
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Urgent Follow-Ups */}
-      {urgentFollowUps.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-md font-medium text-red-800 mb-2 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5" /> Urgent Follow-Ups
-          </h3>
-          <div className="space-y-2">
-            {urgentFollowUps.map(f => {
-              const learner = learners.find(l => l.id === f.learnerId);
-              return (
-                <Link key={f.id} to="/follow-ups" className="block p-2 bg-white rounded border border-red-100 hover:bg-red-50 text-sm">
-                  <span className="font-medium text-red-700">{f.subject}</span>
-                  {learner && <span className="text-red-500 ml-2">— {learner.firstName} {learner.lastName}</span>}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Needs Attention Section (Phase 5A Intelligence) */}
+      <NeedsAttentionWidget
+        alerts={alerts}
+        loading={loadingAlerts || scanning}
+        onScan={scanNow}
+        onAcknowledge={acknowledgeAlert}
+        onDismiss={dismissAlert}
+        onCreateFollowUp={async (id, opts) => {
+          await createFollowUp(id, opts);
+        }}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Sessions */}

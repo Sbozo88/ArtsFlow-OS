@@ -475,7 +475,13 @@ export type AuditAction =
   | 'LINK_DOCUMENT'
   | 'UNLINK_DOCUMENT'
   | 'CREATE_DOCUMENT_TEMPLATE'
-  | 'GENERATE_DOCUMENT';
+  | 'GENERATE_DOCUMENT'
+  // Phase 5A: Reporting, Analytics & Operational Intelligence
+  | 'ACKNOWLEDGE_OPERATIONAL_ALERT'
+  | 'DISMISS_OPERATIONAL_ALERT'
+  | 'RESOLVE_OPERATIONAL_ALERT'
+  | 'CREATE_FOLLOW_UP_FROM_ALERT'
+  | 'EXPORT_REPORT';
 
 export interface AuditLog {
   id: string;
@@ -1011,6 +1017,153 @@ export interface DocumentLink extends BaseRecord {
   entityType: string; // 'learner' | 'guardian' | 'staff' | 'event' | 'consentRequest' | 'invoice' | 'payment' | 'transportPlan' | 'group'
   entityId: string;
 }
+
+// ─── Phase 5A: Reporting, Analytics & Operational Intelligence ─────
+
+export type OperationalAlertType =
+  | 'attendance_low'
+  | 'attendance_consecutive_absence'
+  | 'finance_overdue'
+  | 'consent_missing'
+  | 'transport_capacity'
+  | 'instrument_overdue'
+  | 'costume_overdue'
+  | 'communication_failed'
+  | 'followup_overdue';
+
+export type AlertSeverity = 'info' | 'attention' | 'urgent' | 'critical';
+export type AlertStatus = 'active' | 'acknowledged' | 'resolved' | 'dismissed';
+
+export interface OperationalAlert extends BaseRecord {
+  alertType: OperationalAlertType;
+  severity: AlertSeverity;
+  title: string;
+  description: string;
+  relatedEntityType?: string;
+  relatedEntityId?: string;
+  detectedAt: string;
+  alertStatus: AlertStatus;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  dismissedAt?: string;
+  dismissedBy?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type DateRangePreset = 'today' | 'this_week' | 'this_month' | 'last_month' | 'this_year' | 'custom';
+
+export interface DateRangeFilter {
+  preset: DateRangePreset;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+}
+
+export interface AnalyticsOverviewMetrics {
+  activeLearners: number;
+  activeEnrolments: number;
+  activeProgrammes: number;
+  activeGroups: number;
+  attendanceRate: number;
+  sessionsHeld: number;
+  upcomingEvents: number;
+  totalInvoiced: number; // in cents
+  totalReceived: number; // in cents
+  outstandingFinance: number; // in cents
+  pendingConsentCount: number;
+  openFollowUpsCount: number;
+  activeAlertsCount: number;
+}
+
+export interface LearnerAnalyticsSummary {
+  totalLearners: number;
+  activeLearners: number;
+  inactiveLearners: number;
+  newLearnersInPeriod: number;
+  multiEnrolledCount: number;
+  atRiskCount: number;
+  byProgramme: Array<{ programmeId: string; programmeName: string; count: number }>;
+  byStatus: Record<string, number>;
+  atRiskLearners: Array<{
+    learner: Learner;
+    riskReasons: string[];
+    attendanceRate?: number;
+    consecutiveAbsences?: number;
+    overdueFinance?: number;
+    pendingConsent?: boolean;
+    openFollowUps?: number;
+  }>;
+}
+
+export interface ProgrammeAnalyticsSummary {
+  programmeId: string;
+  programmeName: string;
+  groupCount: number;
+  enrolmentCount: number;
+  activeLearners: number;
+  teacherCount: number;
+  sessionsHeld: number;
+  attendanceRate: number;
+  upcomingEventsCount: number;
+  totalInvoiced: number;
+  totalReceived: number;
+  outstandingBalance: number;
+  collectionRate: number;
+}
+
+export interface AttendanceAnalyticsSummary {
+  sessionsHeld: number;
+  attendanceRecordsCount: number;
+  presentCount: number;
+  absentCount: number;
+  lateCount: number;
+  excusedCount: number;
+  overallAttendanceRate: number;
+  weeklyTrend: Array<{ weekLabel: string; rate: number; sessionCount: number }>;
+  dayOfWeekPattern: Array<{ day: string; dayIndex: number; rate: number; sessionCount: number }>;
+  lowAttendanceGroups: Array<{ groupId: string; groupName: string; programmeName: string; rate: number; sessionCount: number }>;
+  consecutiveAbsenceLearners: Array<{
+    learnerId: string;
+    learnerName: string;
+    groupName: string;
+    consecutiveAbsences: number;
+    lastAbsenceDate?: string;
+  }>;
+}
+
+export interface EventReadinessCheck {
+  eventId: string;
+  eventName: string;
+  eventDate: string;
+  participantsCount: number;
+  consentTotal: number;
+  consentApproved: number;
+  consentPending: number;
+  staffCount: number;
+  transportPlanCount: number;
+  transportSeatsNeeded: number;
+  transportCapacity: number;
+  transportStatus: 'none_needed' | 'confirmed' | 'over_capacity' | 'unassigned';
+  scheduleItemsCount: number;
+  performancesCount: number;
+  overallReadiness: 'ready' | 'attention_needed' | 'critical';
+  readinessIssues: string[];
+}
+
+export interface FinanceAgeingSummary {
+  current: number;    // Not yet due
+  days1_30: number;   // 1 to 30 days overdue
+  days31_60: number;  // 31 to 60 days overdue
+  days61_90: number;  // 61 to 90 days overdue
+  days90Plus: number; // >90 days overdue
+  totalOutstanding: number;
+}
+
+export interface OperationalReportRow {
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 
 
 
