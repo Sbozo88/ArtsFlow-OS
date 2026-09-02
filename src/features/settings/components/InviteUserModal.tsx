@@ -45,6 +45,10 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
     super_admin: {
       title: 'Super Admin',
       desc: 'Complete root access across the multi-tenant system.'
+    },
+    guardian: {
+      title: 'Guardian (External Portal)',
+      desc: 'Self-service family access for linked learners only. Managed directly via the Guardians section.'
     }
   };
 

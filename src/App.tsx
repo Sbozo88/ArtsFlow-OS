@@ -109,6 +109,27 @@ import { UsersAndRolesPage } from './features/settings/UsersAndRolesPage';
 import { BrandingSettingsPage } from './features/settings/BrandingSettingsPage';
 import { SystemSettingsPage } from './features/settings/SystemSettingsPage';
 import { SettingsAuditPage } from './features/settings/SettingsAuditPage';
+import { PortalSettingsPage } from './features/settings/PortalSettingsPage';
+
+// Guardian Portal Pages & Components (Phase 7A)
+import { GuardianProtectedRoute } from './features/portal/components/GuardianProtectedRoute';
+import { GuardianPortalLayout } from './features/portal/components/GuardianPortalLayout';
+import { GuardianLoginPage } from './features/portal/pages/GuardianLoginPage';
+import { GuardianInvitationAcceptPage } from './features/portal/pages/GuardianInvitationAcceptPage';
+import { GuardianDashboardPage } from './features/portal/pages/GuardianDashboardPage';
+import { GuardianLearnersPage } from './features/portal/pages/GuardianLearnersPage';
+import { GuardianLearnerDetailPage } from './features/portal/pages/GuardianLearnerDetailPage';
+import { GuardianAttendancePage } from './features/portal/pages/GuardianAttendancePage';
+import { GuardianEventsPage } from './features/portal/pages/GuardianEventsPage';
+import { GuardianConsentPage } from './features/portal/pages/GuardianConsentPage';
+import { GuardianConsentSubmitPage } from './features/portal/pages/GuardianConsentSubmitPage';
+import { GuardianTransportPage } from './features/portal/pages/GuardianTransportPage';
+import { GuardianFinancePage } from './features/portal/pages/GuardianFinancePage';
+import { GuardianInvoiceViewPage } from './features/portal/pages/GuardianInvoiceViewPage';
+import { GuardianReceiptViewPage } from './features/portal/pages/GuardianReceiptViewPage';
+import { GuardianDocumentsPage } from './features/portal/pages/GuardianDocumentsPage';
+import { GuardianMessagesPage } from './features/portal/pages/GuardianMessagesPage';
+import { GuardianProfilePage } from './features/portal/pages/GuardianProfilePage';
 
 function App() {
   return (
@@ -118,6 +139,28 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/consent/submit/:requestId" element={<GuardianConsentPublicPage />} />
+          <Route path="/portal/login" element={<GuardianLoginPage />} />
+          <Route path="/portal/invite/:token" element={<GuardianInvitationAcceptPage />} />
+
+          {/* Guardian Portal Protected Routes (Phase 7A) */}
+          <Route element={<GuardianProtectedRoute />}>
+            <Route path="/portal" element={<GuardianPortalLayout />}>
+              <Route index element={<GuardianDashboardPage />} />
+              <Route path="learners" element={<GuardianLearnersPage />} />
+              <Route path="learners/:learnerId" element={<GuardianLearnerDetailPage />} />
+              <Route path="attendance" element={<GuardianAttendancePage />} />
+              <Route path="events" element={<GuardianEventsPage />} />
+              <Route path="consent" element={<GuardianConsentPage />} />
+              <Route path="consent/:requestId" element={<GuardianConsentSubmitPage />} />
+              <Route path="transport" element={<GuardianTransportPage />} />
+              <Route path="finance" element={<GuardianFinancePage />} />
+              <Route path="finance/invoices/:invoiceId" element={<GuardianInvoiceViewPage />} />
+              <Route path="finance/receipts/:receiptId" element={<GuardianReceiptViewPage />} />
+              <Route path="documents" element={<GuardianDocumentsPage />} />
+              <Route path="messages" element={<GuardianMessagesPage />} />
+              <Route path="profile" element={<GuardianProfilePage />} />
+            </Route>
+          </Route>
 
           {/* Onboarding Route */}
           <Route element={<OnboardingRoute />}>
@@ -224,6 +267,7 @@ function App() {
               <Route path="settings/programmes" element={<ProgrammeSettingsPage />} />
               <Route path="settings/attendance" element={<AttendanceSettingsPage />} />
               <Route path="settings/finance" element={<FinanceSettingsPage />} />
+              <Route path="settings/portal" element={<PortalSettingsPage />} />
               <Route path="settings/staff" element={<StaffSettingsPage />} />
               <Route path="settings/communication" element={<CommunicationSettingsPage />} />
               <Route path="settings/automation" element={<AutomationSettingsPage />} />

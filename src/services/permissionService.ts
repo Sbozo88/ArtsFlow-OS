@@ -40,7 +40,8 @@ export const ROLE_PERMISSIONS: Record<AuthRole, Permission[]> = {
     'learners.read',
     'attendance.read',
     'finance.read'
-  ]
+  ],
+  guardian: []
 };
 
 export const permissionService = {

@@ -18,6 +18,10 @@ class SessionRepository extends BaseRepository<Session> {
     return snapshot.docs.map(doc => doc.data() as Session);
   }
 
+  async getByGroup(orgId: string, groupId: string): Promise<Session[]> {
+    return this.getByGroupId(orgId, groupId);
+  }
+
   async getByDate(orgId: string, date: string): Promise<Session[]> {
     const q = query(
       this.getCollection(),

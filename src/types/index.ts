@@ -24,7 +24,7 @@ export interface Organisation extends BaseRecord {
   updatedBy: string;
 }
 
-export type AuthRole = 'super_admin' | 'organisation_admin' | 'programme_director' | 'teacher' | 'finance' | 'viewer';
+export type AuthRole = 'super_admin' | 'organisation_admin' | 'programme_director' | 'teacher' | 'finance' | 'viewer' | 'guardian';
 
 // Auth User Record (Simplified for Context)
 export interface AuthUser {
@@ -61,6 +61,7 @@ export interface Learner extends BaseRecord {
   medicalNotes?: string;
   learnerStatus: RecordStatus;
   notes?: string;
+  photoUrl?: string;
 }
 
 export interface Guardian extends BaseRecord {
@@ -536,7 +537,20 @@ export type AuditAction =
   | 'ACCEPT_INVITATION'
   | 'CHANGE_USER_ROLE'
   | 'DISABLE_USER'
-  | 'RESTORE_USER';
+  | 'RESTORE_USER'
+  // Phase 7A: Guardian Portal & External Access
+  | 'INVITE_GUARDIAN_PORTAL'
+  | 'ACTIVATE_GUARDIAN_PORTAL'
+  | 'REVOKE_GUARDIAN_PORTAL'
+  | 'DISABLE_GUARDIAN_PORTAL'
+  | 'RESTORE_GUARDIAN_PORTAL'
+  | 'GUARDIAN_SUBMIT_CONSENT'
+  | 'GUARDIAN_VIEW_FINANCE'
+  | 'GUARDIAN_UPDATE_CONTACT'
+  | 'GUARDIAN_CREATE_CHANGE_REQUEST'
+  | 'GUARDIAN_REVIEW_CHANGE_REQUEST'
+  | 'GUARDIAN_DOWNLOAD_DOCUMENT'
+  | 'UPDATE_PORTAL_SETTINGS';
 
 export interface AuditLog {
   id: string;
@@ -1042,6 +1056,7 @@ export interface DocumentRecord extends BaseRecord {
   versionNumber: number;
   uploadedBy?: string;
   generatedBy?: string;
+  portalVisibility?: 'internal' | 'guardian' | 'staff' | 'public';
   notes?: string;
 }
 
@@ -1698,6 +1713,23 @@ export interface OrganisationSystemSettings {
   recordsPerPage: number;
 }
 
+export interface OrganisationPortalSettings {
+  guardianPortalEnabled: boolean;
+  showAttendance: boolean;
+  showAttendanceHistory: boolean;
+  showFinance: boolean;
+  showPayments: boolean;
+  showEvents: boolean;
+  showConsent: boolean;
+  showTransport: boolean;
+  showDocuments: boolean;
+  showMessages: boolean;
+  showTeacherNames: boolean;
+  allowContactUpdates: boolean;
+  allowDirectProfileEdit: boolean; // if false, creates portalChangeRequests for staff review
+  financeRequiresFinancialContact: boolean; // default true: only financialContact=true guardians see billing
+}
+
 export interface OrganisationSettings extends BaseRecord {
   profile: OrganisationProfileSettings;
   branding: OrganisationBrandingSettings;
@@ -1711,6 +1743,7 @@ export interface OrganisationSettings extends BaseRecord {
   automation: OrganisationAutomationSettings;
   documents: OrganisationDocumentSettings;
   system: OrganisationSystemSettings;
+  portal: OrganisationPortalSettings;
 }
 
 export type CalendarPeriodType = 'term' | 'semester' | 'quarter' | 'cycle' | 'season' | 'custom';
@@ -1765,5 +1798,288 @@ export type Permission =
   | 'automation.manage'
   | 'settings.manage'
   | 'users.manage';
+
+// ─── Phase 7A: Guardian Portal & External Access ────────────────────
+
+export type GuardianPortalAccessStatus = 'invited' | 'active' | 'disabled' | 'revoked';
+
+export interface GuardianPortalAccess extends BaseRecord {
+  userId: string;
+  guardianId: string;
+  accessStatus: GuardianPortalAccessStatus;
+  invitedAt?: string;
+  acceptedAt?: string;
+  lastAccessAt?: string;
+  revokedAt?: string;
+  revocationReason?: string;
+  notes?: string;
+}
+
+export interface GuardianInvitation extends BaseRecord {
+  guardianId: string;
+  email: string;
+  token: string;
+  expiresAt: string;
+  invitationStatus: InvitationStatus; // 'pending' | 'accepted' | 'expired' | 'revoked'
+  acceptedByUserId?: string;
+  acceptedAt?: string;
+  invitedBy: string;
+}
+
+export type PortalChangeRequestStatus = 'pending' | 'approved' | 'declined' | 'completed';
+export type PortalChangeRequestType = 'contact_details' | 'address' | 'emergency_contact' | 'other';
+
+export interface PortalChangeRequest extends BaseRecord {
+  guardianId: string;
+  userId: string;
+  requestType: PortalChangeRequestType;
+  fieldName?: string;
+  oldValue?: string;
+  newValue?: string;
+  description?: string;
+  requestStatus: PortalChangeRequestStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  reviewNotes?: string;
+}
+
+// ─── Guardian-Safe View Models (DTOs) ───────────────────────────────
+
+export interface GuardianLearnerSummaryDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  preferredName?: string;
+  dateOfBirth?: string;
+  photoUrl?: string;
+  programmes: {
+    id: string;
+    name: string;
+    type: string;
+    groupName?: string;
+  }[];
+  attendanceRate: number; // e.g. 92.5
+  outstandingConsentCount: number;
+  transportEnrolledCount: number;
+  balanceDueCents: number;
+  relationshipType: string;
+  financialContact: boolean;
+  emergencyContact: boolean;
+}
+
+export interface GuardianProgrammeInfoDto {
+  id: string;
+  name: string;
+  type: string;
+  description?: string;
+  groupName?: string;
+  venue?: string;
+  schedule?: string;
+  teacherDisplayName?: string;
+}
+
+export interface GuardianSessionDto {
+  id: string;
+  programmeId: string;
+  programmeName: string;
+  groupId?: string;
+  groupName?: string;
+  sessionDate: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  venue?: string;
+  sessionType: string;
+}
+
+export interface GuardianAttendanceSummaryDto {
+  learnerId: string;
+  attendanceRate: number; // percentage
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  excusedCount: number;
+  totalEvaluatedSessions: number;
+  recentSessions: {
+    sessionId: string;
+    date: string;
+    sessionTitle: string;
+    status: 'present' | 'late' | 'absent' | 'excused';
+  }[];
+}
+
+export interface GuardianEventDto {
+  id: string;
+  name: string;
+  eventType: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  startTime?: string;
+  endTime?: string;
+  venue: string;
+  address?: string;
+  participationStatus: 'registered' | 'confirmed' | 'declined' | 'withdrawn' | 'attended';
+  consentRequired: boolean;
+  consentStatus?: 'pending' | 'submitted' | 'approved' | 'declined' | 'not_required';
+  consentRequestId?: string;
+  transportAvailable: boolean;
+  transportStatus?: 'not_booked' | 'booked' | 'boarded' | 'returned';
+  scheduleSummary?: string;
+}
+
+export interface GuardianConsentDetailDto {
+  requestId: string;
+  eventId: string;
+  eventTitle: string;
+  eventDate: string;
+  eventVenue: string;
+  learnerId: string;
+  learnerName: string;
+  deadline?: string;
+  requiresTransportApproval: boolean;
+  requiresMedicalDeclaration: boolean;
+  requiresIndemnity: boolean;
+  indemnityText?: string;
+  submissionStatus: 'pending' | 'submitted' | 'approved' | 'declined' | 'superseded';
+  participationApproved?: boolean;
+  transportApproved?: boolean;
+  indemnityAccepted?: boolean;
+  medicalDeclaration?: string;
+  additionalInfo?: string;
+  signedByGuardianName?: string;
+  signedAt?: string;
+}
+
+export interface GuardianTransportPlanDto {
+  planId: string;
+  eventId: string;
+  eventTitle: string;
+  planName: string;
+  pickupLocation: string;
+  destination: string;
+  departureDate: string;
+  departureTime: string;
+  returnDate?: string;
+  returnTime?: string;
+  meetingTime?: string;
+  boardingStatus: 'planned' | 'boarded' | 'absent' | 'cancelled';
+  returnStatus?: 'pending' | 'boarded' | 'returned' | 'not_returning';
+  seatNumber?: string;
+  notes?: string;
+}
+
+export interface GuardianInvoiceDto {
+  id: string;
+  invoiceNumber: string;
+  learnerId: string;
+  learnerName: string;
+  issueDate: string;
+  dueDate: string;
+  currency: string;
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
+  amountPaidCents: number;
+  balanceCents: number;
+  invoiceStatus: InvoiceStatus;
+  lineItems: {
+    description: string;
+    quantity: number;
+    unitAmountCents: number;
+    lineTotalCents: number;
+  }[];
+}
+
+export interface GuardianPaymentDto {
+  id: string;
+  paymentDate: string;
+  amountCents: number;
+  currency: string;
+  paymentMethod: string;
+  reference?: string;
+  receiptNumber?: string;
+  allocations: {
+    invoiceNumber: string;
+    amountCents: number;
+  }[];
+}
+
+export interface GuardianFinanceSummaryDto {
+  learnerId: string;
+  learnerName: string;
+  totalInvoicedCents: number;
+  totalPaidCents: number;
+  outstandingBalanceCents: number;
+  currency: string;
+  invoices: GuardianInvoiceDto[];
+  recentPayments: GuardianPaymentDto[];
+  paymentInstructions?: {
+    bankName?: string;
+    accountHolder?: string;
+    accountNumber?: string;
+    branchCode?: string;
+    referenceFormat?: string;
+  };
+}
+
+export interface GuardianDocumentDto {
+  id: string;
+  name: string;
+  documentType: DocumentType;
+  fileName?: string;
+  downloadUrl?: string;
+  fileSize?: number;
+  createdAt: string;
+  relatedLearnerName?: string;
+  relatedEventTitle?: string;
+}
+
+export interface GuardianMessageDto {
+  id: string;
+  communicationType: CommunicationType;
+  channel: CommunicationChannel;
+  subject?: string;
+  body: string;
+  sentAt?: string;
+  relatedLearnerName?: string;
+  relatedEventTitle?: string;
+}
+
+export interface GuardianProfileDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  mobileNumber: string;
+  address?: string;
+  communicationPreference?: string;
+  linkedLearners: {
+    learnerId: string;
+    learnerName: string;
+    relationshipType: string;
+    financialContact: boolean;
+    emergencyContact: boolean;
+  }[];
+}
+
+export interface GuardianDashboardDto {
+  guardian: {
+    id: string;
+    displayName: string;
+    email?: string;
+  };
+  actionCards: {
+    pendingConsentCount: number;
+    upcomingEventsCount: number;
+    overdueInvoicesCount: number;
+    totalOutstandingBalanceCents: number;
+    unreadNotificationsCount: number;
+  };
+  learners: GuardianLearnerSummaryDto[];
+  nextUpcomingEvent?: GuardianEventDto;
+  nextUpcomingSession?: GuardianSessionDto;
+}
+
 
 
