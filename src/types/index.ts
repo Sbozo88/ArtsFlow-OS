@@ -438,7 +438,26 @@ export type AuditAction =
   | 'MARK_PASSENGER_BOARDED'
   | 'MARK_PASSENGER_ABSENT'
   | 'CONFIRM_TRANSPORT_DEPARTURE'
-  | 'CONFIRM_TRANSPORT_RETURN';
+  | 'CONFIRM_TRANSPORT_RETURN'
+  | 'CREATE_CHARGE_TYPE'
+  | 'UPDATE_CHARGE_TYPE'
+  | 'ARCHIVE_CHARGE_TYPE'
+  | 'CREATE_CHARGE'
+  | 'UPDATE_CHARGE'
+  | 'CANCEL_CHARGE'
+  | 'CREATE_BULK_CHARGES'
+  | 'CREATE_INVOICE'
+  | 'UPDATE_DRAFT_INVOICE'
+  | 'ISSUE_INVOICE'
+  | 'CANCEL_INVOICE'
+  | 'RECORD_PAYMENT'
+  | 'UPDATE_PAYMENT'
+  | 'REVERSE_PAYMENT'
+  | 'ALLOCATE_PAYMENT'
+  | 'REMOVE_PAYMENT_ALLOCATION'
+  | 'CREATE_DISCOUNT'
+  | 'APPROVE_WAIVER'
+  | 'CREATE_FINANCE_FOLLOW_UP';
 
 export interface AuditLog {
   id: string;
@@ -678,4 +697,128 @@ export interface TransportPassenger extends BaseRecord {
   seatNumber?: string;
   notes?: string;
 }
+
+// ─── Phase 4A: Finance & Payments ─────────────────────────────────
+
+export type ChargeTypeCategory = 
+  | 'programme' 
+  | 'tuition' 
+  | 'registration' 
+  | 'event' 
+  | 'transport' 
+  | 'instrument' 
+  | 'costume' 
+  | 'workshop' 
+  | 'competition' 
+  | 'camp' 
+  | 'other';
+
+export type ChargeTypeStatus = 'active' | 'inactive' | 'archived';
+
+export interface ChargeType extends BaseRecord {
+  name: string;
+  description?: string;
+  category: ChargeTypeCategory;
+  defaultAmount?: number; // In cents
+  currency: string;
+  chargeTypeStatus: ChargeTypeStatus;
+}
+
+export type ChargeStatus = 'draft' | 'active' | 'invoiced' | 'partially_waived' | 'waived' | 'cancelled';
+
+export interface Charge extends BaseRecord {
+  learnerId: string;
+  guardianId?: string;
+  chargeTypeId: string;
+  programmeId?: string;
+  groupId?: string;
+  eventId?: string;
+  transportPlanId?: string;
+  description: string;
+  quantity: number;
+  unitAmount: number; // In cents
+  amount: number; // In cents (quantity * unitAmount)
+  currency: string;
+  chargeDate: string;
+  dueDate?: string;
+  chargeStatus: ChargeStatus;
+  discountAmount?: number; // In cents
+  waivedAmount?: number; // In cents
+  waiverReason?: string;
+  waiverApprovedBy?: string;
+  notes?: string;
+}
+
+export type InvoiceStatus = 'draft' | 'issued' | 'partially_paid' | 'paid' | 'overdue' | 'cancelled';
+
+export interface Invoice extends BaseRecord {
+  invoiceNumber: string;
+  learnerId: string;
+  guardianId?: string;
+  issueDate: string;
+  dueDate: string;
+  currency: string;
+  subtotal: number; // In cents
+  discountTotal: number; // In cents
+  waiverTotal: number; // In cents
+  total: number; // In cents
+  amountPaid: number; // In cents
+  balance: number; // In cents
+  invoiceStatus: InvoiceStatus;
+  notes?: string;
+  issuedAt?: string;
+  cancelledAt?: string;
+  cancellationReason?: string;
+}
+
+export interface InvoiceLineItem extends BaseRecord {
+  invoiceId: string;
+  chargeId?: string;
+  description: string;
+  quantity: number;
+  unitAmount: number; // In cents
+  lineTotal: number; // In cents
+}
+
+export type PaymentMethod = 'cash' | 'eft' | 'bank_deposit' | 'card' | 'mobile_payment' | 'other';
+export type PaymentStatus = 'recorded' | 'partially_allocated' | 'allocated' | 'unallocated' | 'reversed';
+
+export interface Payment extends BaseRecord {
+  paymentNumber: string;
+  learnerId?: string;
+  guardianId?: string;
+  paymentDate: string;
+  amount: number; // In cents
+  allocatedAmount?: number; // In cents
+  currency: string;
+  paymentMethod: PaymentMethod;
+  reference?: string;
+  externalReference?: string;
+  receivedBy: string;
+  paymentStatus: PaymentStatus;
+  notes?: string;
+  reversedAt?: string;
+  reversalReason?: string;
+  reversedBy?: string;
+}
+
+export interface PaymentAllocation extends BaseRecord {
+  paymentId: string;
+  invoiceId: string;
+  amount: number; // In cents
+  allocationDate: string;
+}
+
+export type AdjustmentType = 'discount' | 'waiver' | 'credit' | 'correction';
+
+export interface FinanceAdjustment extends BaseRecord {
+  learnerId?: string;
+  invoiceId?: string;
+  chargeId?: string;
+  adjustmentType: AdjustmentType;
+  amount: number; // In cents
+  reason: string;
+  approvedBy: string;
+}
+
 

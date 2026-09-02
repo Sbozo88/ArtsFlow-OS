@@ -10,7 +10,8 @@ import {
   Activity,
   CalendarDays,
   FileCheck,
-  Bus
+  Bus,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -92,6 +93,19 @@ const navItems = [
     children: [
       { name: 'Fleet & Providers', path: '/transport' },
       { name: 'Transport Reports', path: '/transport/reports' },
+    ]
+  },
+  {
+    name: 'Finance',
+    icon: CreditCard,
+    children: [
+      { name: 'Overview', path: '/finance' },
+      { name: 'Invoices', path: '/finance/invoices' },
+      { name: 'Payments & Receipts', path: '/finance/payments' },
+      { name: 'Charges', path: '/finance/charges' },
+      { name: 'Outstanding Balances', path: '/finance/outstanding' },
+      { name: 'Financial Reports', path: '/finance/reports' },
+      { name: 'Charge Types', path: '/finance/charge-types' },
     ]
   },
   { name: 'Follow-Ups', path: '/follow-ups', icon: ClipboardList },

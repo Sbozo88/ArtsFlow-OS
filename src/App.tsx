@@ -47,6 +47,15 @@ import { GuardianConsentPublicPage } from './features/consent/GuardianConsentPub
 import { TransportManagementPage } from './features/transport/TransportManagementPage';
 import { TransportReportsPage } from './features/transport/TransportReportsPage';
 
+// Finance Pages
+import { FinanceOverviewPage } from './features/finance/FinanceOverviewPage';
+import { InvoicesPage } from './features/finance/InvoicesPage';
+import { PaymentsPage } from './features/finance/PaymentsPage';
+import { ChargesPage } from './features/finance/ChargesPage';
+import { OutstandingPage } from './features/finance/OutstandingPage';
+import { FinanceReportsPage } from './features/finance/FinanceReportsPage';
+import { ChargeTypesPage } from './features/finance/ChargeTypesPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -105,6 +114,15 @@ function App() {
               {/* Transport Module */}
               <Route path="transport" element={<TransportManagementPage />} />
               <Route path="transport/reports" element={<TransportReportsPage />} />
+
+              {/* Finance Module */}
+              <Route path="finance" element={<FinanceOverviewPage />} />
+              <Route path="finance/invoices" element={<InvoicesPage />} />
+              <Route path="finance/payments" element={<PaymentsPage />} />
+              <Route path="finance/charges" element={<ChargesPage />} />
+              <Route path="finance/outstanding" element={<OutstandingPage />} />
+              <Route path="finance/reports" element={<FinanceReportsPage />} />
+              <Route path="finance/charge-types" element={<ChargeTypesPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

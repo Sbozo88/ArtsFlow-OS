@@ -10,6 +10,8 @@ import { useFollowUps } from '../../hooks/useFollowUps';
 import { useConsentRequests } from '../../hooks/useConsentRequests';
 import { useEventTransportPlans } from '../../hooks/useEventTransportPlans';
 import { useTransportPassengers } from '../../hooks/useTransportPassengers';
+import { useFinanceDashboard } from '../../hooks/useFinanceDashboard';
+import { formatMoney } from '../../lib/money';
 import { 
   Users, 
   UserSquare2, 
@@ -21,7 +23,9 @@ import {
   AlertTriangle,
   Plus,
   FileCheck,
-  Bus
+  Bus,
+  DollarSign,
+  CreditCard
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -37,6 +41,7 @@ export const DashboardPage: React.FC = () => {
   const { requests: consentRequests } = useConsentRequests();
   const { plans: transportPlans } = useEventTransportPlans();
   const { passengers: allPassengers } = useTransportPassengers();
+  const { metrics: financeMetrics } = useFinanceDashboard('this_month');
 
   const loading = loadingLearners || loadingGuardians || loadingStaff || loadingProgrammes || loadingGroups || loadingEnrolments || loadingSessions || loadingFollowUps;
 
@@ -80,7 +85,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <StatCard title="Active Learners" value={learners.length} icon={<Users className="w-6 h-6 text-blue-500" />} />
         <StatCard title="Guardians" value={guardians.length} icon={<UserSquare2 className="w-6 h-6 text-green-500" />} />
         <StatCard title="Staff Members" value={staff.length} icon={<Briefcase className="w-6 h-6 text-purple-500" />} />
@@ -91,6 +96,16 @@ export const DashboardPage: React.FC = () => {
         <StatCard title="Open Follow-Ups" value={openFollowUps.length} icon={<ClipboardList className="w-6 h-6 text-rose-500" />} />
         <StatCard title="Pending Consent" value={pendingConsentCount} icon={<FileCheck className="w-6 h-6 text-amber-500" />} />
         <StatCard title="Upcoming Transport" value={upcomingTransportPlans.length} icon={<Bus className="w-6 h-6 text-sky-500" />} />
+        <StatCard 
+          title="Outstanding Fees" 
+          value={formatMoney(financeMetrics?.outstandingBalance || 0)} 
+          icon={<DollarSign className="w-6 h-6 text-rose-500" />} 
+        />
+        <StatCard 
+          title="Payments (This Month)" 
+          value={formatMoney(financeMetrics?.paymentsThisMonth || 0)} 
+          icon={<CreditCard className="w-6 h-6 text-emerald-500" />} 
+        />
       </div>
 
       {/* Transport Warnings */}
