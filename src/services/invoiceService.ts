@@ -6,6 +6,7 @@ import { chargeRepository } from '../repositories/chargeRepository';
 import { paymentAllocationRepository } from '../repositories/paymentAllocationRepository';
 import { learnerRepository } from '../repositories/learnerRepository';
 import { auditService } from './auditService';
+import { organisationSettingsService } from './organisationSettingsService';
 import { addMoney, subtractMoney } from '../lib/money';
 import type { Invoice, InvoiceLineItem, InvoiceStatus } from '../types';
 
@@ -78,7 +79,18 @@ export const invoiceService = {
       return seq;
     });
 
-    return `INV-${year}-${String(nextSeq).padStart(6, '0')}`;
+    let prefix = 'INV-';
+    let padding = 6;
+    try {
+      const settings = await organisationSettingsService.getSettings(organisationId);
+      if (settings?.finance?.invoicePrefix) prefix = settings.finance.invoicePrefix;
+      if (settings?.finance?.invoiceSequencePadding) padding = settings.finance.invoiceSequencePadding;
+    } catch {
+      // Fall back to defaults
+    }
+
+    const cleanPrefix = prefix.endsWith('-') ? prefix : `${prefix}-`;
+    return `${cleanPrefix}${year}-${String(nextSeq).padStart(padding, '0')}`;
   },
 
   /**

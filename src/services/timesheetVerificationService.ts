@@ -2,6 +2,7 @@ import { timesheetRepository } from '../repositories/timesheetRepository';
 import { timesheetEntryRepository } from '../repositories/timesheetEntryRepository';
 import { staffWorkRecordRepository } from '../repositories/staffWorkRecordRepository';
 import { auditService } from './auditService';
+import { organisationSettingsService } from './organisationSettingsService';
 import type { Timesheet, TimesheetStatus } from '../types';
 
 export const timesheetVerificationService = {
@@ -89,8 +90,18 @@ export const timesheetVerificationService = {
     const original = await timesheetRepository.getById(organisationId, timesheetId);
     if (!original) throw new Error(`Timesheet ${timesheetId} not found.`);
 
-    // Self-approval protection guard
-    if (original.submittedBy === actorId) {
+    // Self-approval protection guard based on organisation settings
+    let preventSelfApproval = true;
+    try {
+      const settings = await organisationSettingsService.getSettings(organisationId);
+      if (settings?.staff?.preventSelfApproval !== undefined) {
+        preventSelfApproval = settings.staff.preventSelfApproval;
+      }
+    } catch {
+      preventSelfApproval = true;
+    }
+
+    if (preventSelfApproval && original.submittedBy === actorId) {
       throw new Error('Self-approval not permitted. An independent verifier or administrator must approve this timesheet.');
     }
 

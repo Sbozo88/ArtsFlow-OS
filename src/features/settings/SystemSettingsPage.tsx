@@ -1,0 +1,226 @@
+import React, { useState } from 'react';
+import { Sliders, Save, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { SettingsNav } from './components/SettingsNav';
+import { useOrganisationSettings } from '../../hooks/useOrganisationSettings';
+import type { OrganisationSystemSettings, OrganisationDocumentSettings } from '../../types';
+
+interface FormProps {
+  initialSystem: OrganisationSystemSettings;
+  initialDocs: OrganisationDocumentSettings;
+  onSave: (sys: OrganisationSystemSettings, docs: OrganisationDocumentSettings) => Promise<void>;
+}
+
+const SystemSettingsForm: React.FC<FormProps> = ({ initialSystem, initialDocs, onSave }) => {
+  const [systemData, setSystemData] = useState<OrganisationSystemSettings>(initialSystem);
+  const [docData, setDocData] = useState<OrganisationDocumentSettings>(initialDocs);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    setSaveSuccess(false);
+
+    try {
+      await onSave(systemData, docData);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      const e = err as Error;
+      setError(e.message || 'Failed to update system preferences.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Application Preferences
+            </span>
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 mt-1">System Preferences & Storage Limits</h1>
+          <p className="text-sm text-slate-500">
+            Configure date/time formats, default navigation destinations, pagination, and document upload quotas.
+          </p>
+        </div>
+      </div>
+
+      {saveSuccess && (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-sm font-semibold">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span>System preferences successfully saved!</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-800 text-sm font-semibold">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Display & Formatting Card */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+            <Sliders className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-base font-bold text-slate-900">Display & Localization Formats</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Default Landing Page *
+              </label>
+              <select
+                value={systemData.defaultLandingPage}
+                onChange={e => setSystemData({ ...systemData, defaultLandingPage: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="/dashboard">Executive Dashboard (/dashboard)</option>
+                <option value="/learners">Learners Directory (/learners)</option>
+                <option value="/programmes">Programmes & Groups (/programmes)</option>
+                <option value="/attendance">Attendance Operations (/attendance)</option>
+                <option value="/finance">Finance & Billing (/finance)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Date Format *
+              </label>
+              <select
+                value={systemData.dateFormat}
+                onChange={e => setSystemData({ ...systemData, dateFormat: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-xs"
+              >
+                <option value="YYYY-MM-DD">YYYY-MM-DD (ISO standard)</option>
+                <option value="DD/MM/YYYY">DD/MM/YYYY (UK / SA standard)</option>
+                <option value="MM/DD/YYYY">MM/DD/YYYY (US standard)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Time Format *
+              </label>
+              <select
+                value={systemData.timeFormat}
+                onChange={e => setSystemData({ ...systemData, timeFormat: e.target.value as '24h' | '12h' })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="24h">24-hour (14:30)</option>
+                <option value="12h">12-hour AM/PM (2:30 PM)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Default Records Per Page *
+              </label>
+              <select
+                value={systemData.recordsPerPage}
+                onChange={e => setSystemData({ ...systemData, recordsPerPage: parseInt(e.target.value, 10) || 25 })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value={10}>10 items</option>
+                <option value={25}>25 items</option>
+                <option value={50}>50 items</option>
+                <option value={100}>100 items</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Document Upload Quotas Card */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+            <FileText className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-base font-bold text-slate-900">Document Upload & Security Quotas</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Maximum Upload File Size (MB) *
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  required
+                  value={docData.maximumUploadSizeMb}
+                  onChange={e => setDocData({ ...docData, maximumUploadSizeMb: parseInt(e.target.value, 10) || 10 })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+                <span className="absolute right-3 top-2 text-slate-400 text-sm font-bold">MB</span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Client-side file validator blocks uploads larger than this threshold before cloud transmission.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Standard Document Footer
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Confidential — ArtsFlow OS"
+                value={docData.documentFooter || ''}
+                onChange={e => setDocData({ ...docData, documentFooter: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-4 pt-4">
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            <span>{saving ? 'Saving...' : 'Save Preferences'}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export const SystemSettingsPage: React.FC = () => {
+  const { settings, loading, updateSection } = useOrganisationSettings();
+
+  if (loading || !settings) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  const handleSave = async (sys: OrganisationSystemSettings, docs: OrganisationDocumentSettings) => {
+    await updateSection('system', sys);
+    await updateSection('documents', docs);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <SettingsNav />
+      <SystemSettingsForm
+        initialSystem={settings.system}
+        initialDocs={settings.documents}
+        onSave={handleSave}
+      />
+    </div>
+  );
+};
