@@ -130,9 +130,17 @@ export const OutstandingPage: React.FC = () => {
             Accounts with pending balances, aging invoices, and debt recovery workflows.
           </p>
         </div>
-        <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg text-right">
-          <span className="text-xs font-semibold uppercase text-amber-700 block">Total Outstanding</span>
-          <span className="text-xl font-black text-amber-900">{formatMoney(totalOutstanding)}</span>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/communication/compose?type=finance&audience=outstanding_invoices"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+          >
+            Send Payment Reminders
+          </Link>
+          <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg text-right">
+            <span className="text-xs font-semibold uppercase text-amber-700 block">Total Outstanding</span>
+            <span className="text-xl font-black text-amber-900">{formatMoney(totalOutstanding)}</span>
+          </div>
         </div>
       </div>
 

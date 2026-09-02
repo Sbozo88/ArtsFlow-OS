@@ -375,6 +375,64 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // ─── Phase 4B Collections (Communication & Documents) ─────────
+
+    match /communications/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Communications are historical audit records
+    }
+
+    match /communicationRecipients/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /communicationTemplates/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Archive only
+    }
+
+    match /communicationAttachments/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /documents/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Archive only
+    }
+
+    match /documentVersions/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Immutable version history
+    }
+
+    match /documentTemplates/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false; // Archive only
+    }
+
+    match /documentLinks/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if isUserInOrg(resource.data.organisationId); // Allowed for unlinking documents
+    }
+
     // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {

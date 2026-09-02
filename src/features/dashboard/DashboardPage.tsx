@@ -11,6 +11,8 @@ import { useConsentRequests } from '../../hooks/useConsentRequests';
 import { useEventTransportPlans } from '../../hooks/useEventTransportPlans';
 import { useTransportPassengers } from '../../hooks/useTransportPassengers';
 import { useFinanceDashboard } from '../../hooks/useFinanceDashboard';
+import { useCommunications } from '../../hooks/useCommunications';
+import { useDocuments } from '../../hooks/useDocuments';
 import { formatMoney } from '../../lib/money';
 import { 
   Users, 
@@ -25,7 +27,9 @@ import {
   FileCheck,
   Bus,
   DollarSign,
-  CreditCard
+  CreditCard,
+  MessageSquare,
+  FolderArchive
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -42,6 +46,8 @@ export const DashboardPage: React.FC = () => {
   const { plans: transportPlans } = useEventTransportPlans();
   const { passengers: allPassengers } = useTransportPassengers();
   const { metrics: financeMetrics } = useFinanceDashboard('this_month');
+  const { communications } = useCommunications();
+  const { documents } = useDocuments();
 
   const loading = loadingLearners || loadingGuardians || loadingStaff || loadingProgrammes || loadingGroups || loadingEnrolments || loadingSessions || loadingFollowUps;
 
@@ -63,6 +69,9 @@ export const DashboardPage: React.FC = () => {
     return passengerCount > p.vehicleCapacity;
   });
 
+  // Phase 4B Indicators
+  const messagesToday = communications.filter(c => c.createdAt.startsWith(today)).length;
+
   const upcomingSessions = sessions
     .filter(s => s.date >= today && s.sessionStatus === 'scheduled')
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
@@ -75,6 +84,9 @@ export const DashboardPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
         <div className="flex gap-2">
+          <Link to="/communication/compose" className="btn btn-secondary text-sm flex items-center gap-1">
+            <MessageSquare className="w-4 h-4 text-indigo-600" /> Compose Message
+          </Link>
           <Link to="/learners" className="btn btn-primary text-sm flex items-center gap-1">
             <Plus className="w-4 h-4" /> Learner
           </Link>
@@ -100,6 +112,16 @@ export const DashboardPage: React.FC = () => {
           title="Outstanding Fees" 
           value={formatMoney(financeMetrics?.outstandingBalance || 0)} 
           icon={<DollarSign className="w-6 h-6 text-rose-500" />} 
+        />
+        <StatCard 
+          title="Messages Today" 
+          value={messagesToday} 
+          icon={<MessageSquare className="w-6 h-6 text-indigo-500" />} 
+        />
+        <StatCard 
+          title="Documents Hub" 
+          value={documents.length} 
+          icon={<FolderArchive className="w-6 h-6 text-teal-500" />} 
         />
         <StatCard 
           title="Payments (This Month)" 

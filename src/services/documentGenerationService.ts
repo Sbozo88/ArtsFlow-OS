@@ -1,0 +1,459 @@
+import { documentRepository } from '../repositories/documentRepository';
+import { documentLinkRepository } from '../repositories/documentLinkRepository';
+import { eventRepository } from '../repositories/eventRepository';
+import { eventScheduleRepository } from '../repositories/eventScheduleRepository';
+import { eventPerformanceRepository } from '../repositories/eventPerformanceRepository';
+import { eventParticipantRepository } from '../repositories/eventParticipantRepository';
+import { learnerRepository } from '../repositories/learnerRepository';
+import { eventTransportPlanRepository } from '../repositories/eventTransportPlanRepository';
+import { transportPassengerRepository } from '../repositories/transportPassengerRepository';
+import { transportVehicleRepository } from '../repositories/transportVehicleRepository';
+import { consentRequestRepository } from '../repositories/consentRequestRepository';
+import { auditService } from './auditService';
+import type { DocumentRecord } from '../types';
+
+export const documentGenerationService = {
+  /**
+   * Generates an Event Running Order printable document and optionally saves it as a DocumentRecord.
+   */
+  async generateEventRunningOrder(
+    organisationId: string,
+    eventId: string,
+    saveAsRecord: boolean = true,
+    actorId: string = 'system'
+  ): Promise<{ html: string; document?: DocumentRecord }> {
+    const [event, scheduleItems, performances] = await Promise.all([
+      eventRepository.getById(organisationId, eventId),
+      eventScheduleRepository.getByOrganisation(organisationId),
+      eventPerformanceRepository.getByOrganisation(organisationId)
+    ]);
+
+    if (!event) throw new Error('Event not found.');
+
+    const eventSchedule = scheduleItems
+      .filter(s => s.eventId === eventId)
+      .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+    const eventPerformances = performances
+      .filter(p => p.eventId === eventId)
+      .sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Running Order — ${event.name}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+          h1 { font-size: 24px; margin-bottom: 4px; color: #0f172a; }
+          .subtitle { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+          .section-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-top: 24px; margin-bottom: 12px; color: #334155; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+          th { text-align: left; padding: 8px 10px; background: #f8fafc; border-bottom: 1px solid #cbd5e1; color: #475569; font-weight: 600; }
+          td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+          .tag { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; background: #e0e7ff; color: #3730a3; }
+        </style>
+      </head>
+      <body>
+        <h1>${event.name}</h1>
+        <div class="subtitle">Date: ${event.startDate} | Venue: ${event.venue || 'Main Venue'} | Location: ${event.address || ''}</div>
+
+        <div class="section-title">Operational Schedule</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Activity / Phase</th>
+              <th>Area</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${eventSchedule.map(item => `
+              <tr>
+                <td style="font-weight: 600;">${item.startTime} ${item.endTime ? `- ${item.endTime}` : ''}</td>
+                <td><span class="tag">${item.scheduleType}</span> ${item.title}</td>
+                <td>${item.venueArea || '—'}</td>
+                <td>${item.locationNote || item.notes || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="section-title">Programme Performance Items</div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Item Title</th>
+              <th>Genre</th>
+              <th>Duration</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${eventPerformances.map(item => `
+              <tr>
+                <td>${item.sequenceOrder}</td>
+                <td style="font-weight: 600;">${item.title}</td>
+                <td>${item.itemType}</td>
+                <td>${item.estimatedDurationMinutes ? `${item.estimatedDurationMinutes} mins` : '—'}</td>
+                <td>${item.performanceStatus}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div style="font-size: 11px; color: #94a3b8; text-align: right; margin-top: 30px;">
+          Generated by ArtsFlow OS • ${new Date().toLocaleDateString()}
+        </div>
+      </body>
+      </html>
+    `;
+
+    let docRecord: DocumentRecord | undefined;
+    if (saveAsRecord) {
+      docRecord = await documentRepository.create(organisationId, actorId, {
+        name: `Running Order — ${event.name}`,
+        documentType: 'event',
+        fileName: `running_order_${event.id}.html`,
+        mimeType: 'text/html',
+        fileSize: html.length,
+        documentStatus: 'active',
+        relatedEntityType: 'event',
+        relatedEntityId: eventId,
+        versionNumber: 1,
+        generatedBy: actorId,
+        notes: 'System-generated operational running order.'
+      } as never);
+
+      await documentLinkRepository.create(organisationId, actorId, {
+        documentId: docRecord.id,
+        entityType: 'event',
+        entityId: eventId
+      } as never);
+
+      await auditService.log(
+        organisationId,
+        actorId,
+        'GENERATE_DOCUMENT',
+        'document',
+        docRecord.id,
+        undefined,
+        docRecord
+      );
+    }
+
+    return { html, document: docRecord };
+  },
+
+  /**
+   * Generates a Transport Manifest printable document and optionally saves it as a DocumentRecord.
+   */
+  async generateTransportManifest(
+    organisationId: string,
+    transportPlanId: string,
+    saveAsRecord: boolean = true,
+    actorId: string = 'system'
+  ): Promise<{ html: string; document?: DocumentRecord }> {
+    const [plan, allPassengers, allVehicles, allLearners] = await Promise.all([
+      eventTransportPlanRepository.getById(organisationId, transportPlanId),
+      transportPassengerRepository.getByOrganisation(organisationId),
+      transportVehicleRepository.getByOrganisation(organisationId),
+      learnerRepository.getByOrganisation(organisationId)
+    ]);
+
+    if (!plan) throw new Error('Transport plan not found.');
+
+    const passengers = allPassengers.filter(p => p.eventTransportPlanId === transportPlanId);
+    const vehicle = plan.vehicleId ? allVehicles.find(v => v.id === plan.vehicleId) : null;
+    const learnerMap = new Map(allLearners.map(l => [l.id, l]));
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Passenger Manifest — ${plan.planName}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+          h1 { font-size: 22px; margin-bottom: 4px; }
+          .meta { color: #64748b; font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+          th { text-align: left; padding: 8px 10px; background: #f8fafc; border-bottom: 2px solid #cbd5e1; }
+          td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+        </style>
+      </head>
+      <body>
+        <h1>Transport Passenger Manifest</h1>
+        <div class="meta">
+          <strong>Plan:</strong> ${plan.planName}<br>
+          <strong>Vehicle:</strong> ${vehicle ? `${vehicle.vehicleName} (${vehicle.registrationNumber || 'No reg'})` : 'Unassigned'} • Capacity: ${vehicle?.capacity || '—'}<br>
+          <strong>Departure:</strong> ${plan.departureDate} at ${plan.departureTime} from ${plan.pickupLocation}<br>
+          <strong>Destination:</strong> ${plan.destination}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Passenger Name</th>
+              <th>Type</th>
+              <th>Seat</th>
+              <th>Pickup Point</th>
+              <th>Boarded</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${passengers.map((p, idx) => {
+              const name = p.passengerType === 'learner' && p.learnerId
+                ? (learnerMap.get(p.learnerId) ? `${learnerMap.get(p.learnerId)!.firstName} ${learnerMap.get(p.learnerId)!.lastName}` : p.learnerId)
+                : `Staff (${p.staffId || 'Staff'})`;
+              return `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td style="font-weight: 600;">${name}</td>
+                  <td>${p.passengerType}</td>
+                  <td>${p.seatNumber || '—'}</td>
+                  <td>${plan.pickupLocation || 'Main Hub'}</td>
+                  <td>[  ] ${p.boardingStatus === 'boarded' ? 'YES' : 'No'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+        <div style="font-size: 11px; color: #94a3b8; text-align: right; margin-top: 30px;">
+          ArtsFlow OS Manifest • Driver / Supervisor Signature: _________________________
+        </div>
+      </body>
+      </html>
+    `;
+
+    let docRecord: DocumentRecord | undefined;
+    if (saveAsRecord) {
+      docRecord = await documentRepository.create(organisationId, actorId, {
+        name: `Manifest - ${plan.planName}`,
+        documentType: 'transport',
+        fileName: `transport_manifest_${transportPlanId}.html`,
+        mimeType: 'text/html',
+        fileSize: html.length,
+        documentStatus: 'active',
+        relatedEntityType: 'transportPlan',
+        relatedEntityId: transportPlanId,
+        versionNumber: 1,
+        generatedBy: actorId,
+        notes: 'System-generated passenger manifest.'
+      } as never);
+
+      await documentLinkRepository.create(organisationId, actorId, {
+        documentId: docRecord.id,
+        entityType: 'transportPlan',
+        entityId: transportPlanId
+      } as never);
+
+      await auditService.log(
+        organisationId,
+        actorId,
+        'GENERATE_DOCUMENT',
+        'document',
+        docRecord.id,
+        undefined,
+        docRecord
+      );
+    }
+
+    return { html, document: docRecord };
+  },
+
+  /**
+   * Generates an Event Participant List printable document.
+   */
+  async generateParticipantList(
+    organisationId: string,
+    eventId: string,
+    saveAsRecord: boolean = true,
+    actorId: string = 'system'
+  ): Promise<{ html: string; document?: DocumentRecord }> {
+    const [event, participants, allLearners] = await Promise.all([
+      eventRepository.getById(organisationId, eventId),
+      eventParticipantRepository.getByOrganisation(organisationId),
+      learnerRepository.getByOrganisation(organisationId)
+    ]);
+
+    if (!event) throw new Error('Event not found.');
+
+    const eventParts = participants.filter(p => p.eventId === eventId);
+    const learnerMap = new Map(allLearners.map(l => [l.id, l]));
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Participant Roster — ${event.name}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+          h1 { font-size: 22px; margin-bottom: 4px; }
+          .meta { color: #64748b; font-size: 13px; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; }
+          th { text-align: left; padding: 8px 10px; background: #f8fafc; border-bottom: 2px solid #cbd5e1; }
+          td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+        </style>
+      </head>
+      <body>
+        <h1>Event Participant Roster</h1>
+        <div class="meta">Event: ${event.name} • Date: ${event.startDate} • Total: ${eventParts.length}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Learner Name</th>
+              <th>Grade</th>
+              <th>Role</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${eventParts.map((p, idx) => {
+              const l = learnerMap.get(p.learnerId);
+              return `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td style="font-weight: 600;">${l ? `${l.firstName} ${l.lastName}` : p.learnerId}</td>
+                  <td>${l?.gradeOrClass || '—'}</td>
+                  <td>${p.participantRole || 'Participant'}</td>
+                  <td>${p.participationStatus}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    let docRecord: DocumentRecord | undefined;
+    if (saveAsRecord) {
+      docRecord = await documentRepository.create(organisationId, actorId, {
+        name: `Participants — ${event.name}`,
+        documentType: 'event',
+        fileName: `participants_${eventId}.html`,
+        mimeType: 'text/html',
+        fileSize: html.length,
+        documentStatus: 'active',
+        relatedEntityType: 'event',
+        relatedEntityId: eventId,
+        versionNumber: 1,
+        generatedBy: actorId,
+        notes: 'System-generated participant roster.'
+      } as never);
+
+      await documentLinkRepository.create(organisationId, actorId, {
+        documentId: docRecord.id,
+        entityType: 'event',
+        entityId: eventId
+      } as never);
+    }
+
+    return { html, document: docRecord };
+  },
+
+  /**
+   * Generates a Consent Status Summary printable report.
+   */
+  async generateConsentSummary(
+    organisationId: string,
+    eventId: string,
+    saveAsRecord: boolean = true,
+    actorId: string = 'system'
+  ): Promise<{ html: string; document?: DocumentRecord }> {
+    const [event, requests, allLearners] = await Promise.all([
+      eventRepository.getById(organisationId, eventId),
+      consentRequestRepository.getByOrganisation(organisationId),
+      learnerRepository.getByOrganisation(organisationId)
+    ]);
+
+    if (!event) throw new Error('Event not found.');
+
+    const eventRequests = requests.filter(r => r.eventId === eventId);
+    const learnerMap = new Map(allLearners.map(l => [l.id, l]));
+
+    const approvedCount = eventRequests.filter(r => r.requestStatus === 'approved').length;
+    const submittedCount = eventRequests.filter(r => r.requestStatus === 'submitted').length;
+    const pendingCount = eventRequests.filter(r => r.requestStatus === 'pending' || r.requestStatus === 'sent').length;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Consent Summary — ${event.name}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+          h1 { font-size: 22px; margin-bottom: 4px; }
+          .stats { display: flex; gap: 20px; margin: 20px 0; }
+          .stat-card { border: 1px solid #e2e8f0; padding: 12px 20px; border-radius: 8px; background: #f8fafc; }
+          .stat-val { font-size: 20px; font-weight: bold; color: #0f172a; }
+          .stat-lbl { font-size: 12px; color: #64748b; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 15px; }
+          th { text-align: left; padding: 8px 10px; background: #f8fafc; border-bottom: 2px solid #cbd5e1; }
+          td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+        </style>
+      </head>
+      <body>
+        <h1>Consent Compliance Summary</h1>
+        <div>Event: ${event.name} • Event Date: ${event.startDate}</div>
+        <div class="stats">
+          <div class="stat-card"><div class="stat-val" style="color: #059669;">${approvedCount}</div><div class="stat-lbl">Approved</div></div>
+          <div class="stat-card"><div class="stat-val" style="color: #2563eb;">${submittedCount}</div><div class="stat-lbl">Submitted</div></div>
+          <div class="stat-card"><div class="stat-val" style="color: #d97706;">${pendingCount}</div><div class="stat-lbl">Pending / Missing</div></div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Learner</th>
+              <th>Due Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${eventRequests.map((r, idx) => {
+              const l = learnerMap.get(r.learnerId);
+              return `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td style="font-weight: 600;">${l ? `${l.firstName} ${l.lastName}` : r.learnerId}</td>
+                  <td>${r.dueDate || '—'}</td>
+                  <td style="font-weight: 600;">${r.requestStatus.toUpperCase()}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    let docRecord: DocumentRecord | undefined;
+    if (saveAsRecord) {
+      docRecord = await documentRepository.create(organisationId, actorId, {
+        name: `Consent Summary — ${event.name}`,
+        documentType: 'consent',
+        fileName: `consent_summary_${eventId}.html`,
+        mimeType: 'text/html',
+        fileSize: html.length,
+        documentStatus: 'active',
+        relatedEntityType: 'event',
+        relatedEntityId: eventId,
+        versionNumber: 1,
+        generatedBy: actorId,
+        notes: 'System-generated consent compliance report.'
+      } as never);
+
+      await documentLinkRepository.create(organisationId, actorId, {
+        documentId: docRecord.id,
+        entityType: 'event',
+        entityId: eventId
+      } as never);
+    }
+
+    return { html, document: docRecord };
+  }
+};

@@ -11,7 +11,9 @@ import {
   CalendarDays,
   FileCheck,
   Bus,
-  CreditCard
+  CreditCard,
+  MessageSquare,
+  FolderArchive
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -106,6 +108,25 @@ const navItems = [
       { name: 'Outstanding Balances', path: '/finance/outstanding' },
       { name: 'Financial Reports', path: '/finance/reports' },
       { name: 'Charge Types', path: '/finance/charge-types' },
+    ]
+  },
+  {
+    name: 'Communication',
+    icon: MessageSquare,
+    children: [
+      { name: 'Overview', path: '/communication' },
+      { name: 'Compose Message', path: '/communication/compose' },
+      { name: 'History & Logs', path: '/communication/history' },
+      { name: 'Templates', path: '/communication/templates' },
+    ]
+  },
+  {
+    name: 'Documents',
+    icon: FolderArchive,
+    children: [
+      { name: 'Files Repository', path: '/documents' },
+      { name: 'Generate Forms', path: '/documents/generated' },
+      { name: 'Doc Templates', path: '/documents/templates' },
     ]
   },
   { name: 'Follow-Ups', path: '/follow-ups', icon: ClipboardList },

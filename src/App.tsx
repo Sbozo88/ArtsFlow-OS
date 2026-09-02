@@ -56,6 +56,18 @@ import { OutstandingPage } from './features/finance/OutstandingPage';
 import { FinanceReportsPage } from './features/finance/FinanceReportsPage';
 import { ChargeTypesPage } from './features/finance/ChargeTypesPage';
 
+// Communication Pages
+import { CommunicationOverviewPage } from './features/communication/CommunicationOverviewPage';
+import { ComposeMessagePage } from './features/communication/ComposeMessagePage';
+import { CommunicationHistoryPage } from './features/communication/CommunicationHistoryPage';
+import { CommunicationTemplatesPage } from './features/communication/CommunicationTemplatesPage';
+
+// Document Pages
+import { DocumentsOverviewPage } from './features/documents/DocumentsOverviewPage';
+import { DocumentDetailPage } from './features/documents/DocumentDetailPage';
+import { DocumentTemplatesPage } from './features/documents/DocumentTemplatesPage';
+import { GeneratedDocumentsPage } from './features/documents/GeneratedDocumentsPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -123,6 +135,18 @@ function App() {
               <Route path="finance/outstanding" element={<OutstandingPage />} />
               <Route path="finance/reports" element={<FinanceReportsPage />} />
               <Route path="finance/charge-types" element={<ChargeTypesPage />} />
+
+              {/* Communication Module */}
+              <Route path="communication" element={<CommunicationOverviewPage />} />
+              <Route path="communication/compose" element={<ComposeMessagePage />} />
+              <Route path="communication/history" element={<CommunicationHistoryPage />} />
+              <Route path="communication/templates" element={<CommunicationTemplatesPage />} />
+
+              {/* Documents Module */}
+              <Route path="documents" element={<DocumentsOverviewPage />} />
+              <Route path="documents/generated" element={<GeneratedDocumentsPage />} />
+              <Route path="documents/templates" element={<DocumentTemplatesPage />} />
+              <Route path="documents/:id" element={<DocumentDetailPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
