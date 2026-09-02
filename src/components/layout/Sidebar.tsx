@@ -16,7 +16,8 @@ import {
   FolderArchive,
   BarChart3,
   Zap,
-  Briefcase
+  Briefcase,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -170,6 +171,25 @@ const navItems = [
     ]
   },
   { name: 'Follow-Ups', path: '/follow-ups', icon: ClipboardList },
+  {
+    name: 'Settings',
+    icon: SettingsIcon,
+    children: [
+      { name: 'Overview', path: '/settings' },
+      { name: 'Organisation Profile', path: '/settings/organisation' },
+      { name: 'Operational Calendar', path: '/settings/calendar' },
+      { name: 'Programmes & Classes', path: '/settings/programmes' },
+      { name: 'Attendance Rules', path: '/settings/attendance' },
+      { name: 'Finance & Invoicing', path: '/settings/finance' },
+      { name: 'Staff & Timesheets', path: '/settings/staff' },
+      { name: 'Communication', path: '/settings/communication' },
+      { name: 'Automation Defaults', path: '/settings/automation' },
+      { name: 'Users & Roles', path: '/settings/users' },
+      { name: 'Branding & Assets', path: '/settings/branding' },
+      { name: 'System Preferences', path: '/settings/system' },
+      { name: 'Audit History', path: '/settings/audit' }
+    ]
+  },
 ];
 
 export function Sidebar() {

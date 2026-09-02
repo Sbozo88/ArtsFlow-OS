@@ -1,5 +1,6 @@
 import { automationRuleRepository } from '../../repositories/automationRuleRepository';
 import { auditService } from '../auditService';
+import { organisationSettingsService } from '../organisationSettingsService';
 import type { 
   AutomationRule, 
   RuleCategory, 
@@ -533,5 +534,50 @@ export const automationRuleService = {
       deduplicationWindowHours: tpl.deduplicationWindowHours,
       ruleStatus: initialStatus
     });
+  },
+
+  /**
+   * Installs recommended automation rules using organisation-configured thresholds and defaults.
+   */
+  async installRecommendedRules(organisationId: string, actorId: string): Promise<AutomationRule[]> {
+    const settings = await organisationSettingsService.getSettings(organisationId);
+    const existingRules = await this.getRules(organisationId);
+    const existingNames = new Set(existingRules.map(r => r.name.toLowerCase()));
+
+    const installed: AutomationRule[] = [];
+    const defaultStatus: RuleStatus = settings.automation.dryRunNewRulesByDefault ? 'paused' : 'active';
+    const cooldown = (settings.automation.defaultCooldownHours || 24) * 60;
+
+    for (const tpl of BUILT_IN_TEMPLATES) {
+      if (existingNames.has(tpl.name.toLowerCase())) {
+        continue; // Skip already installed
+      }
+
+      // Clone trigger config and adapt to settings
+      const triggerConfig = { ...tpl.triggerConfig };
+      if (tpl.templateId === 'tpl-attendance-consecutive') {
+        triggerConfig.consecutiveCount = settings.attendance.consecutiveAbsenceThreshold;
+      } else if (tpl.templateId === 'tpl-attendance-low-group') {
+        triggerConfig.thresholdPercent = settings.attendance.lowAttendanceThresholdPercent;
+      }
+
+      const rule = await this.createRule(organisationId, actorId, {
+        name: tpl.name,
+        description: tpl.description,
+        ruleCategory: tpl.ruleCategory,
+        triggerType: tpl.triggerType,
+        triggerConfig,
+        conditions: tpl.conditions,
+        actions: tpl.actions,
+        priority: tpl.priority,
+        cooldownMinutes: cooldown,
+        deduplicationWindowHours: tpl.deduplicationWindowHours,
+        ruleStatus: defaultStatus
+      });
+
+      installed.push(rule);
+    }
+
+    return installed;
   }
 };

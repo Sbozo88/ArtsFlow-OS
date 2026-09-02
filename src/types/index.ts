@@ -514,7 +514,29 @@ export type AuditAction =
   | 'REJECT_TIMESHEET'
   | 'CREATE_SUBSTITUTION'
   | 'CONFIRM_SUBSTITUTION'
-  | 'CANCEL_SUBSTITUTION';
+  | 'CANCEL_SUBSTITUTION'
+  // Phase 6B: Organisation Administration & Configuration
+  | 'UPDATE_ORGANISATION_PROFILE'
+  | 'UPDATE_BRANDING'
+  | 'CREATE_CALENDAR_PERIOD'
+  | 'UPDATE_CALENDAR_PERIOD'
+  | 'ARCHIVE_CALENDAR_PERIOD'
+  | 'UPDATE_PROGRAMME_SETTINGS'
+  | 'UPDATE_ATTENDANCE_SETTINGS'
+  | 'UPDATE_FINANCE_SETTINGS'
+  | 'UPDATE_STAFF_SETTINGS'
+  | 'UPDATE_COMMUNICATION_SETTINGS'
+  | 'UPDATE_AUTOMATION_SETTINGS'
+  | 'UPDATE_TRANSPORT_SETTINGS'
+  | 'UPDATE_CONSENT_SETTINGS'
+  | 'UPDATE_DOCUMENT_SETTINGS'
+  | 'UPDATE_SYSTEM_SETTINGS'
+  | 'INVITE_USER'
+  | 'REVOKE_INVITATION'
+  | 'ACCEPT_INVITATION'
+  | 'CHANGE_USER_ROLE'
+  | 'DISABLE_USER'
+  | 'RESTORE_USER';
 
 export interface AuditLog {
   id: string;
@@ -1527,4 +1549,221 @@ export interface StaffWorkloadSummary {
     timesheetOverdue: boolean;
   };
 }
+
+// ─── Phase 6B: Organisation Administration & Configuration ─────────
+
+export type OrganisationType =
+  | 'school_arts_programme'
+  | 'community_arts_project'
+  | 'music_school'
+  | 'dance_school'
+  | 'arts_organisation'
+  | 'academy'
+  | 'nonprofit'
+  | 'other';
+
+export interface OrganisationProfileSettings {
+  name: string;
+  organisationType: OrganisationType | string;
+  registrationNumber?: string;
+  taxNumber?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  provinceState?: string;
+  postalCode?: string;
+  country: string;
+  timezone: string; // e.g. 'Africa/Johannesburg'
+  defaultCurrency: string; // e.g. 'ZAR'
+  locale: string; // e.g. 'en-ZA'
+  organisationStatus: RecordStatus;
+}
+
+export interface OrganisationBrandingSettings {
+  organisationDisplayName: string;
+  shortName?: string;
+  logoUrl?: string;
+  logoStoragePath?: string;
+  primaryBrandColour?: string; // e.g. '#4f46e5'
+  secondaryBrandColour?: string; // e.g. '#0f172a'
+  documentHeaderText?: string;
+  documentFooterText?: string;
+  emailSignature?: string;
+}
+
+export interface OrganisationProgrammeSettings {
+  allowedProgrammeTypes: string[]; // e.g. ['music', 'dance', 'drama', 'visual_arts', 'theatre', 'poetry', 'creative_arts', 'other']
+  defaultProgrammeStatus: RecordStatus;
+  defaultGroupCapacity: number;
+  defaultSessionDurationMinutes: number;
+  defaultSessionType: SessionType;
+  defaultVenue?: string;
+  defaultAttendanceThreshold: number;
+}
+
+export interface OrganisationAttendanceSettings {
+  lowAttendanceThresholdPercent: number; // e.g. 75
+  consecutiveAbsenceThreshold: number; // e.g. 3
+  lateCountsAsPresent: boolean;
+  excusedCountsInDenominator: boolean;
+  minimumSessionsForAttendanceAlert: number; // e.g. 3
+  attendanceAutomationEnabled: boolean;
+}
+
+export interface OrganisationFinanceSettings {
+  defaultCurrency: string; // e.g. 'ZAR'
+  invoicePrefix: string; // e.g. 'INV-'
+  invoiceSequencePadding: number; // e.g. 6
+  receiptPrefix: string; // e.g. 'REC-'
+  receiptSequencePadding: number; // e.g. 6
+  defaultInvoiceDueDays: number; // e.g. 30
+  allowUnallocatedPayments: boolean;
+  financePeriodStartMonth: number; // 1-12
+  taxEnabled: boolean;
+  taxLabel: string; // e.g. 'VAT'
+  defaultTaxRate: number; // e.g. 15
+}
+
+export interface OrganisationStaffSettings {
+  defaultTimesheetPeriod: 'weekly' | 'monthly' | 'custom';
+  timesheetVerificationRequired: boolean;
+  timesheetApprovalRequired: boolean;
+  preventSelfApproval: boolean;
+  manualWorkEntryAllowed: boolean;
+  maximumNormalWorkHoursPerDay: number;
+  substitutionApprovalRequired: boolean;
+}
+
+export interface OrganisationConsentSettings {
+  defaultConsentDueDaysBeforeEvent: number; // e.g. 14
+  requireParticipationConsent: boolean;
+  requireTransportConsent: boolean;
+  requireMedicalDeclaration: boolean;
+  requireIndemnity: boolean;
+  allowGuardianDigitalAcknowledgement: boolean;
+  firstReminderDaysBeforeEvent: number; // e.g. 7
+  urgentReminderDaysBeforeEvent: number; // e.g. 2
+}
+
+export interface OrganisationTransportSettings {
+  requireTransportConsent: boolean;
+  allowOverCapacityOverride: boolean;
+  defaultMeetingLeadMinutes: number; // e.g. 30
+  requireReturnCheck: boolean;
+  requireDriverContact: boolean;
+  requireVehicleCapacity: boolean;
+}
+
+export interface OrganisationCommunicationSettings {
+  defaultGuardianChannel: 'email' | 'sms' | 'whatsapp';
+  defaultStaffChannel: 'email' | 'in_app';
+  organisationReplyEmail?: string;
+  whatsAppCountryCode?: string; // e.g. '+27'
+  communicationSignature?: string;
+  allowBulkGuardianCommunication: boolean;
+  allowFinanceCommunication: boolean;
+  allowAutomaticExternalSend: boolean;
+  providerSettings?: {
+    providerType: string;
+    senderName?: string;
+    senderAddress?: string;
+    enabled: boolean;
+  };
+}
+
+export interface OrganisationAutomationSettings {
+  automationEnabled: boolean;
+  defaultCooldownHours: number;
+  dryRunNewRulesByDefault: boolean;
+  allowAutoCommunicationSend: boolean;
+  notificationEscalationEnabled: boolean;
+}
+
+export interface OrganisationDocumentSettings {
+  defaultDocumentRetentionStatus: RecordStatus;
+  maximumUploadSizeMb: number; // e.g. 10
+  allowedFileTypes: string[];
+  invoiceDocumentTemplateId?: string;
+  receiptDocumentTemplateId?: string;
+  documentFooter?: string;
+}
+
+export interface OrganisationSystemSettings {
+  defaultLandingPage: string; // e.g. '/dashboard'
+  dateFormat: string; // e.g. 'YYYY-MM-DD'
+  timeFormat: '24h' | '12h';
+  recordsPerPage: number;
+}
+
+export interface OrganisationSettings extends BaseRecord {
+  profile: OrganisationProfileSettings;
+  branding: OrganisationBrandingSettings;
+  programmes: OrganisationProgrammeSettings;
+  attendance: OrganisationAttendanceSettings;
+  finance: OrganisationFinanceSettings;
+  staff: OrganisationStaffSettings;
+  consent: OrganisationConsentSettings;
+  transport: OrganisationTransportSettings;
+  communication: OrganisationCommunicationSettings;
+  automation: OrganisationAutomationSettings;
+  documents: OrganisationDocumentSettings;
+  system: OrganisationSystemSettings;
+}
+
+export type CalendarPeriodType = 'term' | 'semester' | 'quarter' | 'cycle' | 'season' | 'custom';
+export type CalendarPeriodStatus = 'active' | 'completed' | 'planned' | 'archived';
+
+export interface OrganisationCalendarPeriod extends BaseRecord {
+  name: string;
+  periodType: CalendarPeriodType;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  calendarYear: number;
+  periodStatus: CalendarPeriodStatus;
+  notes?: string;
+}
+
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+export interface OrganisationInvitation extends BaseRecord {
+  email: string;
+  role: AuthRole;
+  invitationStatus: InvitationStatus;
+  invitedBy: string;
+  invitedAt: string;
+  expiresAt: string;
+  token: string;
+  acceptedAt?: string;
+  acceptedByUserId?: string;
+}
+
+export type MembershipStatus = 'active' | 'disabled';
+
+export interface OrganisationMembership extends BaseRecord {
+  userId: string;
+  email: string;
+  displayName?: string;
+  role: AuthRole;
+  membershipStatus: MembershipStatus;
+  joinedAt: string;
+  lastActiveAt?: string;
+}
+
+export type Permission =
+  | 'learners.read'
+  | 'learners.write'
+  | 'attendance.read'
+  | 'attendance.write'
+  | 'finance.read'
+  | 'finance.write'
+  | 'events.manage'
+  | 'staff.verify_timesheets'
+  | 'staff.approve_timesheets'
+  | 'automation.manage'
+  | 'settings.manage'
+  | 'users.manage';
+
 

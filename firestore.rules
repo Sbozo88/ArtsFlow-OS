@@ -515,6 +515,36 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── Phase 6B Collections: Organisation Settings & Access ──────
+
+    match /organisationSettings/{orgId} {
+      allow read: if isUserInOrg(orgId) || request.auth != null;
+      allow create: if isUserInOrg(orgId) || request.auth != null;
+      allow update: if isUserInOrg(orgId);
+      allow delete: if false;
+    }
+
+    match /organisationCalendarPeriods/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId);
+      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
+    match /organisationInvitations/{docId} {
+      allow read: if request.auth != null;
+      allow create: if isUserInOrg(request.resource.data.organisationId);
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    match /organisationMemberships/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if isUserInOrg(request.resource.data.organisationId) || request.auth != null;
+      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow delete: if false;
+    }
+
     // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {

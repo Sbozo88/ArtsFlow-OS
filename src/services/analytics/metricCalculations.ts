@@ -20,24 +20,36 @@ export const metricCalculations = {
    * Excused absences are exempted from penalty.
    * If there are no eligible records, returns 0.
    */
-  calculateAttendanceRate(records: Attendance[]): number {
+  calculateAttendanceRate(
+    records: Attendance[],
+    options?: {
+      lateCountsAsPresent?: boolean;
+      excusedCountsInDenominator?: boolean;
+    }
+  ): number {
     if (!records || records.length === 0) return 0;
+
+    const lateCounts = options?.lateCountsAsPresent !== undefined ? options.lateCountsAsPresent : true;
+    const includeExcused = options?.excusedCountsInDenominator || false;
 
     let presentEquivalent = 0;
     let eligible = 0;
 
     for (const r of records) {
-      if (r.attendanceStatus === 'present' || r.attendanceStatus === 'late') {
+      if (r.attendanceStatus === 'present') {
         presentEquivalent += 1;
+        eligible += 1;
+      } else if (r.attendanceStatus === 'late') {
+        if (lateCounts) presentEquivalent += 1;
         eligible += 1;
       } else if (r.attendanceStatus === 'absent') {
         eligible += 1;
+      } else if (r.attendanceStatus === 'excused' && includeExcused) {
+        eligible += 1;
       }
-      // 'excused' does not increase eligible count (exempted from denominator)
     }
 
     if (eligible === 0) {
-      // If only excused records exist, treat as 100% compliant
       return records.some(r => r.attendanceStatus === 'excused') ? 100 : 0;
     }
 

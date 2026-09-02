@@ -3,6 +3,7 @@ import { paymentAllocationRepository } from '../repositories/paymentAllocationRe
 import { invoiceRepository } from '../repositories/invoiceRepository';
 import { learnerRepository } from '../repositories/learnerRepository';
 import { guardianRepository } from '../repositories/guardianRepository';
+import { organisationSettingsService } from './organisationSettingsService';
 import type { Payment, PaymentAllocation, Invoice, Learner, Guardian } from '../types';
 
 export interface ReceiptData {
@@ -53,10 +54,20 @@ export const receiptService = {
       })
     );
 
+    let recPrefix = 'REC-';
+    try {
+      const settings = await organisationSettingsService.getSettings(organisationId);
+      if (settings?.finance?.receiptPrefix) recPrefix = settings.finance.receiptPrefix;
+    } catch {
+      // Fallback to default
+    }
+
+    const cleanRecPrefix = recPrefix.endsWith('-') ? recPrefix : `${recPrefix}-`;
+
     // Derive receipt number consistently
     const receiptNumber = payment.paymentNumber
-      ? payment.paymentNumber.replace('PAY-', 'REC-')
-      : `REC-${payment.id.slice(0, 8).toUpperCase()}`;
+      ? payment.paymentNumber.replace('PAY-', cleanRecPrefix)
+      : `${cleanRecPrefix}${payment.id.slice(0, 8).toUpperCase()}`;
 
     return {
       receiptNumber,

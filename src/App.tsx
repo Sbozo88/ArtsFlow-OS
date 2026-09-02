@@ -95,6 +95,21 @@ import { StaffAvailabilityPage } from './features/staffOperations/StaffAvailabil
 import { StaffWorkloadPage } from './features/staffOperations/StaffWorkloadPage';
 import { StaffReportsPage } from './features/staffOperations/StaffReportsPage';
 
+// Organisation Settings Pages (Phase 6B)
+import { SettingsOverviewPage } from './features/settings/SettingsOverviewPage';
+import { OrganisationProfilePage } from './features/settings/OrganisationProfilePage';
+import { CalendarSettingsPage } from './features/settings/CalendarSettingsPage';
+import { ProgrammeSettingsPage } from './features/settings/ProgrammeSettingsPage';
+import { AttendanceSettingsPage } from './features/settings/AttendanceSettingsPage';
+import { FinanceSettingsPage } from './features/settings/FinanceSettingsPage';
+import { StaffSettingsPage } from './features/settings/StaffSettingsPage';
+import { CommunicationSettingsPage } from './features/settings/CommunicationSettingsPage';
+import { AutomationSettingsPage } from './features/settings/AutomationSettingsPage';
+import { UsersAndRolesPage } from './features/settings/UsersAndRolesPage';
+import { BrandingSettingsPage } from './features/settings/BrandingSettingsPage';
+import { SystemSettingsPage } from './features/settings/SystemSettingsPage';
+import { SettingsAuditPage } from './features/settings/SettingsAuditPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -201,6 +216,21 @@ function App() {
               <Route path="staff-operations/availability" element={<StaffAvailabilityPage />} />
               <Route path="staff-operations/workload" element={<StaffWorkloadPage />} />
               <Route path="staff-operations/reports" element={<StaffReportsPage />} />
+
+              {/* Organisation Settings Module (Phase 6B) */}
+              <Route path="settings" element={<SettingsOverviewPage />} />
+              <Route path="settings/organisation" element={<OrganisationProfilePage />} />
+              <Route path="settings/calendar" element={<CalendarSettingsPage />} />
+              <Route path="settings/programmes" element={<ProgrammeSettingsPage />} />
+              <Route path="settings/attendance" element={<AttendanceSettingsPage />} />
+              <Route path="settings/finance" element={<FinanceSettingsPage />} />
+              <Route path="settings/staff" element={<StaffSettingsPage />} />
+              <Route path="settings/communication" element={<CommunicationSettingsPage />} />
+              <Route path="settings/automation" element={<AutomationSettingsPage />} />
+              <Route path="settings/users" element={<UsersAndRolesPage />} />
+              <Route path="settings/branding" element={<BrandingSettingsPage />} />
+              <Route path="settings/system" element={<SystemSettingsPage />} />
+              <Route path="settings/audit" element={<SettingsAuditPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

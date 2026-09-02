@@ -662,6 +662,38 @@
         { "fieldPath": "originalStaffId", "order": "ASCENDING" },
         { "fieldPath": "substitutionStatus", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "organisationCalendarPeriods",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "calendarYear", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "organisationInvitations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "email", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "organisationInvitations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "invitationStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "organisationMemberships",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
