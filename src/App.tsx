@@ -84,6 +84,17 @@ import { AutomationRuleDetailPage } from './features/automation/AutomationRuleDe
 import { AutomationActivityPage } from './features/automation/AutomationActivityPage';
 import { NotificationsPage } from './features/notifications/NotificationsPage';
 
+// Staff Operations Pages (Phase 6A)
+import { StaffOperationsOverviewPage } from './features/staffOperations/StaffOperationsOverviewPage';
+import { StaffAssignmentsPage } from './features/staffOperations/StaffAssignmentsPage';
+import { StaffWorkRecordsPage } from './features/staffOperations/StaffWorkRecordsPage';
+import { StaffTimesheetsPage } from './features/staffOperations/StaffTimesheetsPage';
+import { StaffTimesheetDetailPage } from './features/staffOperations/StaffTimesheetDetailPage';
+import { StaffVerificationPage } from './features/staffOperations/StaffVerificationPage';
+import { StaffAvailabilityPage } from './features/staffOperations/StaffAvailabilityPage';
+import { StaffWorkloadPage } from './features/staffOperations/StaffWorkloadPage';
+import { StaffReportsPage } from './features/staffOperations/StaffReportsPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -179,6 +190,17 @@ function App() {
               <Route path="automation/rules/:id" element={<AutomationRuleDetailPage />} />
               <Route path="automation/activity" element={<AutomationActivityPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
+
+              {/* Staff Operations Module (Phase 6A) */}
+              <Route path="staff-operations" element={<StaffOperationsOverviewPage />} />
+              <Route path="staff-operations/assignments" element={<StaffAssignmentsPage />} />
+              <Route path="staff-operations/work-records" element={<StaffWorkRecordsPage />} />
+              <Route path="staff-operations/timesheets" element={<StaffTimesheetsPage />} />
+              <Route path="staff-operations/timesheets/:id" element={<StaffTimesheetDetailPage />} />
+              <Route path="staff-operations/verification" element={<StaffVerificationPage />} />
+              <Route path="staff-operations/availability" element={<StaffAvailabilityPage />} />
+              <Route path="staff-operations/workload" element={<StaffWorkloadPage />} />
+              <Route path="staff-operations/reports" element={<StaffReportsPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

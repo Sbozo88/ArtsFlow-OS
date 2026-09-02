@@ -15,13 +15,28 @@ import {
   MessageSquare,
   FolderArchive,
   BarChart3,
-  Zap
+  Zap,
+  Briefcase
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  {
+    name: 'Staff Ops',
+    icon: Briefcase,
+    children: [
+      { name: 'Overview', path: '/staff-operations' },
+      { name: 'Assignments', path: '/staff-operations/assignments' },
+      { name: 'Work Records', path: '/staff-operations/work-records' },
+      { name: 'Timesheets', path: '/staff-operations/timesheets' },
+      { name: 'Verification', path: '/staff-operations/verification' },
+      { name: 'Availability', path: '/staff-operations/availability' },
+      { name: 'Workload', path: '/staff-operations/workload' },
+      { name: 'Reports', path: '/staff-operations/reports' },
+    ]
+  },
   {
     name: 'Automation',
     icon: Zap,

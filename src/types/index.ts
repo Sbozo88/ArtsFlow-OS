@@ -496,7 +496,25 @@ export type AuditAction =
   | 'DISMISS_NOTIFICATION'
   | 'CREATE_FOLLOW_UP_FROM_AUTOMATION'
   | 'PREPARE_COMMUNICATION_FROM_AUTOMATION'
-  | 'UPDATE_NOTIFICATION_PREFERENCES';
+  | 'UPDATE_NOTIFICATION_PREFERENCES'
+  // Phase 6A: Staff Operations, Timesheets & Workload
+  | 'CREATE_STAFF_ASSIGNMENT'
+  | 'UPDATE_STAFF_ASSIGNMENT'
+  | 'END_STAFF_ASSIGNMENT'
+  | 'UPDATE_STAFF_AVAILABILITY'
+  | 'CREATE_WORK_RECORD'
+  | 'UPDATE_WORK_RECORD'
+  | 'VERIFY_WORK_RECORD'
+  | 'REJECT_WORK_RECORD'
+  | 'CREATE_TIMESHEET'
+  | 'SUBMIT_TIMESHEET'
+  | 'RETURN_TIMESHEET'
+  | 'VERIFY_TIMESHEET'
+  | 'APPROVE_TIMESHEET'
+  | 'REJECT_TIMESHEET'
+  | 'CREATE_SUBSTITUTION'
+  | 'CONFIRM_SUBSTITUTION'
+  | 'CANCEL_SUBSTITUTION';
 
 export interface AuditLog {
   id: string;
@@ -1307,6 +1325,7 @@ export type NotificationType =
   | 'asset'
   | 'communication'
   | 'follow_up'
+  | 'staff_operations'
   | 'system';
 
 export type NotificationStatus = 'unread' | 'read' | 'dismissed';
@@ -1339,3 +1358,173 @@ export interface NotificationPreference extends BaseRecord {
   followUps: boolean;
   communication: boolean;
 }
+
+// ─── Phase 6A: Staff Operations, Timesheets & Workload ────────────
+
+export type AssignmentType = 'programme' | 'group' | 'event' | 'administrative' | 'general';
+export type AssignmentStatus = 'active' | 'inactive' | 'completed' | 'cancelled';
+export type AssignmentRole = 
+  | 'lead_teacher'
+  | 'assistant_teacher'
+  | 'conductor'
+  | 'dance_teacher'
+  | 'coach'
+  | 'accompanist'
+  | 'supervisor'
+  | 'programme_director'
+  | 'administrator'
+  | 'volunteer'
+  | 'substitute'
+  | 'other';
+
+export interface StaffAssignment extends BaseRecord {
+  staffId: string;
+  assignmentType: AssignmentType;
+  programmeId?: string;
+  groupId?: string;
+  eventId?: string;
+  role: AssignmentRole;
+  startDate: string; // YYYY-MM-DD
+  endDate?: string;   // YYYY-MM-DD
+  assignmentStatus: AssignmentStatus;
+  isPrimary: boolean;
+  notes?: string;
+}
+
+export type AvailabilityType = 'available' | 'unavailable' | 'preferred' | 'limited';
+export type AvailabilityStatus = 'active' | 'inactive' | 'archived';
+
+export interface StaffAvailability extends BaseRecord {
+  staffId: string;
+  availabilityType: AvailabilityType;
+  date?: string;       // YYYY-MM-DD for specific dates
+  dayOfWeek?: number;  // 0-6 (0 = Sunday, 1 = Monday...) for recurring weekly
+  startTime?: string;  // HH:mm
+  endTime?: string;    // HH:mm
+  reason?: string;
+  notes?: string;
+  availabilityStatus: AvailabilityStatus;
+}
+
+export type WorkType = 
+  | 'teaching'
+  | 'rehearsal'
+  | 'event'
+  | 'performance'
+  | 'workshop'
+  | 'administration'
+  | 'meeting'
+  | 'setup'
+  | 'supervision'
+  | 'other';
+
+export type WorkStatus = 'draft' | 'recorded' | 'verified' | 'rejected' | 'cancelled';
+export type WorkSourceType = 'session' | 'event' | 'manual' | 'automation';
+
+export interface StaffWorkRecord extends BaseRecord {
+  staffId: string;
+  workType: WorkType;
+  sessionId?: string;
+  eventId?: string;
+  programmeId?: string;
+  groupId?: string;
+  workDate: string; // YYYY-MM-DD
+  startTime?: string; // HH:mm
+  endTime?: string;   // HH:mm
+  durationMinutes: number;
+  workStatus: WorkStatus;
+  sourceType: WorkSourceType;
+  sourceRecordId?: string;
+  notes?: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  rejectionReason?: string;
+}
+
+export type TimesheetStatus = 
+  | 'draft'
+  | 'submitted'
+  | 'under_review'
+  | 'verified'
+  | 'approved'
+  | 'rejected'
+  | 'archived';
+
+export interface Timesheet extends BaseRecord {
+  staffId: string;
+  periodStart: string; // YYYY-MM-DD
+  periodEnd: string;   // YYYY-MM-DD
+  timesheetStatus: TimesheetStatus;
+  totalMinutes: number;
+  totalEntries: number;
+  submittedAt?: string;
+  submittedBy?: string;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectedAt?: string;
+  rejectedBy?: string;
+  rejectionReason?: string;
+  notes?: string;
+}
+
+export type TimesheetEntryStatus = 'draft' | 'included' | 'excluded' | 'verified' | 'rejected';
+
+export interface TimesheetEntry extends BaseRecord {
+  timesheetId: string;
+  staffId: string;
+  workRecordId?: string;
+  workDate: string; // YYYY-MM-DD
+  workType: WorkType;
+  programmeId?: string;
+  groupId?: string;
+  sessionId?: string;
+  eventId?: string;
+  startTime?: string;
+  endTime?: string;
+  durationMinutes: number;
+  entryStatus: TimesheetEntryStatus;
+  notes?: string;
+}
+
+export type SubstitutionStatus = 'requested' | 'confirmed' | 'completed' | 'cancelled';
+
+export interface StaffSubstitution extends BaseRecord {
+  sessionId: string;
+  originalStaffId: string;
+  substituteStaffId: string;
+  reason: string;
+  substitutionStatus: SubstitutionStatus;
+  requestedAt?: string;
+  confirmedAt?: string;
+  notes?: string;
+}
+
+export interface TimesheetHoursSummary {
+  teachingMinutes: number;
+  eventMinutes: number;
+  adminMinutes: number;
+  otherMinutes: number;
+  totalMinutes: number;
+}
+
+export interface StaffWorkloadSummary {
+  staffId: string;
+  staffName: string;
+  assignedProgrammesCount: number;
+  assignedGroupsCount: number;
+  sessionsCount: number;
+  eventsCount: number;
+  totalWorkMinutes: number;
+  pendingTimesheetsCount: number;
+  substitutionsCount: number;
+  flags: {
+    highWorkload: boolean;
+    lowActivity: boolean;
+    noActiveAssignment: boolean;
+    repeatedSubstitutions: boolean;
+    timesheetOverdue: boolean;
+  };
+}
+
