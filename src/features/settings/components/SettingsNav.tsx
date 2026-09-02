@@ -13,7 +13,8 @@ import {
   Palette, 
   Sliders, 
   History,
-  LayoutDashboard
+  LayoutDashboard,
+  Shield
 } from 'lucide-react';
 
 export const SettingsNav: React.FC = () => {
@@ -24,6 +25,7 @@ export const SettingsNav: React.FC = () => {
     { name: 'Programmes', path: '/settings/programmes', icon: Layers },
     { name: 'Attendance', path: '/settings/attendance', icon: CheckSquare },
     { name: 'Finance', path: '/settings/finance', icon: CreditCard },
+    { name: 'Guardian Portal', path: '/settings/portal', icon: Shield },
     { name: 'Staff & Timesheets', path: '/settings/staff', icon: Clock },
     { name: 'Communication', path: '/settings/communication', icon: MessageSquare },
     { name: 'Automation', path: '/settings/automation', icon: Cpu },

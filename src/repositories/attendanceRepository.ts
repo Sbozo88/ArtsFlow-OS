@@ -29,6 +29,10 @@ class AttendanceRepository extends BaseRepository<Attendance> {
     return snapshot.docs.map(doc => doc.data() as Attendance);
   }
 
+  async getByLearner(orgId: string, learnerId: string): Promise<Attendance[]> {
+    return this.getByLearnerId(orgId, learnerId);
+  }
+
   async getDuplicate(orgId: string, sessionId: string, learnerId: string): Promise<Attendance | null> {
     const q = query(
       this.getCollection(),

@@ -125,6 +125,22 @@ export const DEFAULT_SETTINGS = (organisationId: string, orgName: string = 'My O
     dateFormat: 'YYYY-MM-DD',
     timeFormat: '24h',
     recordsPerPage: 25
+  },
+  portal: {
+    guardianPortalEnabled: true,
+    showAttendance: true,
+    showAttendanceHistory: true,
+    showFinance: true,
+    showPayments: true,
+    showEvents: true,
+    showConsent: true,
+    showTransport: true,
+    showDocuments: true,
+    showMessages: true,
+    showTeacherNames: true,
+    allowContactUpdates: true,
+    allowDirectProfileEdit: true,
+    financeRequiresFinancialContact: true
   }
 });
 
@@ -209,7 +225,8 @@ export const organisationSettingsService = {
       communication: 'UPDATE_COMMUNICATION_SETTINGS',
       automation: 'UPDATE_AUTOMATION_SETTINGS',
       documents: 'UPDATE_DOCUMENT_SETTINGS',
-      system: 'UPDATE_SYSTEM_SETTINGS'
+      system: 'UPDATE_SYSTEM_SETTINGS',
+      portal: 'UPDATE_PORTAL_SETTINGS'
     };
 
     const action = auditActionMap[section as string] || 'UPDATE';

@@ -694,6 +694,62 @@
         { "fieldPath": "organisationId", "order": "ASCENDING" },
         { "fieldPath": "userId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "guardianPortalAccess",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "guardianId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "guardianPortalAccess",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "guardianPortalAccess",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "accessStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "guardianInvitations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "guardianId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "guardianInvitations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "invitationStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "portalChangeRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "guardianId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "portalChangeRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "requestStatus", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

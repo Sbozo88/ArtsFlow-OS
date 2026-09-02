@@ -545,6 +545,29 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── Phase 7A Collections: Guardian Portal & External Access ───
+
+    match /guardianPortalAccess/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if isUserInOrg(request.resource.data.organisationId) || request.auth != null;
+      allow update: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow delete: if false;
+    }
+
+    match /guardianInvitations/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId) || true; // Allow lookup by token prior to auth
+      allow create: if isUserInOrg(request.resource.data.organisationId);
+      allow update: if isUserInOrg(resource.data.organisationId) || request.auth != null;
+      allow delete: if false;
+    }
+
+    match /portalChangeRequests/{docId} {
+      allow read: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if isUserInOrg(request.resource.data.organisationId) || (request.auth != null && request.resource.data.userId == request.auth.uid);
+      allow update: if isUserInOrg(resource.data.organisationId);
+      allow delete: if false;
+    }
+
     // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {

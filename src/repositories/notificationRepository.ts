@@ -13,6 +13,10 @@ class NotificationRepository extends BaseRepository<AppNotification> {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
+  async getByUser(organisationId: string, userId: string): Promise<AppNotification[]> {
+    return this.getForUser(organisationId, userId);
+  }
+
   async getUnreadForUser(organisationId: string, userId: string): Promise<AppNotification[]> {
     const notifications = await this.getByOrganisation(organisationId);
     return notifications

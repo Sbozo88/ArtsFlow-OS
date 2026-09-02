@@ -18,6 +18,10 @@ class EnrolmentRepository extends BaseRepository<Enrolment> {
     return snapshot.docs.map(doc => doc.data() as Enrolment);
   }
 
+  async getByLearner(orgId: string, learnerId: string): Promise<Enrolment[]> {
+    return this.getByLearnerId(orgId, learnerId);
+  }
+
   async getByGroupId(orgId: string, groupId: string): Promise<Enrolment[]> {
     const q = query(
       this.getCollection(),
