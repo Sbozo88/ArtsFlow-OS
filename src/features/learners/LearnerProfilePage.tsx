@@ -11,13 +11,17 @@ import { useSessions } from '../../hooks/useSessions';
 import { useAuth } from '../../contexts/AuthContext';
 import { useInvoices } from '../../hooks/useInvoices';
 import { usePayments } from '../../hooks/usePayments';
+import { useCommunications } from '../../hooks/useCommunications';
+import { useEntityDocuments } from '../../hooks/useEntityDocuments';
 import { formatMoney } from '../../lib/money';
 import { InvoiceDetailModal } from '../finance/components/InvoiceDetailModal';
 import { ReceiptModal } from '../finance/components/ReceiptModal';
+import { DocumentUploadModal } from '../documents/components/DocumentUploadModal';
+import { CommunicationDetailModal } from '../communication/components/CommunicationDetailModal';
 import { learnerGuardianService } from '../../services/learnerGuardianService';
 import { enrolmentService } from '../../services/enrolmentService';
 // Enrolment types used transitively via service
-import { ArrowLeft, User, Phone, Mail, MapPin, Plus, Trash2, GraduationCap, CheckCircle2, XCircle, Clock, ShieldCheck, CreditCard, Receipt } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, MapPin, Plus, Trash2, GraduationCap, CheckCircle2, XCircle, Clock, ShieldCheck, CreditCard, Receipt, MessageSquare, FolderArchive, Download } from 'lucide-react';
 
 export const LearnerProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,9 +36,13 @@ export const LearnerProfilePage: React.FC = () => {
   const { groups } = useProgrammeGroups();
   const { sessions } = useSessions();
   const { authUser, organisationId } = useAuth();
+  const { communications: learnerComms, refresh: refreshLearnerComms } = useCommunications({ relatedEntityType: 'learner', relatedEntityId: id });
+  const { documents: learnerDocs, refresh: refreshLearnerDocs } = useEntityDocuments('learner', id);
 
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [selectedReceiptPaymentId, setSelectedReceiptPaymentId] = useState<string | null>(null);
+  const [selectedCommId, setSelectedCommId] = useState<string | null>(null);
+  const [showDocUploadModal, setShowDocUploadModal] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedGuardianId, setSelectedGuardianId] = useState('');
@@ -471,6 +479,138 @@ export const LearnerProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Communication Section */}
+      <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-slate-50">
+          <div>
+            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-indigo-600" /> Communication History
+            </h3>
+            <p className="text-xs text-gray-500">Notices, consent requests, and reminders sent to this learner's guardians.</p>
+          </div>
+          <Link
+            to={`/communication/compose?type=guardian&audience=single_learner&learnerId=${id}`}
+            className="btn btn-secondary text-xs flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" /> Message Guardian
+          </Link>
+        </div>
+        <div className="p-4">
+          {learnerComms.length === 0 ? (
+            <p className="text-xs text-slate-400">No communication records sent for this learner yet.</p>
+          ) : (
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-600 font-semibold uppercase">
+                  <tr>
+                    <th className="py-2 px-3">Date</th>
+                    <th className="py-2 px-3">Type</th>
+                    <th className="py-2 px-3">Subject / Body</th>
+                    <th className="py-2 px-3">Channel</th>
+                    <th className="py-2 px-3">Status</th>
+                    <th className="py-2 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {learnerComms.map(c => (
+                    <tr key={c.id} className="hover:bg-slate-50">
+                      <td className="py-2 px-3 text-slate-600 font-mono text-[11px] whitespace-nowrap">
+                        {new Date(c.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-2 px-3 capitalize font-medium text-slate-800">{c.communicationType}</td>
+                      <td className="py-2 px-3 truncate max-w-xs">{c.subject || c.body}</td>
+                      <td className="py-2 px-3 uppercase font-bold text-slate-600 text-[10px]">{c.channel}</td>
+                      <td className="py-2 px-3 capitalize">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
+                          {c.communicationStatus}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <button
+                          onClick={() => setSelectedCommId(c.id)}
+                          className="text-indigo-600 hover:text-indigo-800 font-semibold"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Documents Section */}
+      <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-slate-50">
+          <div>
+            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <FolderArchive className="w-5 h-5 text-indigo-600" /> Learner Documents & Files
+            </h3>
+            <p className="text-xs text-gray-500">Attach indemnity forms, registrations, medical notes, or scores.</p>
+          </div>
+          <button
+            onClick={() => setShowDocUploadModal(true)}
+            className="btn btn-secondary text-xs flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" /> Upload Document
+          </button>
+        </div>
+        <div className="p-4">
+          {learnerDocs.length === 0 ? (
+            <p className="text-xs text-slate-400">No documents attached to this learner.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {learnerDocs.map(doc => (
+                <div key={doc.id} className="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-bold text-xs text-slate-800 truncate">{doc.name}</span>
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-50 text-indigo-700">v{doc.versionNumber || 1}</span>
+                    </div>
+                    {doc.fileName && <p className="text-[11px] font-mono text-slate-400 truncate">{doc.fileName}</p>}
+                  </div>
+                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 text-xs">
+                    <span className="text-[10px] text-slate-400">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-2">
+                      {doc.downloadUrl && (
+                        <a href={doc.downloadUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800" title="Download">
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      <Link to={`/documents/${doc.id}`} className="text-slate-500 hover:text-slate-800 text-[11px] font-semibold">
+                        Details
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Communication Modal */}
+      {selectedCommId && (
+        <CommunicationDetailModal
+          communicationId={selectedCommId}
+          onClose={() => setSelectedCommId(null)}
+          onUpdated={refreshLearnerComms}
+        />
+      )}
+
+      {/* Document Upload Modal */}
+      <DocumentUploadModal
+        isOpen={showDocUploadModal}
+        onClose={() => setShowDocUploadModal(false)}
+        onUploaded={refreshLearnerDocs}
+        defaultType="learner"
+        relatedEntityType="learner"
+        relatedEntityId={id}
+      />
 
       {/* Invoice Detail Modal */}
       <InvoiceDetailModal

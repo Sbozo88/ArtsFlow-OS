@@ -457,7 +457,25 @@ export type AuditAction =
   | 'REMOVE_PAYMENT_ALLOCATION'
   | 'CREATE_DISCOUNT'
   | 'APPROVE_WAIVER'
-  | 'CREATE_FINANCE_FOLLOW_UP';
+  | 'CREATE_FINANCE_FOLLOW_UP'
+  // Phase 4B: Communication & Documents
+  | 'CREATE_COMMUNICATION'
+  | 'UPDATE_COMMUNICATION'
+  | 'SEND_COMMUNICATION'
+  | 'CANCEL_COMMUNICATION'
+  | 'ADD_COMMUNICATION_RECIPIENT'
+  | 'DELIVERY_FAILED'
+  | 'DELIVERY_CONFIRMED'
+  | 'CREATE_COMMUNICATION_TEMPLATE'
+  | 'UPDATE_COMMUNICATION_TEMPLATE'
+  | 'UPLOAD_DOCUMENT'
+  | 'UPDATE_DOCUMENT'
+  | 'ARCHIVE_DOCUMENT'
+  | 'CREATE_DOCUMENT_VERSION'
+  | 'LINK_DOCUMENT'
+  | 'UNLINK_DOCUMENT'
+  | 'CREATE_DOCUMENT_TEMPLATE'
+  | 'GENERATE_DOCUMENT';
 
 export interface AuditLog {
   id: string;
@@ -820,5 +838,179 @@ export interface FinanceAdjustment extends BaseRecord {
   reason: string;
   approvedBy: string;
 }
+
+// ─── Phase 4B: Communication & Documents ────────────────────────────
+
+export type CommunicationType =
+  | 'general'
+  | 'guardian'
+  | 'staff'
+  | 'programme'
+  | 'group'
+  | 'event'
+  | 'finance'
+  | 'consent'
+  | 'transport'
+  | 'attendance'
+  | 'follow_up'
+  | 'other';
+
+export type CommunicationChannel =
+  | 'email'
+  | 'whatsapp'
+  | 'sms'
+  | 'internal'
+  | 'print'
+  | 'manual';
+
+export type CommunicationStatus =
+  | 'draft'
+  | 'ready'
+  | 'sent'
+  | 'partially_sent'
+  | 'failed'
+  | 'cancelled'
+  | 'completed';
+
+export interface Communication extends BaseRecord {
+  communicationType: CommunicationType;
+  channel: CommunicationChannel;
+  subject?: string;
+  body: string;
+  communicationStatus: CommunicationStatus;
+  sentAt?: string;
+  completedAt?: string;
+  relatedEntityType?: string; // 'event' | 'group' | 'programme' | 'invoice' | 'consentRequest' | 'transportPlan' | 'learner'
+  relatedEntityId?: string;
+  templateId?: string;
+  notes?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type RecipientType = 'learner' | 'guardian' | 'staff' | 'external';
+
+export type DeliveryStatus =
+  | 'pending'
+  | 'prepared'
+  | 'sent'
+  | 'delivered'
+  | 'failed'
+  | 'skipped'
+  | 'cancelled';
+
+export interface CommunicationRecipient extends BaseRecord {
+  communicationId: string;
+  recipientType: RecipientType;
+  learnerId?: string;
+  guardianId?: string;
+  staffId?: string;
+  recipientName: string;
+  recipientEmail?: string;
+  recipientPhone?: string;
+  deliveryStatus: DeliveryStatus;
+  deliveryChannel: CommunicationChannel;
+  sentAt?: string;
+  deliveredAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type TemplateCategory =
+  | 'general'
+  | 'attendance'
+  | 'event'
+  | 'consent'
+  | 'transport'
+  | 'finance'
+  | 'programme'
+  | 'guardian'
+  | 'staff'
+  | 'music'
+  | 'dance'
+  | 'other';
+
+export interface CommunicationTemplate extends BaseRecord {
+  name: string;
+  category: TemplateCategory;
+  defaultChannel?: CommunicationChannel;
+  subjectTemplate?: string;
+  bodyTemplate: string;
+  templateStatus: TemplateStatus;
+  description?: string;
+}
+
+export interface CommunicationAttachment extends BaseRecord {
+  communicationId: string;
+  documentId: string;
+}
+
+export type DocumentType =
+  | 'general'
+  | 'learner'
+  | 'guardian'
+  | 'staff'
+  | 'programme'
+  | 'group'
+  | 'music'
+  | 'dance'
+  | 'event'
+  | 'consent'
+  | 'transport'
+  | 'finance'
+  | 'invoice'
+  | 'receipt'
+  | 'report'
+  | 'policy'
+  | 'agreement'
+  | 'other';
+
+export type DocumentStatus = 'draft' | 'active' | 'archived' | 'superseded';
+
+export interface DocumentRecord extends BaseRecord {
+  name: string;
+  documentType: DocumentType;
+  fileName?: string;
+  storagePath?: string;
+  downloadUrl?: string;
+  mimeType?: string;
+  fileSize?: number; // In bytes
+  documentStatus: DocumentStatus;
+  relatedEntityType?: string;
+  relatedEntityId?: string;
+  versionNumber: number;
+  uploadedBy?: string;
+  generatedBy?: string;
+  notes?: string;
+}
+
+export interface DocumentVersion extends BaseRecord {
+  documentId: string;
+  versionNumber: number;
+  fileName: string;
+  storagePath: string;
+  downloadUrl?: string;
+  mimeType: string;
+  fileSize: number;
+  notes?: string;
+}
+
+export type DocumentTemplateFormat = 'html' | 'text' | 'markdown';
+
+export interface DocumentTemplate extends BaseRecord {
+  name: string;
+  documentType: DocumentType;
+  titleTemplate?: string;
+  bodyTemplate?: string;
+  templateFormat: DocumentTemplateFormat;
+  templateStatus: TemplateStatus;
+}
+
+export interface DocumentLink extends BaseRecord {
+  documentId: string;
+  entityType: string; // 'learner' | 'guardian' | 'staff' | 'event' | 'consentRequest' | 'invoice' | 'payment' | 'transportPlan' | 'group'
+  entityId: string;
+}
+
 
 
