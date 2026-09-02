@@ -8,6 +8,7 @@ import { automationRuleService } from '../automation/automationRuleService';
 import { automationRuleRepository } from '../../repositories/automationRuleRepository';
 import { automationExecutionRepository } from '../../repositories/automationExecutionRepository';
 import { notificationRepository } from '../../repositories/notificationRepository';
+import { notificationPreferenceRepository } from '../../repositories/notificationPreferenceRepository';
 import { staffRepository } from '../../repositories/staffRepository';
 import { programmeGroupRepository } from '../../repositories/programmeGroupRepository';
 import { attendanceRepository } from '../../repositories/attendanceRepository';
@@ -462,6 +463,32 @@ describe('Phase 5B: Workflow Automation & Notifications Tests', () => {
         'notification',
         'notif-1'
       );
+    });
+
+    it('manages user notification preferences with defaults and persistent updates', async () => {
+      vi.spyOn(notificationPreferenceRepository, 'getForUser').mockResolvedValue(null);
+      const prefs = await notificationService.getUserPreferences(orgId, 'staff-pref-1');
+      expect(prefs.attendance).toBe(true);
+      expect(prefs.finance).toBe(true);
+
+      const createSpy = vi.spyOn(notificationPreferenceRepository, 'create').mockImplementation(async (_org, _act, data) => ({
+        id: 'pref-1',
+        organisationId: orgId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: actorId,
+        updatedBy: actorId,
+        status: 'active',
+        ...data
+      }));
+
+      const updated = await notificationService.updateUserPreferences(orgId, 'staff-pref-1', actorId, {
+        finance: false,
+        attendance: true
+      });
+      expect(updated.finance).toBe(false);
+      expect(updated.attendance).toBe(true);
+      expect(createSpy).toHaveBeenCalled();
     });
   });
 

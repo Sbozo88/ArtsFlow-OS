@@ -1,6 +1,7 @@
 import { notificationRepository } from '../../repositories/notificationRepository';
+import { notificationPreferenceRepository } from '../../repositories/notificationPreferenceRepository';
 import { auditService } from '../auditService';
-import type { AppNotification, NotificationType, AlertSeverity, NotificationStatus, AuthRole } from '../../types';
+import type { AppNotification, NotificationType, AlertSeverity, NotificationStatus, AuthRole, NotificationPreference } from '../../types';
 
 export interface CreateNotificationInput {
   recipientUserId: string;
@@ -123,5 +124,41 @@ export const notificationService = {
       'notification',
       notificationId
     );
+  },
+
+  /**
+   * Gets notification preferences for a user, or defaults if none configured yet.
+   */
+  async getUserPreferences(organisationId: string, userId: string): Promise<NotificationPreference> {
+    return notificationPreferenceRepository.getOrDefault(organisationId, userId);
+  },
+
+  /**
+   * Updates notification preferences for a user.
+   */
+  async updateUserPreferences(
+    organisationId: string,
+    userId: string,
+    actorId: string,
+    updates: Partial<Omit<NotificationPreference, 'id' | 'organisationId' | 'userId' | 'createdAt' | 'createdBy'>>
+  ): Promise<NotificationPreference> {
+    const existing = await notificationPreferenceRepository.getForUser(organisationId, userId);
+    if (existing) {
+      await notificationPreferenceRepository.update(organisationId, actorId, existing.id, updates);
+      return { ...existing, ...updates };
+    } else {
+      const created = await notificationPreferenceRepository.create(organisationId, actorId, {
+        userId,
+        attendance: updates.attendance ?? true,
+        finance: updates.finance ?? true,
+        events: updates.events ?? true,
+        consent: updates.consent ?? true,
+        transport: updates.transport ?? true,
+        assets: updates.assets ?? true,
+        followUps: updates.followUps ?? true,
+        communication: updates.communication ?? true
+      });
+      return created;
+    }
   }
 };

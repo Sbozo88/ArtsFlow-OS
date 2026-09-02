@@ -27,13 +27,21 @@ export function AutomationOverviewPage() {
     activeRulesCount: number;
     disabledRulesCount: number;
     runsTodayCount: number;
+    actionsTriggeredTodayCount: number;
+    openAutomationFollowUpsCount: number;
+    notificationsPendingCount: number;
     failedRunsCount: number;
+    rulesRequiringAttention: import('../../types').AutomationRule[];
     recentExecutions: AutomationExecution[];
   }>({
     activeRulesCount: 0,
     disabledRulesCount: 0,
     runsTodayCount: 0,
+    actionsTriggeredTodayCount: 0,
+    openAutomationFollowUpsCount: 0,
+    notificationsPendingCount: 0,
     failedRunsCount: 0,
+    rulesRequiringAttention: [],
     recentExecutions: []
   });
 
@@ -157,71 +165,136 @@ export function AutomationOverviewPage() {
       )}
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Rules</span>
-            <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <Zap className="w-4 h-4" />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Active Rules</span>
+            <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+              <Zap className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">{stats.activeRulesCount}</span>
-            <span className="text-xs text-slate-500 font-medium">configured</span>
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold text-slate-900">{stats.activeRulesCount}</span>
+            <span className="text-[11px] text-slate-500 font-medium">enabled</span>
           </div>
-          <Link to="/automation/rules" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium mt-3 inline-flex items-center gap-1">
-            Manage Rules <ArrowRight className="w-3 h-3" />
+          <Link to="/automation/rules" className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium mt-2 inline-flex items-center gap-1">
+            Rules <ArrowRight className="w-2.5 h-2.5" />
           </Link>
         </div>
 
-        <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
+        <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Executions Today</span>
-            <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-              <Activity className="w-4 h-4" />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Disabled Rules</span>
+            <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+              <Clock className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">{stats.runsTodayCount}</span>
-            <span className="text-xs text-slate-500 font-medium">runs logged</span>
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold text-slate-900">{stats.disabledRulesCount}</span>
+            <span className="text-[11px] text-slate-500 font-medium">inactive</span>
           </div>
-          <Link to="/automation/activity" className="text-xs text-emerald-600 hover:text-emerald-800 font-medium mt-3 inline-flex items-center gap-1">
-            View Activity <ArrowRight className="w-3 h-3" />
+          <Link to="/automation/rules" className="text-[11px] text-amber-600 hover:text-amber-800 font-medium mt-2 inline-flex items-center gap-1">
+            Inspect <ArrowRight className="w-2.5 h-2.5" />
           </Link>
         </div>
 
-        <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
+        <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Failed / Issues</span>
-            <span className="p-2 bg-rose-50 text-rose-600 rounded-lg">
-              <AlertTriangle className="w-4 h-4" />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Actions Today</span>
+            <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+              <Activity className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">{stats.failedRunsCount}</span>
-            <span className="text-xs text-slate-500 font-medium">requires retry</span>
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold text-slate-900">{stats.actionsTriggeredTodayCount}</span>
+            <span className="text-[11px] text-slate-500 font-medium">completed</span>
           </div>
-          <span className="text-xs text-slate-400 mt-3 block">
-            {stats.failedRunsCount === 0 ? 'All systems normal' : 'Inspect execution log'}
+          <Link to="/automation/activity" className="text-[11px] text-emerald-600 hover:text-emerald-800 font-medium mt-2 inline-flex items-center gap-1">
+            Activity <ArrowRight className="w-2.5 h-2.5" />
+          </Link>
+        </div>
+
+        <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Auto Follow-Ups</span>
+            <span className="p-1.5 bg-sky-50 text-sky-600 rounded-lg">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold text-slate-900">{stats.openAutomationFollowUpsCount}</span>
+            <span className="text-[11px] text-slate-500 font-medium">open tasks</span>
+          </div>
+          <Link to="/follow-ups" className="text-[11px] text-sky-600 hover:text-sky-800 font-medium mt-2 inline-flex items-center gap-1">
+            Follow-Ups <ArrowRight className="w-2.5 h-2.5" />
+          </Link>
+        </div>
+
+        <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pending Alerts</span>
+            <span className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
+              <Sparkles className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold text-slate-900">{stats.notificationsPendingCount}</span>
+            <span className="text-[11px] text-slate-500 font-medium">unread</span>
+          </div>
+          <Link to="/notifications" className="text-[11px] text-purple-600 hover:text-purple-800 font-medium mt-2 inline-flex items-center gap-1">
+            Notifications <ArrowRight className="w-2.5 h-2.5" />
+          </Link>
+        </div>
+
+        <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Failed Runs</span>
+            <span className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+              <AlertTriangle className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold text-slate-900">{stats.failedRunsCount}</span>
+            <span className="text-[11px] text-slate-500 font-medium">issues</span>
+          </div>
+          <span className="text-[11px] text-slate-400 mt-2 block">
+            {stats.failedRunsCount === 0 ? 'All normal' : 'Inspect logs'}
           </span>
         </div>
-
-        <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Paused Rules</span>
-            <span className="p-2 bg-amber-50 text-amber-600 rounded-lg">
-              <Clock className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900">{stats.disabledRulesCount}</span>
-            <span className="text-xs text-slate-500 font-medium">inactive</span>
-          </div>
-          <Link to="/automation/rules" className="text-xs text-amber-600 hover:text-amber-800 font-medium mt-3 inline-flex items-center gap-1">
-            Inspect Paused <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
       </div>
+
+      {/* Rules Requiring Attention */}
+      {stats.rulesRequiringAttention.length > 0 && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
+              <AlertTriangle className="w-4 h-4 text-rose-600" />
+              Rules Requiring Attention ({stats.rulesRequiringAttention.length})
+            </div>
+            <Link to="/automation/activity" className="text-xs font-semibold text-rose-700 hover:text-rose-900">
+              View Failures &rarr;
+            </Link>
+          </div>
+          <div className="mt-3 divide-y divide-rose-100">
+            {stats.rulesRequiringAttention.map(rule => (
+              <div key={rule.id} className="py-2.5 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-semibold text-rose-950">{rule.name}</span>
+                  <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 uppercase font-medium">
+                    {rule.ruleCategory}
+                  </span>
+                </div>
+                <Link
+                  to={`/automation/rules/${rule.id}`}
+                  className="text-xs font-medium text-rose-700 hover:underline inline-flex items-center gap-1"
+                >
+                  Configure Rule <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Safety Boundary Banner */}
       <div className="p-4 bg-slate-900 text-white rounded-xl flex items-start gap-3.5 shadow-sm">

@@ -33,9 +33,12 @@ import {
   FolderArchive,
   BarChart3,
   Zap,
-  Bell
+  Bell,
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAutomationExecutions } from '../../hooks/useAutomationExecutions';
 
 export const DashboardPage: React.FC = () => {
   const { learners, loading: loadingLearners } = useLearners();
@@ -61,6 +64,8 @@ export const DashboardPage: React.FC = () => {
     createFollowUp 
   } = useOperationalAlerts();
   const { unreadCount } = useUnreadNotifications();
+  const { executions } = useAutomationExecutions();
+  const failedExecutions = executions.filter(e => e.executionStatus === 'failed');
 
   const loading = loadingLearners || loadingGuardians || loadingStaff || loadingProgrammes || loadingGroups || loadingEnrolments || loadingSessions || loadingFollowUps;
 
@@ -109,6 +114,20 @@ export const DashboardPage: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Actionable Automation & Notification Banners (Section 69) */}
+      {failedExecutions.length > 0 && (
+        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs text-rose-900 shadow-xs">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span className="font-semibold">{failedExecutions.length} Automation Execution(s) Failed</span>
+            <span className="text-rose-700 hidden sm:inline">— require inspection or retry</span>
+          </div>
+          <Link to="/automation/activity" className="font-semibold text-rose-800 hover:underline flex items-center gap-1 shrink-0">
+            Inspect Activity <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

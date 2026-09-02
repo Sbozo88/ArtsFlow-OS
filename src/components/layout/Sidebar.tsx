@@ -28,7 +28,7 @@ const navItems = [
     children: [
       { name: 'Overview', path: '/automation' },
       { name: 'Rules', path: '/automation/rules' },
-      { name: 'Activity Log', path: '/automation/activity' },
+      { name: 'Activity', path: '/automation/activity' },
       { name: 'Notifications', path: '/notifications' },
     ]
   },

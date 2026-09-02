@@ -546,6 +546,24 @@
       ]
     },
     {
+      "collectionGroup": "automationRules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "ruleStatus", "order": "ASCENDING" },
+        { "fieldPath": "ruleCategory", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "automationExecutions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organisationId", "order": "ASCENDING" },
+        { "fieldPath": "executionStatus", "order": "ASCENDING" },
+        { "fieldPath": "triggeredAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [

@@ -14,6 +14,8 @@ import type { AutomationExecution } from '../../types';
 
 export function AutomationActivityPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedExecution, setSelectedExecution] = useState<AutomationExecution | null>(null);
 
@@ -22,6 +24,8 @@ export function AutomationActivityPage() {
 
   const filteredExecutions = executions.filter(e => {
     if (selectedStatus !== 'all' && e.executionStatus !== selectedStatus) return false;
+    if (selectedCategory !== 'all' && e.ruleCategory !== selectedCategory) return false;
+    if (selectedDate && !e.triggeredAt.startsWith(selectedDate)) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
@@ -79,7 +83,42 @@ export function AutomationActivityPage() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 outline-none"
+          >
+            <option value="all">All Categories</option>
+            <option value="attendance">Attendance</option>
+            <option value="finance">Finance</option>
+            <option value="consent">Consent</option>
+            <option value="transport">Transport</option>
+            <option value="event">Event</option>
+            <option value="instrument">Instrument</option>
+            <option value="costume">Costume</option>
+            <option value="communication">Communication</option>
+            <option value="follow_up">Follow-Up</option>
+            <option value="general">General</option>
+          </select>
+
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 outline-none"
+            title="Filter by Trigger Date"
+          />
+
+          {selectedDate && (
+            <button
+              onClick={() => setSelectedDate('')}
+              className="text-[11px] text-slate-500 hover:text-slate-800 underline"
+            >
+              Clear date
+            </button>
+          )}
+
           <select
             value={selectedStatus}
             onChange={e => setSelectedStatus(e.target.value)}

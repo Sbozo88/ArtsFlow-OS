@@ -1,5 +1,7 @@
 import { automationRuleRepository } from '../../repositories/automationRuleRepository';
 import { automationExecutionRepository } from '../../repositories/automationExecutionRepository';
+import { followUpRepository } from '../../repositories/followUpRepository';
+import { notificationRepository } from '../../repositories/notificationRepository';
 import { automationEvaluationService } from './automationEvaluationService';
 import { automationActionService, type ActionResult } from './automationActionService';
 import { auditService } from '../auditService';
@@ -234,12 +236,18 @@ export const automationExecutionService = {
     activeRulesCount: number;
     disabledRulesCount: number;
     runsTodayCount: number;
+    actionsTriggeredTodayCount: number;
+    openAutomationFollowUpsCount: number;
+    notificationsPendingCount: number;
     failedRunsCount: number;
+    rulesRequiringAttention: AutomationRule[];
     recentExecutions: AutomationExecution[];
   }> {
-    const [allRules, executions] = await Promise.all([
+    const [allRules, executions, followUps, notifications] = await Promise.all([
       automationRuleRepository.getByOrganisation(organisationId),
-      automationExecutionRepository.getRecentExecutions(organisationId, 20)
+      automationExecutionRepository.getRecentExecutions(organisationId, 50),
+      followUpRepository.getByOrganisation(organisationId),
+      notificationRepository.getByOrganisation(organisationId)
     ]);
 
     const activeRulesCount = allRules.filter(r => r.ruleStatus === 'active').length;
@@ -247,13 +255,28 @@ export const automationExecutionService = {
 
     const todayStr = new Date().toISOString().split('T')[0];
     const todayRuns = executions.filter(e => e.triggeredAt.startsWith(todayStr));
+    const actionsTriggeredTodayCount = todayRuns.reduce((sum, e) => sum + (e.actionsCompleted || 0), 0);
     const failedRunsCount = executions.filter(e => e.executionStatus === 'failed').length;
+
+    const openAutomationFollowUpsCount = followUps.filter(
+      f => f.followUpStatus === 'open' && (f.description?.includes('Automation') || f.subject?.includes('[Auto]'))
+    ).length;
+
+    const notificationsPendingCount = notifications.filter(n => n.notificationStatus === 'unread').length;
+
+    // Rules requiring attention: rules that have had failures in recent runs
+    const failedRuleIds = new Set(executions.filter(e => e.executionStatus === 'failed').map(e => e.automationRuleId));
+    const rulesRequiringAttention = allRules.filter(r => failedRuleIds.has(r.id));
 
     return {
       activeRulesCount,
       disabledRulesCount,
       runsTodayCount: todayRuns.length,
+      actionsTriggeredTodayCount,
+      openAutomationFollowUpsCount,
+      notificationsPendingCount,
       failedRunsCount,
+      rulesRequiringAttention,
       recentExecutions: executions
     };
   }
