@@ -1,4 +1,5 @@
-import { query, where, getDocs } from 'firebase/firestore';
+import { query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { BaseRepository } from './BaseRepository';
 import type { OrganisationCalendarPeriod, CalendarPeriodStatus } from '../types';
 
@@ -37,8 +38,6 @@ export class OrganisationCalendarPeriodRepository extends BaseRepository<Organis
   }
 
   async save(period: OrganisationCalendarPeriod): Promise<void> {
-    const { doc, setDoc } = await import('firebase/firestore');
-    const { db } = await import('../lib/firebase');
     const docRef = doc(db, this.collectionName, period.id);
     await setDoc(docRef, period, { merge: true });
   }

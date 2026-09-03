@@ -65,7 +65,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="hidden sm:block"><OrganisationSwitcher /></div>
+        <div className="flex items-center"><OrganisationSwitcher /></div>
 
         {/* Search */}
         <div className="relative hidden sm:block w-64 lg:w-80">

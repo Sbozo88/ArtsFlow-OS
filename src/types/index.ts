@@ -2554,3 +2554,202 @@ export interface OrganisationTemplate {
   recommendedGroups: Array<{ name: string; type: string; category?: string }>;
   recommendedAutomationRules?: string[];
 }
+
+// ============================================================================
+// FAST PHASE 4: Customer Lifecycle & Usage / Limits
+// ============================================================================
+
+export type LimitMeterKey =
+  | 'limits.learners'
+  | 'limits.staff_users'
+  | 'limits.storage_mb'
+  | 'limits.monthly_communications'
+  | 'limits.automation_runs';
+
+export type LimitUsageStatus = 'ok' | 'warning' | 'critical' | 'exceeded';
+
+export interface OrganisationUsage extends BaseRecord {
+  organisationId: string;
+  billingPeriod: string; // YYYY-MM for monthly meters, or 'current'
+  learnersCount: number;
+  staffUsersCount: number;
+  storageMb: number;
+  monthlyCommunicationsCount: number;
+  automationRunsCount: number;
+  lastSyncedAt: string;
+}
+
+export interface MeterStatus {
+  key: LimitMeterKey;
+  name: string;
+  description: string;
+  current: number;
+  limit: number | null; // null represents unlimited
+  unit?: string;
+  percentUsed: number;
+  status: LimitUsageStatus;
+  warning: boolean;
+  exceeded: boolean;
+}
+
+export interface OrganisationUsageSummary {
+  organisationId: string;
+  billingPeriod: string;
+  meters: Record<LimitMeterKey, MeterStatus>;
+  anyWarning: boolean;
+  anyCritical: boolean;
+  anyExceeded: boolean;
+  lastSyncedAt: string;
+}
+
+export interface LimitCheckResult {
+  allowed: boolean;
+  key: LimitMeterKey;
+  current: number;
+  limit: number | null;
+  projected: number;
+  percentUsed: number;
+  status: LimitUsageStatus;
+  reason?: string;
+}
+
+export type LifecycleAccessLevel = 'full' | 'read_only_admin' | 'blocked';
+
+export interface LifecycleNoticeBanner {
+  id: string;
+  type: 'info' | 'warning' | 'danger';
+  title: string;
+  message: string;
+  ctaLabel?: string;
+  ctaAction?: 'upgrade' | 'update_billing' | 'contact_support';
+  ctaPath?: string;
+}
+
+export interface CustomerLifecycleState {
+  organisationId: string;
+  tenantStatus: TenantStatus;
+  subscriptionStatus?: SubscriptionStatus;
+  planId: string;
+  planName: string;
+  isOperational: boolean;
+  accessLevel: LifecycleAccessLevel;
+
+  // Trial metadata
+  isTrialing: boolean;
+  trialEndsAt?: string;
+  trialDaysRemaining?: number;
+  isTrialExpiringSoon?: boolean;
+
+  // Past due metadata
+  isPastDue: boolean;
+  pastDueSince?: string;
+  pastDueGraceDaysRemaining?: number;
+  isGraceExpiringSoon?: boolean;
+
+  // Restriction & Suspension metadata
+  isRestricted: boolean;
+  restrictionReason?: string;
+  restrictionReasonType?: RestrictionReasonType;
+  isSuspended: boolean;
+  suspensionReason?: string;
+
+  // Active notices & banners
+  activeBanners: LifecycleNoticeBanner[];
+}
+
+export class PlanLimitExceededError extends Error {
+  readonly limitKey: LimitMeterKey;
+  readonly current: number;
+  readonly limit: number;
+
+  constructor(limitKey: LimitMeterKey, current: number, limit: number, message?: string) {
+    super(
+      message ||
+        `Plan limit exceeded for ${limitKey}: current usage of ${current} has reached plan limit of ${limit}. Please upgrade your plan.`
+    );
+    this.name = 'PlanLimitExceededError';
+    this.limitKey = limitKey;
+    this.current = current;
+    this.limit = limit;
+    Object.setPrototypeOf(this, PlanLimitExceededError.prototype);
+  }
+}
+
+export class TenantRestrictedError extends Error {
+  readonly restrictionReasonType?: RestrictionReasonType;
+
+  constructor(message?: string, restrictionReasonType?: RestrictionReasonType) {
+    super(
+      message ||
+        'This organisation is restricted due to billing or trial expiry. Operational changes are paused until resolved.'
+    );
+    this.name = 'TenantRestrictedError';
+    this.restrictionReasonType = restrictionReasonType;
+    Object.setPrototypeOf(this, TenantRestrictedError.prototype);
+  }
+}
+
+// ============================================================================
+// FAST PHASE 5: Platform Support & Commercial Analytics
+// ============================================================================
+
+export interface CommercialPlanMetric {
+  planId: string;
+  planName: string;
+  activeCount: number;
+  trialCount: number;
+  mrr: number; // in cents or currency minor unit
+  currency: string;
+}
+
+export interface PlatformUsageAggregate {
+  totalLearners: number;
+  totalStaffUsers: number;
+  totalStorageMb: number;
+  totalMonthlyCommunications: number;
+  totalAutomationRuns: number;
+  tenantsNearCapacityCount: number;
+}
+
+export interface TenantAtRisk {
+  organisationId: string;
+  organisationName: string;
+  riskType: 'past_due' | 'trial_expiring_soon' | 'limit_exceeded' | 'suspended';
+  severity: 'critical' | 'warning';
+  detail: string;
+}
+
+export interface CommercialAnalyticsSummary {
+  mrr: number; // total Monthly Recurring Revenue in cents
+  arr: number; // Annual Recurring Revenue (MRR * 12)
+  currency: string;
+  activePaidSubscriptions: number;
+  trialSubscriptions: number;
+  pastDueSubscriptions: number;
+  canceledSubscriptions: number;
+  trialToPaidConversionRate: number; // percentage (0-100)
+  churnRate: number; // percentage (0-100)
+  averageRevenuePerAccount: number; // in cents
+  revenueByPlan: Record<string, CommercialPlanMetric>;
+  platformUsageAggregate: PlatformUsageAggregate;
+  tenantsAtRisk: TenantAtRisk[];
+  generatedAt: string;
+}
+
+export interface PlatformDiagnosticReport {
+  organisationId: string;
+  organisationName: string;
+  tenantStatus: TenantStatus;
+  subscription: Subscription | null;
+  lifecycleState: CustomerLifecycleState;
+  usageSummary: OrganisationUsageSummary | null;
+  memberCount: number;
+  adminCount: number;
+  hasOwnerOrAdmin: boolean;
+  readinessStatus: 'ready' | 'pending' | 'action_required';
+  warnings: string[];
+  healthScore: number; // 0 - 100
+  checkedAt: string;
+}
+
+

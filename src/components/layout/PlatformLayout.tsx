@@ -14,7 +14,8 @@ import {
   Sparkles,
   Package,
   Layers,
-  CreditCard
+  CreditCard,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
@@ -34,6 +35,7 @@ export const PlatformLayout: React.FC = () => {
     { to: '/platform/organisations', label: 'Organisations', icon: Building2 },
     { to: '/platform/plans', label: 'Plans', icon: Package },
     { to: '/platform/subscriptions', label: 'Subscriptions', icon: CreditCard },
+    { to: '/platform/analytics', label: 'Commercial Analytics', icon: TrendingUp },
     { to: '/platform/features', label: 'Features', icon: Layers },
     { to: '/platform/users', label: 'Users', icon: Users },
     { to: '/platform/health', label: 'Platform Health', icon: Activity },

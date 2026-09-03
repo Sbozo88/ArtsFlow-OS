@@ -21,6 +21,32 @@ declare global {
   }
 }
 
+function formatAuthError(error: unknown): string {
+  const code = (error as { code?: string })?.code || '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'Invalid email or password. Please check your credentials and try again.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email address already exists. Please sign in instead.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters long.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Access is temporarily paused for security. Please wait a moment and try again.';
+    case 'auth/popup-closed-by-user':
+      return 'Google sign-in was cancelled. Please try again.';
+    case 'auth/invalid-verification-code':
+      return 'The SMS verification code entered is incorrect. Please try again.';
+    default: {
+      const msg = (error as Error)?.message || '';
+      return msg.replace(/^Firebase:\s*(Error\s*)?(\(auth\/[^)]+\)\.?\s*)?/i, '') || 'Authentication could not be completed. Please try again.';
+    }
+  }
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
@@ -48,7 +74,7 @@ export function LoginPage() {
       }
       navigate('/learners');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Authentication failed');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -62,7 +88,7 @@ export function LoginPage() {
       await signInWithPopup(auth, provider);
       navigate('/learners');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Google sign in failed');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -85,7 +111,7 @@ export function LoginPage() {
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
       setConfirmationResult(confirmation);
     } catch (err: unknown) {
-      setError((err as Error).message || 'Failed to send SMS');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -99,7 +125,7 @@ export function LoginPage() {
       await confirmationResult.confirm(verificationCode);
       navigate('/learners');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Invalid verification code');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }

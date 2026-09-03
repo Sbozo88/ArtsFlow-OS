@@ -88,13 +88,14 @@ export const PlatformPlansPage: React.FC = () => {
   const handleSeedPrices = async () => {
     try {
       setLoading(true);
+      setError('');
       const defaultPrices = buildStandardPlanPrices(authUser?.uid || 'super_admin');
       for (const p of defaultPrices) {
         await planPriceRepository.save(p);
       }
       await handleRefresh();
     } catch (err) {
-      alert((err as Error).message || 'Failed to seed prices');
+      setError((err as Error).message || 'Failed to initialize default standard prices.');
     } finally {
       setLoading(false);
     }
@@ -329,7 +330,7 @@ export const PlatformPlansPage: React.FC = () => {
               disabled={loading}
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors"
             >
-              Seed Standard Test Prices
+              Initialize Standard Prices
             </button>
           )}
 

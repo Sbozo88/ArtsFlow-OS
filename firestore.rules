@@ -414,6 +414,12 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    // SaaS Fast Phase 4: Usage & Metering Security Rules
+    match /organisationUsage/{usageId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow write: if isPlatformAdmin();
+    }
+
     match /{collectionName}/{docId} {
       allow read: if isPeopleCollection(collectionName)
         && inOrganisationOnRead() && isViewer();

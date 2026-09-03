@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { LifecycleBanner } from './LifecycleBanner';
 import { cn } from '../../lib/utils';
 import { useActiveOrganisation } from '../../contexts/ActiveOrganisationContext';
+import { LoadingState } from '../ui/LoadingState';
 
 export function Layout() {
   const { isSwitchingOrganisation, activeOrganisation } = useActiveOrganisation();
@@ -41,8 +43,15 @@ export function Layout() {
         )}
       >
         <Header onMenuToggle={() => setMobileMenuOpen(true)} />
+        <LifecycleBanner />
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          {isSwitchingOrganisation ? (
+            <div className="flex h-96 items-center justify-center" role="status" aria-live="polite">
+              <LoadingState message="Switching organisation…" size="lg" />
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>

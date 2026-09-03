@@ -3,6 +3,7 @@ import { subscriptionPlanRepository } from '../../repositories/subscriptionPlanR
 import { organisationRepository } from '../../repositories/organisationRepository';
 import { auditService } from '../auditService';
 import { tenantLifecycleService } from '../tenantLifecycleService';
+import { entitlementResolverService } from '../entitlementResolverService';
 import type {
   Subscription,
   BillingInterval
@@ -527,11 +528,6 @@ export const saasSubscriptionService = {
   },
 
   async invalidateEntitlementCache(organisationId: string): Promise<void> {
-    try {
-      const { entitlementResolverService } = await import('../entitlementResolverService');
-      entitlementResolverService.invalidateCache(organisationId);
-    } catch {
-      // Ignore circular reference during bootstrap
-    }
+    entitlementResolverService.invalidateCache(organisationId);
   }
 };

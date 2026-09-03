@@ -44,7 +44,7 @@ export function OrganisationSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={isSwitchingOrganisation}
-        className="flex max-w-[230px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
+        className="flex max-w-[150px] sm:max-w-[230px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 sm:px-2.5 py-1 sm:py-1.5 text-left hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
       >
         <Building2 className="h-4 w-4 shrink-0 text-indigo-600" />
         <span className="min-w-0">

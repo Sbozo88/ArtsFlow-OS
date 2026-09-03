@@ -4,6 +4,8 @@ import { documentRepository } from '../repositories/documentRepository';
 import { documentVersionRepository } from '../repositories/documentVersionRepository';
 import { documentLinkRepository } from '../repositories/documentLinkRepository';
 import { auditService } from './auditService';
+import { customerLifecycleService } from './customerLifecycleService';
+import { usageMeteringService } from './usageMeteringService';
 import type { DocumentRecord, DocumentType } from '../types';
 
 export const MAX_DOCUMENT_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
@@ -68,6 +70,23 @@ export const documentUploadService = {
   ): Promise<DocumentRecord> {
     this.validateFile(input.file);
 
+    const mb = Math.ceil(input.file.size / (1024 * 1024)) || 1;
+    try {
+      await customerLifecycleService.assertCanMutateOperationalData(organisationId, actorId);
+    } catch (err: any) {
+      if (err?.name === 'TenantRestrictedError' || err?.message?.includes('suspended')) {
+        throw err;
+      }
+    }
+
+    try {
+      await usageMeteringService.assertWithinLimit(organisationId, 'limits.storage_mb', mb);
+    } catch (err: any) {
+      if (err?.name === 'PlanLimitExceededError') {
+        throw err;
+      }
+    }
+
     const docName = input.name?.trim() || input.file.name;
     const cleanFileName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const versionNumber = 1;
@@ -129,6 +148,17 @@ export const documentUploadService = {
         entityType: input.relatedEntityType,
         entityId: input.relatedEntityId
       } as never);
+    }
+
+    try {
+      await usageMeteringService.recordMeterConsumption(
+        organisationId,
+        'limits.storage_mb',
+        mb,
+        actorId
+      );
+    } catch {
+      // Non-blocking in mock environments
     }
 
     await auditService.log(

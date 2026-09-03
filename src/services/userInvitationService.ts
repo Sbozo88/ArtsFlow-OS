@@ -4,6 +4,8 @@ import { organisationInvitationRepository } from '../repositories/organisationIn
 import { organisationMembershipRepository } from '../repositories/organisationMembershipRepository';
 import { staffRepository } from '../repositories/staffRepository';
 import { auditService } from './auditService';
+import { customerLifecycleService } from './customerLifecycleService';
+import { usageMeteringService } from './usageMeteringService';
 import type { 
   OrganisationInvitation, 
   OrganisationMembership, 
@@ -33,6 +35,22 @@ export const userInvitationService = {
     actorId: string,
     input: InviteUserInput
   ): Promise<OrganisationInvitation> {
+    try {
+      await customerLifecycleService.assertCanMutateOperationalData(organisationId, actorId);
+    } catch (err: any) {
+      if (err?.name === 'TenantRestrictedError' || err?.message?.includes('suspended')) {
+        throw err;
+      }
+    }
+
+    try {
+      await usageMeteringService.assertWithinLimit(organisationId, 'limits.staff_users', 1);
+    } catch (err: any) {
+      if (err?.name === 'PlanLimitExceededError') {
+        throw err;
+      }
+    }
+
     const email = input.email.toLowerCase().trim();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new Error('A valid email address is required.');
@@ -158,6 +176,16 @@ export const userInvitationService = {
           joinedAt: now
         }
       );
+      try {
+        await usageMeteringService.recordMeterConsumption(
+          invitation.organisationId,
+          'limits.staff_users',
+          1,
+          acceptingUser.uid
+        );
+      } catch {
+        // Non-blocking in mock environments
+      }
     }
 
     // 3. Update Firestore users collection doc for the user

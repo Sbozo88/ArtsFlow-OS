@@ -5,6 +5,8 @@ import { notificationRepository } from '../../repositories/notificationRepositor
 import { automationEvaluationService } from './automationEvaluationService';
 import { automationActionService, type ActionResult } from './automationActionService';
 import { entitlementResolverService } from '../entitlementResolverService';
+import { customerLifecycleService } from '../customerLifecycleService';
+import { usageMeteringService } from '../usageMeteringService';
 import { auditService } from '../auditService';
 import type { 
   AutomationExecution, 
@@ -33,6 +35,24 @@ export const automationExecutionService = {
     const isEntitled = await entitlementResolverService.hasFeature(organisationId, 'automation.core');
     if (!isEntitled) {
       throw new Error(`Organisation is not entitled to feature 'automation.core'.`);
+    }
+
+    if (!isDryRun) {
+      try {
+        await customerLifecycleService.assertCanMutateOperationalData(organisationId, actorId);
+      } catch (err: any) {
+        if (err?.name === 'TenantRestrictedError' || err?.message?.includes('suspended')) {
+          throw err;
+        }
+      }
+
+      try {
+        await usageMeteringService.assertWithinLimit(organisationId, 'limits.automation_runs', 1);
+      } catch (err: any) {
+        if (err?.name === 'PlanLimitExceededError') {
+          throw err;
+        }
+      }
     }
 
     const rule = await automationRuleRepository.getById(organisationId, ruleId);
@@ -166,6 +186,17 @@ export const automationExecutionService = {
         updates.lastTriggeredAt = nowIso;
       }
       await automationRuleRepository.update(organisationId, actorId, rule.id, updates);
+
+      try {
+        await usageMeteringService.recordMeterConsumption(
+          organisationId,
+          'limits.automation_runs',
+          1,
+          actorId
+        );
+      } catch {
+        // Non-blocking in mock environments
+      }
 
       await auditService.log(
         organisationId,

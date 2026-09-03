@@ -1,6 +1,7 @@
 import { organisationRepository } from '../repositories/organisationRepository';
 import { subscriptionPlanRepository } from '../repositories/subscriptionPlanRepository';
 import { auditService } from './auditService';
+import { entitlementResolverService } from './entitlementResolverService';
 import type { Organisation, SubscriptionPlan } from '../types';
 
 export interface PlanAssignmentResult {
@@ -62,12 +63,7 @@ export const planAssignmentService = {
     });
 
     // Invalidate cache
-    try {
-      const { entitlementResolverService } = await import('./entitlementResolverService');
-      entitlementResolverService.invalidateCache(organisationId);
-    } catch {
-      // ignore circular import on startup
-    }
+    entitlementResolverService.invalidateCache(organisationId);
 
     return {
       organisation: updatedOrg,

@@ -17,9 +17,13 @@ import {
   Sliders,
   Check,
   CreditCard,
-  Sparkles
+  Sparkles,
+  Activity,
+  Wrench,
+  AlertTriangle
 } from 'lucide-react';
 import { platformOrganisationService } from '../../../services/platformOrganisationService';
+import { platformSupportService } from '../../../services/platform/platformSupportService';
 import { tenantLifecycleService } from '../../../services/tenantLifecycleService';
 import { subscriptionPlanService } from '../../../services/subscriptionPlanService';
 import { planAssignmentService } from '../../../services/planAssignmentService';
@@ -45,7 +49,8 @@ import type {
   OverrideType,
   Subscription,
   OrganisationOnboarding,
-  ProvisioningJob
+  ProvisioningJob,
+  PlatformDiagnosticReport
 } from '../../../types';
 
 export const PlatformOrganisationDetailPage: React.FC = () => {
@@ -93,6 +98,13 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
     startsAt: '',
     expiresAt: ''
   });
+
+  // Support & Diagnostics State
+  const [diagReport, setDiagReport] = useState<PlatformDiagnosticReport | null>(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagModalOpen, setDiagModalOpen] = useState(false);
+  const [supportActionLoading, setSupportActionLoading] = useState(false);
+  const [supportBannerMessage, setSupportBannerMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadOrganisationData = useCallback(async () => {
     if (!organisationId) return;
@@ -345,6 +357,62 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
     }
   };
 
+  const handleRunDiagnostics = async () => {
+    if (!organisationId) return;
+    try {
+      setDiagLoading(true);
+      const rep = await platformSupportService.generateDiagnosticReport(organisationId);
+      setDiagReport(rep);
+      setDiagModalOpen(true);
+    } catch (err) {
+      setSupportBannerMessage({ type: 'error', text: (err as Error).message || 'Failed to generate diagnostic report' });
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
+  const handleForceSyncUsage = async () => {
+    if (!organisationId || !authUser) return;
+    try {
+      setSupportActionLoading(true);
+      await platformSupportService.forceSyncUsage(organisationId, authUser.uid);
+      setSupportBannerMessage({ type: 'success', text: 'Usage meters successfully synchronized from authoritative operational records.' });
+      await loadOrganisationData();
+    } catch (err) {
+      setSupportBannerMessage({ type: 'error', text: (err as Error).message || 'Failed to synchronize usage meters' });
+    } finally {
+      setSupportActionLoading(false);
+    }
+  };
+
+  const handleExtendTrial = async () => {
+    if (!organisationId || !authUser) return;
+    try {
+      setSupportActionLoading(true);
+      await platformSupportService.extendTrial(organisationId, authUser.uid, 14, 'Customer requested trial extension via platform support');
+      setSupportBannerMessage({ type: 'success', text: 'Trial extended by 14 days and operational access verified.' });
+      await loadOrganisationData();
+    } catch (err) {
+      setSupportBannerMessage({ type: 'error', text: (err as Error).message || 'Failed to extend trial' });
+    } finally {
+      setSupportActionLoading(false);
+    }
+  };
+
+  const handleGrantGrace = async () => {
+    if (!organisationId || !authUser) return;
+    try {
+      setSupportActionLoading(true);
+      await platformSupportService.grantPastDueGrace(organisationId, authUser.uid, 7, 'Temporary grace extension approved by platform support');
+      setSupportBannerMessage({ type: 'success', text: '7-day past-due grace extension granted.' });
+      await loadOrganisationData();
+    } catch (err) {
+      setSupportBannerMessage({ type: 'error', text: (err as Error).message || 'Failed to grant grace extension' });
+    } finally {
+      setSupportActionLoading(false);
+    }
+  };
+
   const getStatusBadge = (status?: TenantStatus) => {
     const s = status || 'active';
     switch (s) {
@@ -422,6 +490,32 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
         <div className="p-4 bg-red-900/30 border border-red-700/50 rounded-xl text-red-200 text-sm flex items-center gap-3">
           <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {supportBannerMessage && (
+        <div
+          className={`p-4 rounded-xl text-sm flex items-center justify-between gap-3 ${
+            supportBannerMessage.type === 'success'
+              ? 'bg-emerald-950/60 border border-emerald-700/60 text-emerald-200'
+              : 'bg-rose-950/60 border border-rose-700/60 text-rose-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {supportBannerMessage.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            ) : (
+              <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
+            )}
+            <span>{supportBannerMessage.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSupportBannerMessage(null)}
+            className="p-1 hover:text-white rounded"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -940,6 +1034,65 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Support Operations & Diagnostics (Fast Phase 5) */}
+          <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Wrench className="w-4 h-4 text-emerald-400" />
+                Support & Diagnostics
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Operator diagnostic tooling and automated maintenance actions for customer support.
+            </p>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={handleRunDiagnostics}
+                disabled={diagLoading}
+                className="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"
+              >
+                <Activity className={`w-4 h-4 ${diagLoading ? 'animate-spin' : ''}`} />
+                {diagLoading ? 'Evaluating...' : 'Run Diagnostics Report'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleForceSyncUsage}
+                disabled={supportActionLoading}
+                className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium rounded-lg flex items-center justify-center gap-2 transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${supportActionLoading ? 'animate-spin' : ''}`} />
+                Force Sync Usage Meters
+              </button>
+
+              {(currentStatus === 'trial' || currentStatus === 'restricted' || subscription?.subscriptionStatus === 'trialing') && (
+                <button
+                  type="button"
+                  onClick={handleExtendTrial}
+                  disabled={supportActionLoading}
+                  className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-800/50 text-xs font-medium rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                  Extend Trial (+14 Days)
+                </button>
+              )}
+
+              {(currentStatus === 'restricted' || subscription?.subscriptionStatus === 'past_due') && (
+                <button
+                  type="button"
+                  onClick={handleGrantGrace}
+                  disabled={supportActionLoading}
+                  className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-800/50 text-xs font-medium rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  Grant Grace Extension (+7 Days)
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1253,6 +1406,120 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Diagnostic Report Modal (Fast Phase 5) */}
+      {diagModalOpen && diagReport && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <Activity className="w-5 h-5 text-indigo-400" />
+                <div>
+                  <h3 className="text-base font-bold text-white">Diagnostic & Health Assessment</h3>
+                  <p className="text-xs text-slate-400">{diagReport.organisationName} ({diagReport.organisationId})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDiagModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Health Score Banner */}
+            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-700/60 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Health Score</span>
+                <div className="text-3xl font-extrabold text-white mt-1">
+                  {diagReport.healthScore}
+                  <span className="text-base font-normal text-slate-400"> / 100</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                    diagReport.healthScore >= 80
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      : diagReport.healthScore >= 50
+                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                  }`}
+                >
+                  {diagReport.healthScore >= 80 ? 'EXCELLENT' : diagReport.healthScore >= 50 ? 'NEEDS ATTENTION' : 'CRITICAL'}
+                </span>
+                <div className="text-[11px] text-slate-400 mt-1">
+                  Readiness: <span className="text-slate-200 capitalize">{diagReport.readinessStatus.replace(/_/g, ' ')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Assessment Breakdown Grid */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-slate-900/40 rounded-lg border border-slate-700/40">
+                <span className="text-slate-400 block font-medium">Tenant Operational State:</span>
+                <span className={`font-semibold mt-1 inline-block ${diagReport.lifecycleState.isOperational ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {diagReport.lifecycleState.isOperational ? 'Operational (Fully Active)' : 'Restricted / Inactive'}
+                </span>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 rounded-lg border border-slate-700/40">
+                <span className="text-slate-400 block font-medium">Admin User Assignment:</span>
+                <span className={`font-semibold mt-1 inline-block ${diagReport.hasOwnerOrAdmin ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {diagReport.adminCount} Active Admin{diagReport.adminCount === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 rounded-lg border border-slate-700/40">
+                <span className="text-slate-400 block font-medium">Subscription Tier:</span>
+                <span className="font-semibold text-slate-200 mt-1 inline-block">
+                  {diagReport.subscription?.planId || 'plan_legacy_full'} ({diagReport.subscription?.subscriptionStatus || 'active'})
+                </span>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 rounded-lg border border-slate-700/40">
+                <span className="text-slate-400 block font-medium">Plan Capacity State:</span>
+                <span className={`font-semibold mt-1 inline-block ${diagReport.usageSummary?.anyExceeded ? 'text-rose-400' : diagReport.usageSummary?.anyWarning ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {diagReport.usageSummary?.anyExceeded ? 'Exceeded Plan Limits' : diagReport.usageSummary?.anyWarning ? 'Near Capacity (>=80%)' : 'Normal Usage'}
+                </span>
+              </div>
+            </div>
+
+            {/* Diagnostic Warnings */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                Identified Warnings & Issues ({diagReport.warnings.length})
+              </h4>
+              {diagReport.warnings.length === 0 ? (
+                <div className="p-3 bg-emerald-950/40 border border-emerald-800/40 rounded-lg text-emerald-300 text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>All operational, billing, and administrative health checks passed successfully.</span>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {diagReport.warnings.map((w, idx) => (
+                    <div key={idx} className="p-2.5 bg-slate-900/60 border border-slate-700/60 rounded-lg text-xs text-amber-300 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span>{w}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-700 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDiagModalOpen(false)}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 rounded-lg transition-colors"
+              >
+                Close Report
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { organisationEntitlementOverrideRepository } from '../repositories/organisationEntitlementOverrideRepository';
 import { auditService } from './auditService';
+import { entitlementResolverService } from './entitlementResolverService';
 import type { OrganisationEntitlementOverride, OverrideType } from '../types';
 
 export const entitlementOverrideService = {
@@ -66,12 +67,7 @@ export const entitlementOverrideService = {
       after: override
     });
 
-    try {
-      const { entitlementResolverService } = await import('./entitlementResolverService');
-      entitlementResolverService.invalidateCache(organisationId);
-    } catch {
-      // ignore circular reference on startup
-    }
+    entitlementResolverService.invalidateCache(organisationId);
 
     return override;
   },
@@ -121,12 +117,7 @@ export const entitlementOverrideService = {
       after: updated
     });
 
-    try {
-      const { entitlementResolverService } = await import('./entitlementResolverService');
-      entitlementResolverService.invalidateCache(current.organisationId);
-    } catch {
-      // ignore
-    }
+    entitlementResolverService.invalidateCache(current.organisationId);
 
     return updated;
   },
@@ -165,12 +156,7 @@ export const entitlementOverrideService = {
       after: ended
     });
 
-    try {
-      const { entitlementResolverService } = await import('./entitlementResolverService');
-      entitlementResolverService.invalidateCache(current.organisationId);
-    } catch {
-      // ignore
-    }
+    entitlementResolverService.invalidateCache(current.organisationId);
 
     return ended;
   }
