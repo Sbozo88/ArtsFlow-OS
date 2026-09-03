@@ -1,16 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Search, Check, ExternalLink, AlertTriangle, Info, AlertCircle } from 'lucide-react';
+import { Bell, Search, Check, ExternalLink, AlertTriangle, Info, AlertCircle, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
+import { useOrganisationSettings } from '../../hooks/useOrganisationSettings';
 import type { AlertSeverity } from '../../types';
 
-export function Header() {
+interface HeaderProps {
+  onMenuToggle: () => void;
+}
+
+export function Header({ onMenuToggle }: HeaderProps) {
   const { user, authUser } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useOrganisationSettings();
   const { unreadCount, recentUnread, markAsRead, markAllAsRead } = useUnreadNotifications();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const orgName = settings?.profile?.name || 'ArtsFlow OS';
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -23,7 +32,7 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const displayName = authUser?.role 
+  const displayName = authUser?.role
     ? `${authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1)} User`
     : user?.email?.split('@')[0] || 'Staff Member';
 
@@ -47,37 +56,64 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-30">
-      <div className="flex items-center gap-4 w-96">
-        <div className="relative w-full">
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30">
+      <div className="flex items-center gap-3">
+        {/* Mobile menu toggle */}
+        <button
+          type="button"
+          onClick={onMenuToggle}
+          className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Organisation name */}
+        <span className="hidden sm:block text-sm font-semibold text-slate-700 truncate max-w-[180px]">
+          {orgName}
+        </span>
+
+        {/* Search */}
+        <div className="relative hidden sm:block w-64 lg:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Search learners, groups, rules..." 
-            className="w-full pl-10 pr-4 py-2 bg-slate-100 border-transparent rounded-md text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
+          <input
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Search learners, groups…"
+            className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
           />
+          {searchValue && (
+            <button
+              type="button"
+              onClick={() => setSearchValue('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
-      
-      <div className="flex items-center gap-4">
+
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Notifications Popover */}
         <div className="relative" ref={dropdownRef}>
-          <button 
+          <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors relative"
-            title="Notifications"
-            aria-label="View notifications"
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors relative"
+            aria-label={`View notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 min-w-[1.25rem] h-5 px-1 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+              <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden text-slate-800 animate-in fade-in duration-150">
+            <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden text-slate-800">
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm text-slate-900">Notifications</span>
@@ -144,11 +180,11 @@ export function Header() {
         </div>
 
         {/* User Profile */}
-        <div className="flex items-center gap-2 pl-4 border-l border-slate-200">
+        <div className="flex items-center gap-2 pl-2 sm:pl-4 border-l border-slate-200">
           <div className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs">
             {initials}
           </div>
-          <div className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
+          <div className="hidden sm:block text-sm font-medium text-slate-700 truncate max-w-[120px]">
             {displayName}
           </div>
         </div>
