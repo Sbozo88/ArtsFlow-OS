@@ -636,7 +636,13 @@ export type AuditAction =
   | 'ORGANISATION_START_ONBOARDING'
   | 'ORGANISATION_COMPLETE_ONBOARDING_STEP'
   | 'ORGANISATION_SKIP_ONBOARDING_STEP'
-  | 'ORGANISATION_COMPLETE_ONBOARDING';
+  | 'ORGANISATION_COMPLETE_ONBOARDING'
+  // SaaS 3B: Multi-Organisation Users & Membership Switching Actions
+  | 'USER_SWITCH_ORGANISATION'
+  | 'USER_SET_DEFAULT_ORGANISATION'
+  | 'ORGANISATION_MEMBERSHIP_ACTIVATED'
+  | 'ORGANISATION_MEMBERSHIP_DISABLED'
+  | 'ORGANISATION_MEMBERSHIP_REVOKED';
 
 export type AuditScopeType = 'platform' | 'organisation';
 
@@ -1873,7 +1879,23 @@ export interface OrganisationMembership extends BaseRecord {
   membershipStatus: MembershipStatus;
   isDefaultOrganisation?: boolean;
   joinedAt: string;
+  invitedAt?: string;
+  acceptedAt?: string;
+  disabledAt?: string;
+  revokedAt?: string;
   lastActiveAt?: string;
+}
+
+export interface UserPreferences {
+  id: string;
+  userId: string;
+  lastActiveOrganisationId?: string;
+  updatedAt: string;
+}
+
+export interface OrganisationMembershipView {
+  membership: OrganisationMembership;
+  organisation: Organisation;
 }
 
 export type PlatformPermission =

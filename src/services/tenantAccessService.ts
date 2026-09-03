@@ -50,6 +50,13 @@ export class TenantAccessService {
   isReadOnlyAdminAccess(tenantStatus?: TenantStatus | string, role?: string): boolean {
     return tenantStatus === 'restricted' && role === 'organisation_admin';
   }
+
+  getAccessError(reason?: 'NO_MEMBERSHIP' | 'MEMBERSHIP_INACTIVE' | 'TENANT_SUSPENDED'): string {
+    if (reason === 'NO_MEMBERSHIP') return 'You no longer have access to this organisation.';
+    if (reason === 'MEMBERSHIP_INACTIVE') return 'Your membership for this organisation is not active.';
+    if (reason === 'TENANT_SUSPENDED') return 'This organisation is currently restricted.';
+    return "We couldn't switch organisations. Your current workspace has not changed.";
+  }
 }
 
 export const tenantAccessService = new TenantAccessService();

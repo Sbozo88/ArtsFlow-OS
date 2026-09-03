@@ -22,10 +22,13 @@ import {
   ChevronDown,
   ChevronLeft,
   X,
+  Building2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEntitlements } from '../../contexts/EntitlementContext';
+import { usePermissions } from '../../hooks/usePermission';
+import type { Permission } from '../../types';
 
 // ── Navigation Data ──────────────────────────────────────────────────────────
 
@@ -40,6 +43,7 @@ interface NavGroup {
   icon: React.ComponentType<{ className?: string }>;
   path?: string;
   featureKey?: string;
+  permission?: Permission;
   children?: NavChild[];
 }
 
@@ -131,6 +135,7 @@ const navItems: NavGroup[] = [
     name: 'Finance',
     icon: Wallet,
     featureKey: 'finance.core',
+    permission: 'finance.read',
     children: [
       { name: 'Overview', path: '/finance' },
       { name: 'Invoices', path: '/finance/invoices' },
@@ -206,6 +211,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Settings',
     icon: SettingsIcon,
+    permission: 'settings.read',
     children: [
       { name: 'Overview', path: '/settings' },
       { name: 'Organisation Profile', path: '/settings/organisation' },
@@ -254,7 +260,10 @@ export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose
   };
 
   const { hasFeature } = useEntitlements();
-  const visibleNavItems = navItems.filter((item) => !item.featureKey || hasFeature(item.featureKey));
+  const { can } = usePermissions();
+  const visibleNavItems = navItems.filter((item) =>
+    (!item.featureKey || hasFeature(item.featureKey)) && (!item.permission || can(item.permission))
+  );
 
   const sidebarContent = (
     <>
@@ -309,6 +318,17 @@ export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose
 
       {/* Footer */}
       <div className="p-3 border-t border-slate-800 space-y-1">
+        <NavLink
+          to="/account/organisations"
+          onClick={onMobileClose}
+          className={cn(
+            'flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors text-slate-400 hover:text-white hover:bg-slate-800',
+            collapsed && 'justify-center'
+          )}
+        >
+          <Building2 className="w-4 h-4 shrink-0" />
+          {!collapsed && <span>My Organisations</span>}
+        </NavLink>
         <button
           onClick={() => logout()}
           className={cn(
