@@ -5,9 +5,9 @@ This file records evidence, not aspirations. A box may be checked only after the
 ## 1. Automated quality gate
 
 - [x] `npm run typecheck`
-- [x] `npm run lint` with no errors (three non-blocking Fast Refresh warnings remain)
-- [x] `npm test` — 153 passing tests
-- [x] `npm run test:rules` — 14 passing Firestore/Storage emulator tests
+- [x] `npm run lint` with no errors (four non-blocking Fast Refresh warnings remain)
+- [x] `npm test` — 229 passing tests
+- [x] `npm run test:rules` — 17 passing Firestore/Storage emulator tests
 - [x] `npm run build` (large bundle warning recorded)
 - [x] `npm audit --omit=dev` — zero production vulnerabilities
 

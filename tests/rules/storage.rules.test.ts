@@ -85,4 +85,17 @@ describe('Storage tenant, role, path, and content boundaries', () => {
     await assertSucceeds(file('admin-a', path)
       .putString('image', 'raw', { contentType: 'image/png' }));
   });
+
+  it('keeps generated exports private to tenant administrators', async () => {
+    await seedUsers();
+    const path = 'organisations/org-a/exports/export-2026.json';
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.storage(BUCKET).ref(path)
+        .putString('{}', 'raw', { contentType: 'application/json' });
+    });
+
+    await assertSucceeds(file('admin-a', path).getMetadata());
+    await assertFails(file('teacher-a', path).getMetadata());
+    await assertFails(file('admin-b', path).getMetadata());
+  });
 });

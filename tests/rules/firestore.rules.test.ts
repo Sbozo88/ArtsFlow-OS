@@ -12,6 +12,29 @@ const NOW = '2026-09-03T10:00:00.000Z';
 
 let testEnv: RulesTestEnvironment;
 
+const OPERATIONAL_COLLECTIONS = [
+  'learners', 'guardians', 'learnerGuardians', 'staff', 'programmes',
+  'programmeGroups', 'enrolments', 'followUps', 'instruments',
+  'instrumentAllocations', 'repertoire', 'sessionRepertoire', 'practiceLogs',
+  'musicAssessments', 'danceLevels', 'choreography', 'sessionChoreography',
+  'dancePracticeLogs', 'danceAssessments', 'costumes', 'costumeAllocations',
+  'sessions', 'attendance', 'events', 'eventGroups', 'eventParticipants',
+  'eventStaff', 'eventScheduleItems', 'eventPerformanceItems', 'eventAttendance',
+  'consentTemplates', 'consentRequests', 'consentSubmissions',
+  'transportProviders', 'transportVehicles', 'eventTransportPlans',
+  'transportPassengers', 'chargeTypes', 'charges', 'invoices',
+  'invoiceLineItems', 'payments', 'paymentAllocations', 'financeAdjustments',
+  'communications', 'communicationRecipients', 'communicationTemplates',
+  'communicationAttachments', 'documents', 'documentVersions',
+  'documentTemplates', 'documentLinks', 'operationalAlerts', 'automationRules',
+  'automationExecutions', 'notifications', 'notificationPreferences',
+  'staffAssignments', 'staffAvailability', 'staffWorkRecords', 'timesheets',
+  'timesheetEntries', 'staffSubstitutions', 'organisationCalendarPeriods',
+  'organisationInvitations', 'organisationMemberships', 'guardianPortalAccess',
+  'guardianInvitations', 'learnerPortalAccess', 'learnerInvitations',
+  'portalChangeRequests',
+] as const;
+
 const user = (organisationId: string, role: string) => ({
   email: `${role}@example.test`,
   organisationId,
@@ -41,6 +64,7 @@ async function seed() {
       db.doc('users/finance-a').set(user('org-a', 'finance')),
       db.doc('users/viewer-a').set(user('org-a', 'viewer')),
       db.doc('users/guardian-a').set({ ...user('org-a', 'guardian'), guardianId: 'guardian-1' }),
+      db.doc('users/disabled-a').set({ ...user('org-a', 'teacher'), status: 'disabled' }),
       db.doc('learners/learner-a').set(record('learner-a', 'org-a', 'admin-a', { firstName: 'A' })),
       db.doc('learners/learner-b').set(record('learner-b', 'org-b', 'admin-b', { firstName: 'B' })),
       db.doc('invoices/invoice-a').set(record('invoice-a', 'org-a', 'admin-a', { total: 100 })),
@@ -76,6 +100,28 @@ describe('Firestore tenant and authority boundaries', () => {
     const db = testEnv.authenticatedContext('admin-a').firestore();
     await assertSucceeds(db.doc('learners/learner-a').get());
     await assertFails(db.doc('learners/learner-b').get());
+  });
+
+  it('blocks cross-tenant reads across every operational collection', async () => {
+    await seed();
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await Promise.all(OPERATIONAL_COLLECTIONS.map((name) =>
+        db.doc(`${name}/${name}-org-b`).set(record(`${name}-org-b`, 'org-b', 'admin-b')),
+      ));
+    });
+
+    const db = testEnv.authenticatedContext('admin-a').firestore();
+    for (const name of OPERATIONAL_COLLECTIONS) {
+      await assertFails(db.doc(`${name}/${name}-org-b`).get());
+    }
+  });
+
+  it('blocks disabled identities immediately', async () => {
+    await seed();
+    const db = testEnv.authenticatedContext('disabled-a').firestore();
+    await assertFails(db.doc('learners/learner-a').get());
+    await assertFails(db.doc('attendance/attendance-a').get());
   });
 
   it('requires tenant-scoped collection queries', async () => {
@@ -139,6 +185,28 @@ describe('Firestore tenant and authority boundaries', () => {
     const db = testEnv.authenticatedContext('guardian-a').firestore();
     await assertFails(db.doc('learners/learner-a').get());
     await assertFails(db.doc('invoices/invoice-a').get());
+  });
+
+  it('protects finance counters from collisions and arbitrary mutation', async () => {
+    await seed();
+    const financeDb = testEnv.authenticatedContext('finance-a').firestore();
+    const teacherDb = testEnv.authenticatedContext('teacher-a').firestore();
+    const counter = financeDb.doc('invoiceCounters/org-a_2026');
+
+    await assertSucceeds(counter.set({
+      organisationId: 'org-a',
+      year: 2026,
+      currentSequence: 1,
+      updatedAt: NOW,
+    }));
+    await assertSucceeds(counter.update({ currentSequence: 2, updatedAt: NOW }));
+    await assertFails(counter.update({ currentSequence: 10, updatedAt: NOW }));
+    await assertFails(teacherDb.doc('invoiceCounters/org-a_2027').set({
+      organisationId: 'org-a',
+      year: 2027,
+      currentSequence: 1,
+      updatedAt: NOW,
+    }));
   });
 
   it('rejects tenant reassignment and malformed base records', async () => {
@@ -239,4 +307,3 @@ describe('Firestore tenant and authority boundaries', () => {
     await assertFails(orgAdminDb.collection('organisations').get());
   });
 });
-
