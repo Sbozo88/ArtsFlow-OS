@@ -2,9 +2,9 @@ name: ArtsFlow OS — Release Validation CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop/v1.1 ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop/v1.1 ]
 
 jobs:
   validate:
