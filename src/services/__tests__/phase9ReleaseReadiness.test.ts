@@ -38,54 +38,6 @@ describe('ArtsFlow OS Phase 9 — Final Functional & Release Readiness Test Suit
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 1. Multi-Tenant Organisation Isolation Master Test (Section 91)
-  // ─────────────────────────────────────────────────────────────────────────────
-  describe('Multi-Tenant Organisation Isolation Master Test', () => {
-    const ORG_A = 'org_alpha_conservatory';
-    const ORG_B = 'org_beta_dance_centre';
-
-    it('proves Organisation A cannot access Organisation B across 10 distinct collections', async () => {
-      // Mock repositories to return only records belonging to the requested organisation
-      const mockStorage = new Map<string, Array<{ id: string; organisationId: string; name?: string }>>();
-
-      const setupCollection = (name: string) => {
-        mockStorage.set(name, [
-          { id: `${name}_a1`, organisationId: ORG_A, name: `Alpha ${name}` },
-          { id: `${name}_a2`, organisationId: ORG_A, name: `Alpha ${name} 2` },
-          { id: `${name}_b1`, organisationId: ORG_B, name: `Beta ${name}` }
-        ]);
-      };
-
-      const collections = [
-        'learners', 'staff', 'attendance', 'events', 'invoices',
-        'payments', 'documents', 'automationRules', 'timesheets', 'guardianPortalAccess'
-      ];
-
-      collections.forEach(setupCollection);
-
-      // Verify tenant filtering helper
-      const queryTenant = (collectionName: string, targetOrg: string) => {
-        const all = mockStorage.get(collectionName) || [];
-        return all.filter(r => r.organisationId === targetOrg);
-      };
-
-      // Assert complete isolation across all 10 collections
-      for (const col of collections) {
-        const recordsForA = queryTenant(col, ORG_A);
-        const recordsForB = queryTenant(col, ORG_B);
-
-        expect(recordsForA.length).toBe(2);
-        expect(recordsForB.length).toBe(1);
-
-        // Prove Org A records never include Org B data
-        expect(recordsForA.some(r => r.organisationId === ORG_B)).toBe(false);
-        // Prove Org B records never include Org A data
-        expect(recordsForB.some(r => r.organisationId === ORG_A)).toBe(false);
-      }
-    });
-  });
-
-  // ─────────────────────────────────────────────────────────────────────────────
   // 2. Comprehensive Role Permissions Matrix Tests (Section 23, 24, 90)
   // ─────────────────────────────────────────────────────────────────────────────
   describe('Role-Based Access Control & Permissions Matrix', () => {
@@ -315,12 +267,13 @@ describe('ArtsFlow OS Phase 9 — Final Functional & Release Readiness Test Suit
 
     it('reports integration adapter statuses with resilient fallbacks', () => {
       const statuses = platformOperationsService.getIntegrationStatuses();
-      expect(statuses.email.status).toBe('Sandbox');
-      expect(statuses.sms.status).toBe('Sandbox');
-      expect(statuses.whatsapp.status).toBe('Sandbox');
-      expect(statuses.payments.status).toBe('Sandbox');
+      expect(statuses.email.status).toBe('Not Configured');
+      expect(statuses.sms.status).toBe('Not Configured');
+      expect(statuses.whatsapp.status).toBe('Connected');
+      expect(statuses.payments.status).toBe('Not Configured');
       expect(statuses.calendar.status).toBe('Connected');
       expect(statuses.accounting.status).toBe('Connected');
+      expect(statuses.webhooks.status).toBe('Not Configured');
     });
 
     it('validates learner CSV import formats and flags missing required headers', () => {

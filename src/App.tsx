@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { ProtectedRoute, OnboardingRoute } from './components/layout/AuthRoutes';
 import { LoginPage } from './features/auth/LoginPage';
+import { AccessDisabledPage } from './features/auth/AccessDisabledPage';
 import { OnboardingPage } from './features/onboarding/OnboardingPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { LearnersPage } from './features/learners/LearnersPage';
@@ -130,6 +131,9 @@ import { GuardianReceiptViewPage } from './features/portal/pages/GuardianReceipt
 import { GuardianDocumentsPage } from './features/portal/pages/GuardianDocumentsPage';
 import { GuardianMessagesPage } from './features/portal/pages/GuardianMessagesPage';
 import { GuardianProfilePage } from './features/portal/pages/GuardianProfilePage';
+import { LearnerPortalNoticePage } from './features/portal/pages/LearnerPortalNoticePage';
+import { GuardianPortalUnavailablePage } from './features/portal/pages/GuardianPortalUnavailablePage';
+import { releaseCapabilities } from './config/releaseCapabilities';
 import { NotFoundPage } from './components/layout/NotFoundPage';
 
 function App() {
@@ -139,9 +143,11 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/access-disabled" element={<AccessDisabledPage />} />
           <Route path="/consent/submit/:requestId" element={<GuardianConsentPublicPage />} />
-          <Route path="/portal/login" element={<GuardianLoginPage />} />
-          <Route path="/portal/invite/:token" element={<GuardianInvitationAcceptPage />} />
+          <Route path="/portal/login" element={releaseCapabilities.guardianPortal ? <GuardianLoginPage /> : <GuardianPortalUnavailablePage />} />
+          <Route path="/portal/invite/:token" element={releaseCapabilities.guardianPortal ? <GuardianInvitationAcceptPage /> : <GuardianPortalUnavailablePage />} />
+          <Route path="/learner-portal" element={<LearnerPortalNoticePage />} />
 
           {/* Guardian Portal Protected Routes (Phase 7A) */}
           <Route element={<GuardianProtectedRoute />}>

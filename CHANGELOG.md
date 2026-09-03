@@ -4,10 +4,20 @@ All notable changes and functional releases of ArtsFlow OS are documented in thi
 
 ---
 
+## [Unreleased] — v1.0 release hardening
+
+- Replaced tenant-membership-only Firebase Rules with immutable authority fields, role-aware access, bounded schemas, and emulator-backed attack tests.
+- Isolated guardian and learner identities from internal application routes.
+- Removed fabricated backup, webhook, integration, upload, seed, and migration success claims.
+- Added an explicit Firebase validation/deployment workflow and honest release gates.
+- Clarified that learner self-service, payment gateways, webhook runtimes, and verified managed backups are not shipped in v1.0.
+
+---
+
 ## [1.0.0-rc.1] — 2026-09-02
 
 ### Release Summary
-This Release Candidate represents the complete functional consolidation of ArtsFlow OS across all 9 build phases. It introduces multi-tenant isolation master validation, complete role permissions matrix, financial reconciliation tools, centralized datetime & timezone conversion utilities, platform operations diagnostics, safe demo seeding, hardened Firestore & Storage security rules, and a comprehensive documentation suite.
+This release candidate consolidates the v1.0 application modules. Production approval remains subject to the current release checklist and security gates.
 
 ---
 
@@ -58,8 +68,8 @@ This Release Candidate represents the complete functional consolidation of ArtsF
 
 ### External Portals
 - **Guardian Portal**: Independent, mobile-responsive self-service portal for parents to monitor student attendance, digitally sign consent forms, track transport, inspect invoices, and settle fees.
-- **Learner Portal**: Student self-service interface for timetables, home practice logging, repertoire scores, and published assessments.
-- **Relationship-Based Isolation**: Guarantees that guardians and learners can never access peer data, internal staff notes, or administrative tools.
+- **Learner Account Isolation**: Learner identities are blocked from the administration interface; full learner self-service is deferred.
+- **Guardian Portal Gate**: The guardian UI is present, while production relationship-based backend enforcement remains a release gate.
 
 ### Platform Operations & Security
 - **Data Quality Scanner**: Built-in referential integrity auditor detecting broken relationships and orphaned records.

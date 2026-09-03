@@ -32,6 +32,7 @@ export interface AuthUser {
   email: string | null;
   displayName: string | null;
   role?: AuthRole; // from custom claims or user doc
+  accountStatus?: 'active' | 'disabled';
 }
 
 export interface Staff extends BaseRecord {
@@ -2088,6 +2089,5 @@ export interface GuardianDashboardDto {
   nextUpcomingEvent?: GuardianEventDto;
   nextUpcomingSession?: GuardianSessionDto;
 }
-
 
 

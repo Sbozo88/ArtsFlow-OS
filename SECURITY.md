@@ -12,7 +12,7 @@ ArtsFlow OS is built on four core security tenets:
 2. **Deny-by-Default Authorization**: All Cloud Firestore and Storage paths deny reads and writes unless explicitly authorized by rules.
 3. **Role & Relationship Boundary Enforcement**: Administrative privileges are strictly separated from teacher, finance, and viewer roles. External users (Guardians and Learners) have zero access to the internal administration workspace.
 4. **Defense in Depth**: Access control is enforced across three distinct layers:
-   - Client-side route guards (`ProtectedRoute`, `GuardianProtectedRoute`, `LearnerProtectedRoute`).
+   - Client-side route guards and explicit external-role redirects.
    - Business service authorization assertions (`permissionService.can(...)`, `guardianAccessService`).
    - Cloud Firestore & Storage server-side security rules.
 
@@ -43,7 +43,7 @@ ArtsFlow OS defines 8 distinct system roles:
 | **Platform Operations & Logs** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **User & Role Administration** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-*\*Note: Guardians and Learners access only their own verified, relationship-scoped data via dedicated portal endpoints (`/portal/...`). They have zero access to the admin system or peer records.*
+*\*Note: Guardians and learners have zero access to the internal administration workspace. Guardian relationship-scoped data access remains a production release gate; learner self-service is deferred.*
 
 ---
 
@@ -51,15 +51,8 @@ ArtsFlow OS defines 8 distinct system roles:
 
 ### Cloud Firestore Rules (`firestore.rules`)
 - **Default Deny**: `match /{document=**} { allow read, write: if false; }`.
-- **Organisation Membership Check**: All collections enforce `isUserInOrg(resource.data.organisationId)`:
-  ```javascript
-  function isUserInOrg(orgId) {
-    return request.auth != null && (
-      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organisationId == orgId
-    );
-  }
-  ```
-- **Anti-Enumeration Protection**: Public endpoints (e.g. `guardianInvitations`, `consentRequests`) split `get` and `list`. Direct document lookup with a token/id is permitted (`allow get: if ...`), while collection scans without authorization are blocked (`allow list: if isUserInOrg(...)`).
+- **Organisation Membership Check**: Operational collections require an immutable user tenant and an authorised internal role. New tenant bootstrap is restricted to the deterministic `org_<Firebase UID>` identifier.
+- **Invitation Protection**: Portal invitation records are not publicly enumerable. A server-mediated acceptance flow is required before production guardian onboarding is enabled.
 - **Immutable Audit Logs**: The `auditLogs` collection strictly disallows `update` and `delete`.
 
 ### Cloud Storage Rules (`storage.rules`)
@@ -71,15 +64,13 @@ ArtsFlow OS defines 8 distinct system roles:
 
 ## 4. Webhook & External API Security
 
-1. **HMAC-SHA256 Signature Verification**: Inbound payment webhooks (e.g. Paystack / payment providers) require cryptographic signature validation using shared webhook secrets stored server-side.
-2. **Idempotency Guarantees**: Webhook events check recorded transaction hashes (`paymentEvents`) to prevent double-crediting or duplicate invoice allocations.
-3. **URL Protocol Sanitization**: Webhook endpoints and calendar URLs must use strict `https://` protocols. Unsafe `javascript:` or `data:` URLs are rejected by client and server validators.
+No inbound webhook runtime or payment gateway is deployed in v1.0. Any future webhook implementation must validate provider signatures server-side, store idempotency keys, reject replays, and keep secrets out of the browser. The application must not describe those controls as active before a Cloud Functions implementation and integration test exist.
 
 ---
 
 ## 5. Secret Handling & Environment Separation
 
-- **No Secrets in Source**: Firebase API keys and secrets are loaded exclusively via environment variables (`.env.local`).
+- **No Server Secrets in Source**: Provider secrets and service-account credentials must never enter source control. Firebase web configuration is a public client identifier and is restricted by Firebase/Google Cloud configuration and Security Rules, not treated as an authorisation secret.
 - **Sanitized Exports**: The data export engine (`platformOperationsService.exportOrganisationData`) automatically strips fields named `password`, `token`, `secret`, `apiKey`, and `webhookSecret`.
 - **Production Lockout on Utilities**: Demo database seed scripts and destructive migration commands refuse execution if `NODE_ENV === 'production'`.
 

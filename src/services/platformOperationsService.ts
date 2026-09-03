@@ -13,6 +13,7 @@ import { financeReconciliationService } from './financeReconciliationService';
 export interface ReleaseMetadata {
   version: string;
   buildDate: string;
+  commitSha: string;
   environment: 'production' | 'staging' | 'development';
   platformName: string;
   schemaVersion: number;
@@ -59,7 +60,7 @@ export interface DataQualityReport {
 }
 
 export interface BackupStatusReport {
-  lastBackupAt: string;
+  lastBackupAt: string | null;
   backupFrequency: string;
   storageTarget: string;
   status: 'operational' | 'degraded' | 'pending';
@@ -94,7 +95,8 @@ export const platformOperationsService = {
   getReleaseMetadata(): ReleaseMetadata {
     return {
       version: '1.0.0-rc.1',
-      buildDate: '2026-09-02',
+      buildDate: import.meta.env.VITE_BUILD_DATE || 'local build',
+      commitSha: import.meta.env.VITE_COMMIT_SHA || 'unavailable',
       environment: (import.meta.env.MODE as 'production' | 'staging' | 'development') || 'development',
       platformName: 'ArtsFlow OS',
       schemaVersion: 1
@@ -108,24 +110,24 @@ export const platformOperationsService = {
   getIntegrationStatuses(): IntegrationStatusReport {
     return {
       email: {
-        status: 'Sandbox',
-        provider: 'Firebase / SendGrid Client Adapter',
-        notes: 'In-app transactional simulation active. Enterprise API key optional.'
+        status: 'Not Configured',
+        provider: 'No server-side provider',
+        notes: 'Messages can be prepared in-app; no transactional email delivery is configured.'
       },
       sms: {
-        status: 'Sandbox',
-        provider: 'Manual SMS Protocol / Carrier Hook',
-        notes: 'Prepared SMS dispatch active. Carrier direct gateway optional.'
+        status: 'Not Configured',
+        provider: 'No carrier gateway',
+        notes: 'No automated SMS delivery provider is configured.'
       },
       whatsapp: {
-        status: 'Sandbox',
-        provider: 'WhatsApp Click-to-Chat Direct Protocol',
-        notes: 'Direct wa.me protocol active. Enterprise Cloud API optional.'
+        status: 'Connected',
+        provider: 'WhatsApp Click-to-Chat',
+        notes: 'User-initiated wa.me links are available; no WhatsApp Cloud API is configured.'
       },
       payments: {
-        status: 'Sandbox',
-        provider: 'Direct Cash/EFT Ledger & Paystack Webhook Adapter',
-        notes: 'Cash/EFT reconciliation active. Webhook signatures validated in cloud.'
+        status: 'Not Configured',
+        provider: 'Manual cash / EFT ledger',
+        notes: 'Manual payment recording is available; no card gateway or webhook endpoint exists.'
       },
       calendar: {
         status: 'Connected',
@@ -138,9 +140,9 @@ export const platformOperationsService = {
         notes: 'Standard journal & ledger export compatible with Xero/QuickBooks.'
       },
       webhooks: {
-        status: 'Sandbox',
-        provider: 'HMAC-SHA256 Outbound & Inbound Webhooks',
-        notes: 'Webhook delivery engine ready with automated retry and loop protection.'
+        status: 'Not Configured',
+        provider: 'No webhook runtime',
+        notes: 'No Cloud Functions webhook receiver or delivery engine is deployed.'
       }
     };
   },
@@ -443,16 +445,17 @@ export const platformOperationsService = {
   },
 
   /**
-   * Reports live backup status and retention policies.
+   * Reports only verified backup configuration. The browser cannot inspect
+   * Cloud Firestore managed backup state, so unknown state remains explicit.
    */
   getBackupStatus(): BackupStatusReport {
     return {
-      lastBackupAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4h ago
-      backupFrequency: 'Daily Automated Snapshot (02:00 SAST)',
-      storageTarget: 'Google Cloud Storage (Coldline Isolated Vault)',
-      status: 'operational',
-      retentionDays: 90,
-      notes: 'Automated Firestore snapshot verified. Disaster recovery runbook documented in RECOVERY.md.'
+      lastBackupAt: null,
+      backupFrequency: 'Not configured or not verifiable from this client',
+      storageTarget: 'Not configured',
+      status: 'pending',
+      retentionDays: 0,
+      notes: 'Configure and verify managed backups in Google Cloud before marking backup readiness complete.'
     };
   }
 };

@@ -43,7 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           uid,
           email,
           displayName,
-          role: data.role
+          role: data.role,
+          accountStatus: data.status || 'active'
         });
         setOrganisationId(data.organisationId || null);
       } else {

@@ -33,16 +33,9 @@ export const documentVersionService = {
     const newVersionNumber = (existing.versionNumber || 1) + 1;
 
     const storagePath = `organisations/${organisationId}/documents/${documentId}/v${newVersionNumber}/${cleanFileName}`;
-    let downloadUrl: string;
-
-    try {
-      const storageRef = ref(storage, storagePath);
-      const snapshot = await uploadBytes(storageRef, file);
-      downloadUrl = await getDownloadURL(snapshot.ref);
-    } catch (storageErr) {
-      console.warn('Storage upload notice for new version:', storageErr);
-      downloadUrl = `https://firebasestorage.googleapis.com/v0/b/artflow-os.firebasestorage.app/o/${encodeURIComponent(storagePath)}?alt=media`;
-    }
+    const storageRef = ref(storage, storagePath);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadUrl = await getDownloadURL(snapshot.ref);
 
     // Record the new version
     const version = await documentVersionRepository.create(organisationId, actorId, {
