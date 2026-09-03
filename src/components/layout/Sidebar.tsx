@@ -25,18 +25,21 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
+import { useEntitlements } from '../../contexts/EntitlementContext';
 
 // ── Navigation Data ──────────────────────────────────────────────────────────
 
 interface NavChild {
   name: string;
   path: string;
+  featureKey?: string;
 }
 
 interface NavGroup {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
   path?: string;
+  featureKey?: string;
   children?: NavChild[];
 }
 
@@ -71,6 +74,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Music',
     icon: Music,
+    featureKey: 'music.core',
     children: [
       { name: 'Overview', path: '/music' },
       { name: 'Instruments', path: '/music/instruments' },
@@ -83,6 +87,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Dance',
     icon: Activity,
+    featureKey: 'dance.core',
     children: [
       { name: 'Overview', path: '/dance' },
       { name: 'Levels', path: '/dance/levels' },
@@ -96,6 +101,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Events',
     icon: CalendarDays,
+    featureKey: 'events.core',
     children: [
       { name: 'Overview', path: '/events' },
       { name: 'Calendar / List', path: '/events/calendar' },
@@ -106,6 +112,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Consent',
     icon: FileCheck,
+    featureKey: 'events.consent',
     children: [
       { name: 'Requests & Status', path: '/consent' },
       { name: 'Consent Templates', path: '/consent/templates' },
@@ -114,6 +121,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Transport',
     icon: Bus,
+    featureKey: 'events.transport',
     children: [
       { name: 'Fleet & Providers', path: '/transport' },
       { name: 'Transport Reports', path: '/transport/reports' },
@@ -122,6 +130,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Finance',
     icon: Wallet,
+    featureKey: 'finance.core',
     children: [
       { name: 'Overview', path: '/finance' },
       { name: 'Invoices', path: '/finance/invoices' },
@@ -135,6 +144,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Communication',
     icon: MessageSquare,
+    featureKey: 'communication.core',
     children: [
       { name: 'Overview', path: '/communication' },
       { name: 'Compose Message', path: '/communication/compose' },
@@ -145,6 +155,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Documents',
     icon: FileText,
+    featureKey: 'documents.core',
     children: [
       { name: 'Files Repository', path: '/documents' },
       { name: 'Generate Forms', path: '/documents/generated' },
@@ -155,6 +166,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Analytics',
     icon: BarChart3,
+    featureKey: 'analytics.core',
     children: [
       { name: 'Overview', path: '/analytics' },
       { name: 'Learners', path: '/analytics/learners' },
@@ -168,6 +180,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Automation',
     icon: Zap,
+    featureKey: 'automation.core',
     children: [
       { name: 'Overview', path: '/automation' },
       { name: 'Rules', path: '/automation/rules' },
@@ -178,6 +191,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Staff Operations',
     icon: Briefcase,
+    featureKey: 'staff_operations.core',
     children: [
       { name: 'Overview', path: '/staff-operations' },
       { name: 'Assignments', path: '/staff-operations/assignments' },
@@ -239,6 +253,9 @@ export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose
     });
   };
 
+  const { hasFeature } = useEntitlements();
+  const visibleNavItems = navItems.filter((item) => !item.featureKey || hasFeature(item.featureKey));
+
   const sidebarContent = (
     <>
       {/* Brand */}
@@ -273,7 +290,7 @@ export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose
 
       {/* Nav Items */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto no-scrollbar">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavItem
             key={item.name}
             item={item}

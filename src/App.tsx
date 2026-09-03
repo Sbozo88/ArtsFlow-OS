@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
-import { ProtectedRoute, OnboardingRoute, PlatformRoute } from './components/layout/AuthRoutes';
+import { ProtectedRoute, OnboardingRoute, PlatformRoute, FeatureRoute } from './components/layout/AuthRoutes';
 import { LoginPage } from './features/auth/LoginPage';
 import { AccessDisabledPage } from './features/auth/AccessDisabledPage';
+import { FeatureAccessDeniedPage } from './features/platform/pages/FeatureAccessDeniedPage';
 import { OnboardingPage } from './features/onboarding/OnboardingPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { LearnersPage } from './features/learners/LearnersPage';
@@ -18,6 +19,7 @@ import { SessionDetailPage } from './features/sessions/SessionDetailPage';
 import { AttendancePage } from './features/attendance/AttendancePage';
 import { FollowUpsPage } from './features/followUps/FollowUpsPage';
 import { AuthProvider } from './contexts/AuthContext';
+import { EntitlementProvider } from './contexts/EntitlementContext';
 import { MusicDashboardPage } from './features/music/MusicDashboardPage';
 import { InstrumentsPage } from './features/music/InstrumentsPage';
 import { EnsemblesPage } from './features/music/EnsemblesPage';
@@ -145,176 +147,211 @@ import { PlatformUsersPage } from './features/platform/pages/PlatformUsersPage';
 import { PlatformHealthPage } from './features/platform/pages/PlatformHealthPage';
 import { PlatformAuditPage } from './features/platform/pages/PlatformAuditPage';
 import { PlatformSettingsPage } from './features/platform/pages/PlatformSettingsPage';
+import { PlatformPlansPage } from './features/platform/pages/PlatformPlansPage';
+import { PlatformFeaturesPage } from './features/platform/pages/PlatformFeaturesPage';
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/access-disabled" element={<AccessDisabledPage />} />
-          <Route path="/consent/submit/:requestId" element={<GuardianConsentPublicPage />} />
-          <Route path="/portal/login" element={releaseCapabilities.guardianPortal ? <GuardianLoginPage /> : <GuardianPortalUnavailablePage />} />
-          <Route path="/portal/invite/:token" element={releaseCapabilities.guardianPortal ? <GuardianInvitationAcceptPage /> : <GuardianPortalUnavailablePage />} />
-          <Route path="/learner-portal" element={<LearnerPortalNoticePage />} />
+      <EntitlementProvider>
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/access-disabled" element={<AccessDisabledPage />} />
+            <Route path="/access-denied" element={<FeatureAccessDeniedPage />} />
+            <Route path="/consent/submit/:requestId" element={<GuardianConsentPublicPage />} />
+            <Route path="/portal/login" element={releaseCapabilities.guardianPortal ? <GuardianLoginPage /> : <GuardianPortalUnavailablePage />} />
+            <Route path="/portal/invite/:token" element={releaseCapabilities.guardianPortal ? <GuardianInvitationAcceptPage /> : <GuardianPortalUnavailablePage />} />
+            <Route path="/learner-portal" element={<LearnerPortalNoticePage />} />
 
-          {/* Guardian Portal Protected Routes (Phase 7A) */}
-          <Route element={<GuardianProtectedRoute />}>
-            <Route path="/portal" element={<GuardianPortalLayout />}>
-              <Route index element={<GuardianDashboardPage />} />
-              <Route path="learners" element={<GuardianLearnersPage />} />
-              <Route path="learners/:learnerId" element={<GuardianLearnerDetailPage />} />
-              <Route path="attendance" element={<GuardianAttendancePage />} />
-              <Route path="events" element={<GuardianEventsPage />} />
-              <Route path="consent" element={<GuardianConsentPage />} />
-              <Route path="consent/:requestId" element={<GuardianConsentSubmitPage />} />
-              <Route path="transport" element={<GuardianTransportPage />} />
-              <Route path="finance" element={<GuardianFinancePage />} />
-              <Route path="finance/invoices/:invoiceId" element={<GuardianInvoiceViewPage />} />
-              <Route path="finance/receipts/:receiptId" element={<GuardianReceiptViewPage />} />
-              <Route path="documents" element={<GuardianDocumentsPage />} />
-              <Route path="messages" element={<GuardianMessagesPage />} />
-              <Route path="profile" element={<GuardianProfilePage />} />
+            {/* Guardian Portal Protected Routes (Phase 7A) */}
+            <Route element={<FeatureRoute feature="guardian_portal" />}>
+              <Route element={<GuardianProtectedRoute />}>
+                <Route path="/portal" element={<GuardianPortalLayout />}>
+                  <Route index element={<GuardianDashboardPage />} />
+                  <Route path="learners" element={<GuardianLearnersPage />} />
+                  <Route path="learners/:learnerId" element={<GuardianLearnerDetailPage />} />
+                  <Route path="attendance" element={<GuardianAttendancePage />} />
+                  <Route path="events" element={<GuardianEventsPage />} />
+                  <Route path="consent" element={<GuardianConsentPage />} />
+                  <Route path="consent/:requestId" element={<GuardianConsentSubmitPage />} />
+                  <Route path="transport" element={<GuardianTransportPage />} />
+                  <Route path="finance" element={<GuardianFinancePage />} />
+                  <Route path="finance/invoices/:invoiceId" element={<GuardianInvoiceViewPage />} />
+                  <Route path="finance/receipts/:receiptId" element={<GuardianReceiptViewPage />} />
+                  <Route path="documents" element={<GuardianDocumentsPage />} />
+                  <Route path="messages" element={<GuardianMessagesPage />} />
+                  <Route path="profile" element={<GuardianProfilePage />} />
+                </Route>
+              </Route>
             </Route>
-          </Route>
 
-          {/* Onboarding Route */}
-          <Route element={<OnboardingRoute />}>
-            <Route path="/onboarding" element={<OnboardingPage />} />
-          </Route>
-
-          {/* SaaS 1B: Platform Super Admin Console Routes */}
-          <Route element={<PlatformRoute />}>
-            <Route path="/platform" element={<PlatformLayout />}>
-              <Route index element={<PlatformDashboardPage />} />
-              <Route path="organisations" element={<PlatformOrganisationsPage />} />
-              <Route path="organisations/:organisationId" element={<PlatformOrganisationDetailPage />} />
-              <Route path="users" element={<PlatformUsersPage />} />
-              <Route path="health" element={<PlatformHealthPage />} />
-              <Route path="audit" element={<PlatformAuditPage />} />
-              <Route path="settings" element={<PlatformSettingsPage />} />
+            {/* Onboarding Route */}
+            <Route element={<OnboardingRoute />}>
+              <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>
-          </Route>
 
-          {/* Protected Application Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="learners" element={<LearnersPage />} />
-              <Route path="learners/:id" element={<LearnerProfilePage />} />
-              <Route path="guardians" element={<GuardiansPage />} />
-              <Route path="programmes" element={<ProgrammesPage />} />
-              <Route path="groups" element={<GroupsPage />} />
-              <Route path="groups/:id" element={<GroupDetailPage />} />
-              <Route path="staff" element={<StaffPage />} />
-              <Route path="enrolments" element={<EnrolmentsPage />} />
-              <Route path="sessions" element={<SessionsPage />} />
-              <Route path="sessions/:id" element={<SessionDetailPage />} />
-              <Route path="attendance" element={<AttendancePage />} />
-              <Route path="follow-ups" element={<FollowUpsPage />} />
-              <Route path="music" element={<MusicDashboardPage />} />
-              <Route path="music/instruments" element={<InstrumentsPage />} />
-              <Route path="music/ensembles" element={<EnsemblesPage />} />
-              <Route path="music/repertoire" element={<RepertoirePage />} />
-              <Route path="music/practice" element={<PracticeLogsPage />} />
-              <Route path="music/assessments" element={<MusicAssessmentsPage />} />
-              <Route path="dance" element={<DanceDashboardPage />} />
-              <Route path="dance/levels" element={<DanceLevelsPage />} />
-              <Route path="dance/classes" element={<DanceClassesPage />} />
-              <Route path="dance/choreography" element={<ChoreographyPage />} />
-              <Route path="dance/costumes" element={<CostumesPage />} />
-              <Route path="dance/practice" element={<DancePracticeLogsPage />} />
-              <Route path="dance/assessments" element={<DanceAssessmentsPage />} />
-              
-              {/* Events Module */}
-              <Route path="events" element={<EventsDashboardPage />} />
-              <Route path="events/calendar" element={<EventListPage />} />
-              <Route path="events/participants" element={<EventParticipantsPage />} />
-              <Route path="events/reports" element={<EventReportsPage />} />
-              <Route path="events/:id" element={<EventDetailPage />} />
-
-              {/* Consent Module */}
-              <Route path="consent" element={<ConsentRequestsPage />} />
-              <Route path="consent/templates" element={<ConsentTemplatesPage />} />
-
-              {/* Transport Module */}
-              <Route path="transport" element={<TransportManagementPage />} />
-              <Route path="transport/reports" element={<TransportReportsPage />} />
-
-              {/* Finance Module */}
-              <Route path="finance" element={<FinanceOverviewPage />} />
-              <Route path="finance/invoices" element={<InvoicesPage />} />
-              <Route path="finance/payments" element={<PaymentsPage />} />
-              <Route path="finance/charges" element={<ChargesPage />} />
-              <Route path="finance/outstanding" element={<OutstandingPage />} />
-              <Route path="finance/reports" element={<FinanceReportsPage />} />
-              <Route path="finance/charge-types" element={<ChargeTypesPage />} />
-
-              {/* Communication Module */}
-              <Route path="communication" element={<CommunicationOverviewPage />} />
-              <Route path="communication/compose" element={<ComposeMessagePage />} />
-              <Route path="communication/history" element={<CommunicationHistoryPage />} />
-              <Route path="communication/templates" element={<CommunicationTemplatesPage />} />
-
-              {/* Documents Module */}
-              <Route path="documents" element={<DocumentsOverviewPage />} />
-              <Route path="documents/generated" element={<GeneratedDocumentsPage />} />
-              <Route path="documents/templates" element={<DocumentTemplatesPage />} />
-              <Route path="documents/:id" element={<DocumentDetailPage />} />
-
-              {/* Analytics Module */}
-              <Route path="analytics" element={<AnalyticsOverviewPage />} />
-              <Route path="analytics/learners" element={<LearnerAnalyticsPage />} />
-              <Route path="analytics/programmes" element={<ProgrammeAnalyticsPage />} />
-              <Route path="analytics/attendance" element={<AttendanceAnalyticsPage />} />
-              <Route path="analytics/events" element={<EventAnalyticsPage />} />
-              <Route path="analytics/finance" element={<FinanceAnalyticsPage />} />
-              <Route path="analytics/reports" element={<ReportsPage />} />
-
-              {/* Automation Module */}
-              <Route path="automation" element={<AutomationOverviewPage />} />
-              <Route path="automation/rules" element={<AutomationRulesPage />} />
-              <Route path="automation/rules/:id" element={<AutomationRuleDetailPage />} />
-              <Route path="automation/activity" element={<AutomationActivityPage />} />
-              <Route path="notifications" element={<NotificationsPage />} />
-
-              {/* Staff Operations Module (Phase 6A) */}
-              <Route path="staff-operations" element={<StaffOperationsOverviewPage />} />
-              <Route path="staff-operations/assignments" element={<StaffAssignmentsPage />} />
-              <Route path="staff-operations/work-records" element={<StaffWorkRecordsPage />} />
-              <Route path="staff-operations/timesheets" element={<StaffTimesheetsPage />} />
-              <Route path="staff-operations/timesheets/:id" element={<StaffTimesheetDetailPage />} />
-              <Route path="staff-operations/verification" element={<StaffVerificationPage />} />
-              <Route path="staff-operations/availability" element={<StaffAvailabilityPage />} />
-              <Route path="staff-operations/workload" element={<StaffWorkloadPage />} />
-              <Route path="staff-operations/reports" element={<StaffReportsPage />} />
-
-              {/* Organisation Settings Module (Phase 6B) */}
-              <Route path="settings" element={<SettingsOverviewPage />} />
-              <Route path="settings/organisation" element={<OrganisationProfilePage />} />
-              <Route path="settings/calendar" element={<CalendarSettingsPage />} />
-              <Route path="settings/programmes" element={<ProgrammeSettingsPage />} />
-              <Route path="settings/attendance" element={<AttendanceSettingsPage />} />
-              <Route path="settings/finance" element={<FinanceSettingsPage />} />
-              <Route path="settings/portal" element={<PortalSettingsPage />} />
-              <Route path="settings/staff" element={<StaffSettingsPage />} />
-              <Route path="settings/communication" element={<CommunicationSettingsPage />} />
-              <Route path="settings/automation" element={<AutomationSettingsPage />} />
-              <Route path="settings/users" element={<UsersAndRolesPage />} />
-              <Route path="settings/branding" element={<BrandingSettingsPage />} />
-              <Route path="settings/system" element={<SystemSettingsPage />} />
-              <Route path="settings/audit" element={<SettingsAuditPage />} />
-
-              {/* In-app 404 Catch-all */}
-              <Route path="*" element={<NotFoundPage />} />
+            {/* SaaS 1B: Platform Super Admin Console Routes */}
+            <Route element={<PlatformRoute />}>
+              <Route path="/platform" element={<PlatformLayout />}>
+                <Route index element={<PlatformDashboardPage />} />
+                <Route path="organisations" element={<PlatformOrganisationsPage />} />
+                <Route path="organisations/:organisationId" element={<PlatformOrganisationDetailPage />} />
+                <Route path="plans" element={<PlatformPlansPage />} />
+                <Route path="features" element={<PlatformFeaturesPage />} />
+                <Route path="users" element={<PlatformUsersPage />} />
+                <Route path="health" element={<PlatformHealthPage />} />
+                <Route path="audit" element={<PlatformAuditPage />} />
+                <Route path="settings" element={<PlatformSettingsPage />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Global 404 Catch-all */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Router>
+            {/* Protected Application Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<DashboardPage />} />
+                <Route path="learners" element={<LearnersPage />} />
+                <Route path="learners/:id" element={<LearnerProfilePage />} />
+                <Route path="guardians" element={<GuardiansPage />} />
+                <Route path="programmes" element={<ProgrammesPage />} />
+                <Route path="groups" element={<GroupsPage />} />
+                <Route path="groups/:id" element={<GroupDetailPage />} />
+                <Route path="staff" element={<StaffPage />} />
+                <Route path="enrolments" element={<EnrolmentsPage />} />
+                <Route path="sessions" element={<SessionsPage />} />
+                <Route path="sessions/:id" element={<SessionDetailPage />} />
+                <Route path="attendance" element={<AttendancePage />} />
+                <Route path="follow-ups" element={<FollowUpsPage />} />
+
+                {/* Music Module */}
+                <Route element={<FeatureRoute feature="music.core" />}>
+                  <Route path="music" element={<MusicDashboardPage />} />
+                  <Route path="music/instruments" element={<InstrumentsPage />} />
+                  <Route path="music/ensembles" element={<EnsemblesPage />} />
+                  <Route path="music/repertoire" element={<RepertoirePage />} />
+                  <Route path="music/practice" element={<PracticeLogsPage />} />
+                  <Route path="music/assessments" element={<MusicAssessmentsPage />} />
+                </Route>
+
+                {/* Dance Module */}
+                <Route element={<FeatureRoute feature="dance.core" />}>
+                  <Route path="dance" element={<DanceDashboardPage />} />
+                  <Route path="dance/levels" element={<DanceLevelsPage />} />
+                  <Route path="dance/classes" element={<DanceClassesPage />} />
+                  <Route path="dance/choreography" element={<ChoreographyPage />} />
+                  <Route path="dance/costumes" element={<CostumesPage />} />
+                  <Route path="dance/practice" element={<DancePracticeLogsPage />} />
+                  <Route path="dance/assessments" element={<DanceAssessmentsPage />} />
+                </Route>
+                
+                {/* Events Module */}
+                <Route element={<FeatureRoute feature="events.core" />}>
+                  <Route path="events" element={<EventsDashboardPage />} />
+                  <Route path="events/calendar" element={<EventListPage />} />
+                  <Route path="events/participants" element={<EventParticipantsPage />} />
+                  <Route path="events/reports" element={<EventReportsPage />} />
+                  <Route path="events/:id" element={<EventDetailPage />} />
+                </Route>
+
+                {/* Consent Module */}
+                <Route element={<FeatureRoute feature="events.consent" />}>
+                  <Route path="consent" element={<ConsentRequestsPage />} />
+                  <Route path="consent/templates" element={<ConsentTemplatesPage />} />
+                </Route>
+
+                {/* Transport Module */}
+                <Route element={<FeatureRoute feature="events.transport" />}>
+                  <Route path="transport" element={<TransportManagementPage />} />
+                  <Route path="transport/reports" element={<TransportReportsPage />} />
+                </Route>
+
+                {/* Finance Module */}
+                <Route element={<FeatureRoute feature="finance.core" />}>
+                  <Route path="finance" element={<FinanceOverviewPage />} />
+                  <Route path="finance/invoices" element={<InvoicesPage />} />
+                  <Route path="finance/payments" element={<PaymentsPage />} />
+                  <Route path="finance/charges" element={<ChargesPage />} />
+                  <Route path="finance/outstanding" element={<OutstandingPage />} />
+                  <Route path="finance/reports" element={<FinanceReportsPage />} />
+                  <Route path="finance/charge-types" element={<ChargeTypesPage />} />
+                </Route>
+
+                {/* Communication Module */}
+                <Route element={<FeatureRoute feature="communication.core" />}>
+                  <Route path="communication" element={<CommunicationOverviewPage />} />
+                  <Route path="communication/compose" element={<ComposeMessagePage />} />
+                  <Route path="communication/history" element={<CommunicationHistoryPage />} />
+                  <Route path="communication/templates" element={<CommunicationTemplatesPage />} />
+                </Route>
+
+                {/* Documents Module */}
+                <Route element={<FeatureRoute feature="documents.core" />}>
+                  <Route path="documents" element={<DocumentsOverviewPage />} />
+                  <Route path="documents/generated" element={<GeneratedDocumentsPage />} />
+                  <Route path="documents/templates" element={<DocumentTemplatesPage />} />
+                  <Route path="documents/:id" element={<DocumentDetailPage />} />
+                </Route>
+
+                {/* Analytics Module */}
+                <Route element={<FeatureRoute feature="analytics.core" />}>
+                  <Route path="analytics" element={<AnalyticsOverviewPage />} />
+                  <Route path="analytics/learners" element={<LearnerAnalyticsPage />} />
+                  <Route path="analytics/programmes" element={<ProgrammeAnalyticsPage />} />
+                  <Route path="analytics/attendance" element={<AttendanceAnalyticsPage />} />
+                  <Route path="analytics/events" element={<EventAnalyticsPage />} />
+                  <Route path="analytics/finance" element={<FinanceAnalyticsPage />} />
+                  <Route path="analytics/reports" element={<ReportsPage />} />
+                </Route>
+
+                {/* Automation Module */}
+                <Route element={<FeatureRoute feature="automation.core" />}>
+                  <Route path="automation" element={<AutomationOverviewPage />} />
+                  <Route path="automation/rules" element={<AutomationRulesPage />} />
+                  <Route path="automation/rules/:id" element={<AutomationRuleDetailPage />} />
+                  <Route path="automation/activity" element={<AutomationActivityPage />} />
+                  <Route path="notifications" element={<NotificationsPage />} />
+                </Route>
+
+                {/* Staff Operations Module (Phase 6A) */}
+                <Route element={<FeatureRoute feature="staff_operations.core" />}>
+                  <Route path="staff-operations" element={<StaffOperationsOverviewPage />} />
+                  <Route path="staff-operations/assignments" element={<StaffAssignmentsPage />} />
+                  <Route path="staff-operations/work-records" element={<StaffWorkRecordsPage />} />
+                  <Route path="staff-operations/timesheets" element={<StaffTimesheetsPage />} />
+                  <Route path="staff-operations/timesheets/:id" element={<StaffTimesheetDetailPage />} />
+                  <Route path="staff-operations/verification" element={<StaffVerificationPage />} />
+                  <Route path="staff-operations/availability" element={<StaffAvailabilityPage />} />
+                  <Route path="staff-operations/workload" element={<StaffWorkloadPage />} />
+                  <Route path="staff-operations/reports" element={<StaffReportsPage />} />
+                </Route>
+
+                {/* Organisation Settings Module (Phase 6B) */}
+                <Route path="settings" element={<SettingsOverviewPage />} />
+                <Route path="settings/organisation" element={<OrganisationProfilePage />} />
+                <Route path="settings/calendar" element={<CalendarSettingsPage />} />
+                <Route path="settings/programmes" element={<ProgrammeSettingsPage />} />
+                <Route path="settings/attendance" element={<AttendanceSettingsPage />} />
+                <Route path="settings/finance" element={<FinanceSettingsPage />} />
+                <Route path="settings/portal" element={<PortalSettingsPage />} />
+                <Route path="settings/staff" element={<StaffSettingsPage />} />
+                <Route path="settings/communication" element={<CommunicationSettingsPage />} />
+                <Route path="settings/automation" element={<AutomationSettingsPage />} />
+                <Route path="settings/users" element={<UsersAndRolesPage />} />
+                <Route path="settings/branding" element={<BrandingSettingsPage />} />
+                <Route path="settings/system" element={<SystemSettingsPage />} />
+                <Route path="settings/audit" element={<SettingsAuditPage />} />
+
+                {/* In-app 404 Catch-all */}
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Route>
+
+            {/* Global 404 Catch-all */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Router>
+      </EntitlementProvider>
     </AuthProvider>
   );
 }
