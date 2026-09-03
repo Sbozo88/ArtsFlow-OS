@@ -17,7 +17,6 @@ jobs:
     name: Validate and deploy production
     runs-on: ubuntu-latest
     environment: production
-    if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ARTFLOW_OS != '' }}
 
     steps:
       - name: Checkout code
@@ -28,6 +27,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: Setup Java for Firebase emulators
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
 
       - name: Install dependencies
         run: npm ci

@@ -35,6 +35,13 @@ export class OrganisationCalendarPeriodRepository extends BaseRepository<Organis
   ): Promise<void> {
     await this.update(organisationId, actorId, id, { periodStatus } as unknown as Partial<Omit<OrganisationCalendarPeriod, keyof import('../types').BaseRecord>>);
   }
+
+  async save(period: OrganisationCalendarPeriod): Promise<void> {
+    const { doc, setDoc } = await import('firebase/firestore');
+    const { db } = await import('../lib/firebase');
+    const docRef = doc(db, this.collectionName, period.id);
+    await setDoc(docRef, period, { merge: true });
+  }
 }
 
 export const organisationCalendarPeriodRepository = new OrganisationCalendarPeriodRepository();

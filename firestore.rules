@@ -156,8 +156,7 @@ service cloud.firestore {
     function isFinanceCollection(name) {
       return name in [
         'chargeTypes', 'charges', 'invoices', 'invoiceLineItems', 'payments',
-        'paymentAllocations', 'financeAdjustments', 'invoiceCounters',
-        'paymentCounters'
+        'paymentAllocations', 'financeAdjustments'
       ];
     }
 
@@ -270,6 +269,52 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /invoiceCounters/{counterId} {
+      allow get: if isFinance() && resource.data.organisationId == organisationId();
+      allow list: if false;
+      allow create: if isFinance()
+        && request.resource.data.keys().hasOnly([
+          'organisationId', 'year', 'currentSequence', 'updatedAt'
+        ])
+        && request.resource.data.organisationId == organisationId()
+        && request.resource.data.year is int
+        && request.resource.data.currentSequence == 1
+        && request.resource.data.updatedAt is string;
+      allow update: if isFinance()
+        && resource.data.organisationId == organisationId()
+        && request.resource.data.organisationId == resource.data.organisationId
+        && request.resource.data.year == resource.data.year
+        && request.resource.data.currentSequence == resource.data.currentSequence + 1
+        && request.resource.data.updatedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentSequence', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /paymentCounters/{counterId} {
+      allow get: if isFinance() && resource.data.organisationId == organisationId();
+      allow list: if false;
+      allow create: if isFinance()
+        && request.resource.data.keys().hasOnly([
+          'organisationId', 'year', 'currentSequence', 'updatedAt'
+        ])
+        && request.resource.data.organisationId == organisationId()
+        && request.resource.data.year is int
+        && request.resource.data.currentSequence == 1
+        && request.resource.data.updatedAt is string;
+      allow update: if isFinance()
+        && resource.data.organisationId == organisationId()
+        && request.resource.data.organisationId == resource.data.organisationId
+        && request.resource.data.year == resource.data.year
+        && request.resource.data.currentSequence == resource.data.currentSequence + 1
+        && request.resource.data.updatedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentSequence', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
     match /organisationMemberships/{membershipId} {
       allow read: if signedIn() && (
         resource.data.userId == request.auth.uid ||
@@ -339,6 +384,33 @@ service cloud.firestore {
 
     match /saasBillingEvents/{eventId} {
       allow read: if isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
+    // SaaS 3A: Customer Provisioning & School Onboarding Security Rules
+    match /organisationOnboarding/{onboardingId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow create: if isPlatformAdmin() || (
+        signedIn() &&
+        role() == 'organisation_admin' &&
+        sameOrganisation(request.resource.data.organisationId)
+      );
+      allow update: if isPlatformAdmin() || (
+        signedIn() &&
+        role() == 'organisation_admin' &&
+        sameOrganisation(resource.data.organisationId) &&
+        request.resource.data.organisationId == resource.data.organisationId
+      );
+      allow delete: if false;
+    }
+
+    match /provisioningJobs/{jobId} {
+      allow read: if isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /organisationTemplates/{templateId} {
+      allow read: if signedIn();
       allow write: if isPlatformAdmin();
     }
 

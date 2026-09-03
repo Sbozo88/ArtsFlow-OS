@@ -35,11 +35,27 @@ import {
   Bell,
   AlertTriangle,
   ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { organisationOnboardingService } from '../../services/onboarding/organisationOnboardingService';
+import type { OrganisationOnboarding } from '../../types';
 
 export const DashboardPage: React.FC = () => {
   useDocumentTitle('Dashboard');
+  const { authUser, organisationId } = useAuth();
+  const [onboarding, setOnboarding] = React.useState<OrganisationOnboarding | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    if (authUser?.role === 'organisation_admin' && organisationId) {
+      organisationOnboardingService.getOnboarding(organisationId).then((ob) => {
+        if (isMounted) setOnboarding(ob);
+      }).catch(() => {});
+    }
+    return () => { isMounted = false; };
+  }, [authUser?.role, organisationId]);
 
   const { learners, loading: loadingLearners } = useLearners();
   const { guardians, loading: loadingGuardians } = useGuardians();
@@ -106,6 +122,31 @@ export const DashboardPage: React.FC = () => {
           { label: 'Add Learner', onClick: () => window.location.href = '/learners', icon: Users, variant: 'primary' },
         ]}
       />
+
+      {/* SaaS 3A: Finish setting up ArtsFlow Setup Card */}
+      {authUser?.role === 'organisation_admin' && onboarding && onboarding.onboardingStatus !== 'completed' && (
+        <div className="p-4 bg-gradient-to-r from-indigo-900/40 via-slate-800 to-indigo-950/30 border border-indigo-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-sm font-semibold text-white">Finish setting up ArtsFlow</h3>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300">
+                {onboarding.completedSteps?.length || 0} of 12 steps complete
+              </span>
+            </div>
+            <p className="text-xs text-slate-300">
+              Configure your organisation, programmes, and staff to get ready for go-live.
+            </p>
+          </div>
+          <Link
+            to="/onboarding"
+            className="self-start sm:self-auto py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20 shrink-0"
+          >
+            Continue Setup
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
 
       {/* Failed Automation Banner */}
       {failedExecutions.length > 0 && (

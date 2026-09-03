@@ -627,7 +627,16 @@ export type AuditAction =
   | 'PLATFORM_CREATE_COMPLIMENTARY_SUBSCRIPTION'
   | 'PLATFORM_PROCESS_SAAS_BILLING_EVENT'
   | 'PLATFORM_RESTRICT_TENANT_FOR_BILLING'
-  | 'PLATFORM_RESTORE_TENANT_AFTER_BILLING';
+  | 'PLATFORM_RESTORE_TENANT_AFTER_BILLING'
+  // SaaS 3A: Customer Provisioning & School Onboarding Actions
+  | 'PLATFORM_START_ORGANISATION_PROVISIONING'
+  | 'PLATFORM_COMPLETE_ORGANISATION_PROVISIONING'
+  | 'PLATFORM_FAIL_ORGANISATION_PROVISIONING'
+  | 'PLATFORM_RETRY_ORGANISATION_PROVISIONING'
+  | 'ORGANISATION_START_ONBOARDING'
+  | 'ORGANISATION_COMPLETE_ONBOARDING_STEP'
+  | 'ORGANISATION_SKIP_ONBOARDING_STEP'
+  | 'ORGANISATION_COMPLETE_ONBOARDING';
 
 export type AuditScopeType = 'platform' | 'organisation';
 
@@ -1883,7 +1892,9 @@ export type PlatformPermission =
   | 'platform.entitlements.manage'
   | 'platform.subscriptions.read'
   | 'platform.subscriptions.manage'
-  | 'platform.pricing.manage';
+  | 'platform.pricing.manage'
+  | 'platform.provisioning.read'
+  | 'platform.provisioning.manage';
 
 export type Permission =
   | 'learners.read'
@@ -2431,5 +2442,93 @@ export interface SaaSBillingEvent {
   status: RecordStatus;
 }
 
+// ==========================================
+// SaaS 3A: Customer Provisioning & Onboarding
+// ==========================================
 
+export type ProvisioningMode = 'trial' | 'manual_active' | 'complimentary' | 'legacy';
 
+export interface ProvisionOrganisationInput {
+  organisationName: string;
+  organisationType: string;
+  country?: string;
+  timezone?: string;
+  locale?: string;
+  currency?: string;
+  primaryAdminName?: string;
+  primaryAdminEmail: string;
+  planId: string;
+  provisioningMode: ProvisioningMode;
+  trialDays?: number;
+  billingMode?: BillingMode;
+  complimentaryReason?: string;
+  organisationTemplate?: string;
+  contactPhone?: string;
+  website?: string;
+  address?: string;
+  provisioningRequestId?: string;
+}
+
+export type ProvisioningJobStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+export interface ProvisioningJob extends BaseRecord {
+  requestId: string;
+  organisationId: string;
+  organisationName: string;
+  jobStatus: ProvisioningJobStatus;
+  input: ProvisionOrganisationInput;
+  stagesCompleted: string[];
+  currentStage?: string;
+  error?: string;
+  errorReference?: string;
+  createdOrganisationId?: string;
+  createdSubscriptionId?: string;
+  createdInvitationId?: string;
+  completedAt?: string;
+}
+
+export type OnboardingStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'ready_for_review'
+  | 'completed'
+  | 'abandoned';
+
+export type OnboardingStep =
+  | 'welcome'
+  | 'organisation_profile'
+  | 'branding'
+  | 'programme_types'
+  | 'calendar'
+  | 'attendance'
+  | 'finance'
+  | 'staff'
+  | 'programmes_groups'
+  | 'learner_import'
+  | 'guardian_setup'
+  | 'review'
+  | 'go_live';
+
+export interface OrganisationOnboarding extends BaseRecord {
+  onboardingStatus: OnboardingStatus;
+  currentStep: OnboardingStep;
+  completedSteps: OnboardingStep[];
+  skippedSteps: OnboardingStep[];
+  stepData?: Record<string, unknown>;
+  startedAt: string;
+  lastProgressAt: string;
+  completedAt?: string;
+}
+
+export interface OrganisationTemplate {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  programmeTypes: string[];
+  defaultAttendanceThreshold: number;
+  consecutiveAbsenceThreshold: number;
+  defaultGroupCapacity: number;
+  recommendedGroups: Array<{ name: string; type: string; category?: string }>;
+  recommendedAutomationRules?: string[];
+}
