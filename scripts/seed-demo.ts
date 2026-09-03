@@ -189,14 +189,9 @@ export async function runDemoSeed(dryRun: boolean = true): Promise<{
     };
   }
 
-  // In live non-prod execution, Firestore batch writes would commit these records
-  console.log('[SEED] Production safety checks passed. Database seed committed for organization:', DEMO_ORGANISATION_ID);
-  return {
-    success: true,
-    organisationId: DEMO_ORGANISATION_ID,
-    recordCounts,
-    dryRun: false
-  };
+  throw new Error(
+    'LIVE SEED NOT IMPLEMENTED: no Firestore writer is configured. Run with --dry-run only; no data was changed.'
+  );
 }
 
 // Allow direct execution from CLI

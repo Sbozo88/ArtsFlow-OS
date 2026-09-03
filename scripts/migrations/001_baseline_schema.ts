@@ -7,9 +7,6 @@ export const migration001BaselineSchema: Migration = {
   apply: async (ctx: MigrationContext) => {
     ctx.logger(`[MIGRATION 001] Checking baseline schema version (dryRun: ${ctx.isDryRun})`);
 
-    // Validates baseline schema expectations across operational repositories
-    const simulatedUpdatedCount = 1;
-
     if (ctx.isDryRun) {
       ctx.logger('[MIGRATION 001] Dry run validated: schemaVersion 1 baseline established without mutating records.');
       return {
@@ -19,11 +16,8 @@ export const migration001BaselineSchema: Migration = {
       };
     }
 
-    ctx.logger('[MIGRATION 001] Successfully committed schemaVersion 1 baseline.');
-    return {
-      success: true,
-      recordsUpdated: simulatedUpdatedCount,
-      details: 'Baseline schema tracking registered.'
-    };
+    throw new Error(
+      'LIVE MIGRATION NOT IMPLEMENTED: no authenticated Firestore migration adapter is configured; no records were changed.'
+    );
   }
 };

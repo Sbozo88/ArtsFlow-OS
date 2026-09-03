@@ -33,5 +33,11 @@ jobs:
       - name: Automated Test Suites
         run: npm test
 
+      - name: Firebase Security Rules Tests
+        run: npm run test:rules
+
       - name: Production Bundle Compilation
+        env:
+          VITE_BUILD_DATE: ${{ github.event.repository.updated_at }}
+          VITE_COMMIT_SHA: ${{ github.sha }}
         run: npm run build

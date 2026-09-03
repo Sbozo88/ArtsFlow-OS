@@ -1,4 +1,4 @@
-import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { organisationInvitationRepository } from '../repositories/organisationInvitationRepository';
 import { organisationMembershipRepository } from '../repositories/organisationMembershipRepository';
@@ -224,17 +224,14 @@ export const userInvitationService = {
       }
     }
 
-    await organisationMembershipRepository.updateRole(organisationId, actorId, membershipId, newRole);
-
-    // Update users doc in background
-    try {
-      await updateDoc(doc(db, 'users', existing.userId), {
-        role: newRole,
-        updatedAt: new Date().toISOString()
-      });
-    } catch {
-      // Best-effort doc sync
-    }
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'organisationMemberships', membershipId), {
+      role: newRole,
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorId
+    });
+    batch.update(doc(db, 'users', existing.userId), { role: newRole });
+    await batch.commit();
 
     await auditService.log(
       organisationId,
@@ -266,7 +263,14 @@ export const userInvitationService = {
       }
     }
 
-    await organisationMembershipRepository.updateStatus(organisationId, actorId, membershipId, 'disabled');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'organisationMemberships', membershipId), {
+      membershipStatus: 'disabled',
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorId
+    });
+    batch.update(doc(db, 'users', existing.userId), { status: 'disabled' });
+    await batch.commit();
 
     await auditService.log(
       organisationId,
@@ -286,7 +290,14 @@ export const userInvitationService = {
     const existing = await organisationMembershipRepository.getById(organisationId, membershipId);
     if (!existing) throw new Error(`Membership ${membershipId} not found.`);
 
-    await organisationMembershipRepository.updateStatus(organisationId, actorId, membershipId, 'active');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'organisationMemberships', membershipId), {
+      membershipStatus: 'active',
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorId
+    });
+    batch.update(doc(db, 'users', existing.userId), { status: 'active' });
+    await batch.commit();
 
     await auditService.log(
       organisationId,

@@ -2,15 +2,15 @@
 
 **ArtsFlow OS** is an enterprise-grade operating system engineered specifically for Arts Academies, Music Schools, Dance Studios, Community Ensembles, and Multi-Disciplinary Creative Arts Organisations.
 
-Built with strict multi-tenant architecture, relationship-based external portal isolation, and domain-driven design, ArtsFlow OS manages the entire lifecycle of an arts academy: from student registration and instrument/costume inventories, to staff timesheets, multi-channel parent communication, automated fee billing, event logistics, and operational analytics.
+ArtsFlow OS manages the operational lifecycle of an arts academy: from learner registration and instrument/costume inventories to staff timesheets, fee administration, event logistics, and operational analytics. The v1.0 release candidate is undergoing production security validation.
 
 ---
 
 ## Release Status
 
 - **Current Version**: `1.0.0-rc.1` (Release Candidate)
-- **Status**: Functionally Complete & Hardened for Release
-- **Target**: Production Ready
+- **Status**: Release validation in progress
+- **Target**: Production readiness after security, portal, backup, and smoke-test gates pass
 
 ---
 
@@ -38,7 +38,7 @@ Built with strict multi-tenant architecture, relationship-based external portal 
 * **Payments & Allocations**: Minor-unit (integer cents) financial ledger, payment recording (Cash, EFT, Gateway), receipt generation, and real-time reconciliation.
 
 ### 5. Communication & Document Management
-* **Multi-Channel Delivery**: Unified communication engine with dynamic variable substitution for Email, SMS, and WhatsApp.
+* **Communication Preparation**: Message composition with dynamic variable substitution. WhatsApp click-to-chat is available; automated Email/SMS delivery is not configured.
 * **Document Engine**: Cloud document repository with automated letterhead branding, certificate generator, and version control.
 
 ### 6. Operational Intelligence & Automation
@@ -51,13 +51,13 @@ Built with strict multi-tenant architecture, relationship-based external portal 
 * **Staff Substitutions**: Structured cover teacher workflows with automated audit trails.
 
 ### 8. Self-Service Portals
-* **Guardian Portal**: Secure, external self-service portal for parents/guardians to view student progress, sign consent forms, track transport, review invoices, and settle fees.
-* **Learner Portal**: Mobile-first portal for students to inspect rehearsal schedules, log practice sessions, view repertoire, and track published assessments.
+* **Guardian Portal**: A dedicated guardian interface exists, but production relationship-rule validation remains a release gate.
+* **Learner Accounts**: Learner identities are blocked from the administration interface. Learner self-service is planned after v1.0 and is not presented as shipped functionality.
 
 ### 9. Platform Operations & Integrations
 * **System Health & Data Quality**: Automated referential integrity scanner and orphan detector.
-* **Backups & Recovery**: Automated daily cloud snapshots and disaster recovery runbooks.
-* **Integration Adapters**: Resilient abstractions for Email, SMS, WhatsApp, Payments, Calendar feeds, and Accounting exports.
+* **Backups & Recovery**: Recovery procedures are documented; managed backups must be configured and verified separately in Google Cloud.
+* **Integration Adapters**: Local iCalendar/accounting exports and WhatsApp click-to-chat are available. Email, SMS, gateway, and webhook runtimes are not configured.
 
 ---
 
@@ -77,7 +77,7 @@ Accessible, Responsive UI Views
 Firestore Security Rules & Composite Indexes
 ```
 
-1. **Zero UI Direct Writes**: UI components never directly mutate Firestore documents; all writes flow through typed business services.
+1. **Service-Oriented Writes**: Operational screens use typed services; authentication/bootstrap flows contain narrowly scoped direct Firebase writes.
 2. **Authoritative Sources of Truth**: Entities such as `learners` and `guardians` are unified system-wide and never duplicated into module silos.
 3. **Money Minor Units**: All financial calculations operate on integer minor units (cents) to completely eliminate floating-point drift.
 4. **Deny-by-Default Security**: Security rules deny all reads and writes unless explicitly authorized by tenant membership or verified token ownership.

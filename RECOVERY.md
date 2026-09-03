@@ -46,7 +46,7 @@ This document contains step-by-step technical procedures for responding to syste
 - Post-migration script logs error; UI displays undefined errors on newly migrated fields.
 
 ### Recovery Steps
-1. All ArtsFlow migrations support **dryRun** mode. Ensure `dryRun: true` was executed prior to apply.
+1. The current baseline migration supports validation-only **dryRun** mode. Live execution deliberately fails until an authenticated migration adapter is implemented.
 2. If an applied migration fails midway:
    - Identify the failed migration version in `scripts/migrations/runner.ts`.
    - The runner automatically halts on first failure, preventing downstream cascading corruption.
@@ -60,7 +60,8 @@ This document contains step-by-step technical procedures for responding to syste
 
 ### Prerequisites
 - Google Cloud SDK (`gcloud`) installed with Project Owner permissions.
-- Identified target backup snapshot URI in Google Cloud Storage (e.g. `gs://[PROJECT_ID]-backups/2026-09-01T02:00:00/`).
+- A managed backup/export policy that has been explicitly configured and verified.
+- An identified target backup snapshot URI in Google Cloud Storage.
 
 ### Restore Execution Steps
 ```bash
@@ -77,7 +78,7 @@ gcloud firestore import gs://[YOUR_BACKUP_BUCKET]/[SNAPSHOT_TIMESTAMP]/
 ### Post-Restore Verification
 1. Run **Data Quality Scan** in **Settings → System Preferences** (`/settings/system`).
 2. Run **Finance Reconciliation** (`financeReconciliationService.reconcileOrganisation(orgId)`) to verify invoice and payment balances.
-3. Verify tenant isolation rules with `npm test`.
+3. Verify tenant isolation rules with `npm run test:rules`.
 
 ---
 

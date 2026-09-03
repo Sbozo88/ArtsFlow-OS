@@ -8,7 +8,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run src",
+    "test:rules": "npx --yes firebase-tools@15.29.0 emulators:exec --project demo-artflow-os --only firestore,storage \"vitest run --config vitest.rules.config.ts\"",
+    "validate": "npm run typecheck && npm run lint && npm run test && npm run test:rules && npm run build",
+    "deploy:firebase": "npx --yes firebase-tools@15.29.0 deploy --project artflow-os --only hosting,firestore:rules,firestore:indexes",
+    "deploy:storage": "npx --yes firebase-tools@15.29.0 deploy --project artflow-os --only storage",
+    "release:firebase": "npm run validate && npm run deploy:firebase",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",

@@ -90,15 +90,18 @@ export const documentUploadService = {
     // Step 2: Upload bytes to Firebase Storage
     const storagePath = `organisations/${organisationId}/documents/${document.id}/v${versionNumber}/${cleanFileName}`;
     let downloadUrl: string;
-
     try {
       const storageRef = ref(storage, storagePath);
       const snapshot = await uploadBytes(storageRef, input.file);
       downloadUrl = await getDownloadURL(snapshot.ref);
     } catch (storageErr) {
-      // In automated/mock test environment where storage is mocked or offline:
-      console.warn('Storage upload notice (falling back to generated path):', storageErr);
-      downloadUrl = `https://firebasestorage.googleapis.com/v0/b/artflow-os.firebasestorage.app/o/${encodeURIComponent(storagePath)}?alt=media`;
+      // Keep the failed metadata record out of normal queries and never invent
+      // a download URL for bytes that were not stored.
+      await documentRepository.softDelete(organisationId, actorId, document.id);
+      throw new Error(
+        `Document upload failed; no file was published. ${(storageErr as Error).message || ''}`.trim(),
+        { cause: storageErr }
+      );
     }
 
     // Step 3: Update document with storagePath and downloadUrl

@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
-import { ProtectedRoute, OnboardingRoute } from './components/layout/AuthRoutes';
+import { ProtectedRoute, OnboardingRoute, PlatformRoute } from './components/layout/AuthRoutes';
 import { LoginPage } from './features/auth/LoginPage';
+import { AccessDisabledPage } from './features/auth/AccessDisabledPage';
 import { OnboardingPage } from './features/onboarding/OnboardingPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { LearnersPage } from './features/learners/LearnersPage';
@@ -130,7 +131,20 @@ import { GuardianReceiptViewPage } from './features/portal/pages/GuardianReceipt
 import { GuardianDocumentsPage } from './features/portal/pages/GuardianDocumentsPage';
 import { GuardianMessagesPage } from './features/portal/pages/GuardianMessagesPage';
 import { GuardianProfilePage } from './features/portal/pages/GuardianProfilePage';
+import { LearnerPortalNoticePage } from './features/portal/pages/LearnerPortalNoticePage';
+import { GuardianPortalUnavailablePage } from './features/portal/pages/GuardianPortalUnavailablePage';
+import { releaseCapabilities } from './config/releaseCapabilities';
 import { NotFoundPage } from './components/layout/NotFoundPage';
+
+// Platform Super Admin Console Pages (SaaS 1B)
+import { PlatformLayout } from './components/layout/PlatformLayout';
+import { PlatformDashboardPage } from './features/platform/pages/PlatformDashboardPage';
+import { PlatformOrganisationsPage } from './features/platform/pages/PlatformOrganisationsPage';
+import { PlatformOrganisationDetailPage } from './features/platform/pages/PlatformOrganisationDetailPage';
+import { PlatformUsersPage } from './features/platform/pages/PlatformUsersPage';
+import { PlatformHealthPage } from './features/platform/pages/PlatformHealthPage';
+import { PlatformAuditPage } from './features/platform/pages/PlatformAuditPage';
+import { PlatformSettingsPage } from './features/platform/pages/PlatformSettingsPage';
 
 function App() {
   return (
@@ -139,9 +153,11 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/access-disabled" element={<AccessDisabledPage />} />
           <Route path="/consent/submit/:requestId" element={<GuardianConsentPublicPage />} />
-          <Route path="/portal/login" element={<GuardianLoginPage />} />
-          <Route path="/portal/invite/:token" element={<GuardianInvitationAcceptPage />} />
+          <Route path="/portal/login" element={releaseCapabilities.guardianPortal ? <GuardianLoginPage /> : <GuardianPortalUnavailablePage />} />
+          <Route path="/portal/invite/:token" element={releaseCapabilities.guardianPortal ? <GuardianInvitationAcceptPage /> : <GuardianPortalUnavailablePage />} />
+          <Route path="/learner-portal" element={<LearnerPortalNoticePage />} />
 
           {/* Guardian Portal Protected Routes (Phase 7A) */}
           <Route element={<GuardianProtectedRoute />}>
@@ -166,6 +182,19 @@ function App() {
           {/* Onboarding Route */}
           <Route element={<OnboardingRoute />}>
             <Route path="/onboarding" element={<OnboardingPage />} />
+          </Route>
+
+          {/* SaaS 1B: Platform Super Admin Console Routes */}
+          <Route element={<PlatformRoute />}>
+            <Route path="/platform" element={<PlatformLayout />}>
+              <Route index element={<PlatformDashboardPage />} />
+              <Route path="organisations" element={<PlatformOrganisationsPage />} />
+              <Route path="organisations/:organisationId" element={<PlatformOrganisationDetailPage />} />
+              <Route path="users" element={<PlatformUsersPage />} />
+              <Route path="health" element={<PlatformHealthPage />} />
+              <Route path="audit" element={<PlatformAuditPage />} />
+              <Route path="settings" element={<PlatformSettingsPage />} />
+            </Route>
           </Route>
 
           {/* Protected Application Routes */}

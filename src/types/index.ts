@@ -10,13 +10,33 @@ export interface BaseRecord {
   status: RecordStatus;
 }
 
+export type TenantStatus =
+  | 'provisioning'
+  | 'trial'
+  | 'active'
+  | 'restricted'
+  | 'suspended'
+  | 'cancelled'
+  | 'archived';
+
 export interface Organisation extends BaseRecord {
   id: string;
   name: string;
   organisationType: string;
+  slug?: string;
   email?: string;
   phone?: string;
   address?: string;
+  tenantStatus?: TenantStatus;
+  primaryAdminEmail?: string;
+  primaryAdminName?: string;
+  suspendedAt?: string;
+  suspendedBy?: string;
+  suspensionReason?: string;
+  restrictedAt?: string;
+  restrictedBy?: string;
+  restrictionReason?: string;
+  lastActiveAt?: string;
   status: RecordStatus;
   createdAt: string;
   updatedAt: string;
@@ -24,14 +44,37 @@ export interface Organisation extends BaseRecord {
   updatedBy: string;
 }
 
-export type AuthRole = 'super_admin' | 'organisation_admin' | 'programme_director' | 'teacher' | 'finance' | 'viewer' | 'guardian' | 'learner';
+export type PlatformRole = 'super_admin' | null;
+
+export type OrganisationRole =
+  | 'organisation_admin'
+  | 'programme_director'
+  | 'teacher'
+  | 'finance'
+  | 'viewer';
+
+export type ExternalRole = 'guardian' | 'learner';
+
+export type AuthRole =
+  | 'super_admin'
+  | 'organisation_admin'
+  | 'programme_director'
+  | 'teacher'
+  | 'finance'
+  | 'viewer'
+  | 'guardian'
+  | 'learner';
 
 // Auth User Record (Simplified for Context)
 export interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string | null;
-  role?: AuthRole; // from custom claims or user doc
+  role?: AuthRole; // from custom claims, user doc, or resolved active membership
+  platformRole?: PlatformRole;
+  organisationId?: string;
+  accountStatus?: 'active' | 'disabled';
+  activeMembershipId?: string;
 }
 
 export interface Staff extends BaseRecord {
@@ -550,7 +593,18 @@ export type AuditAction =
   | 'GUARDIAN_CREATE_CHANGE_REQUEST'
   | 'GUARDIAN_REVIEW_CHANGE_REQUEST'
   | 'GUARDIAN_DOWNLOAD_DOCUMENT'
-  | 'UPDATE_PORTAL_SETTINGS';
+  | 'UPDATE_PORTAL_SETTINGS'
+  // SaaS 1B: Platform Super Admin Console Actions
+  | 'PLATFORM_CREATE_ORGANISATION'
+  | 'PLATFORM_ACTIVATE_TENANT'
+  | 'PLATFORM_RESTRICT_TENANT'
+  | 'PLATFORM_SUSPEND_TENANT'
+  | 'PLATFORM_RESTORE_TENANT'
+  | 'PLATFORM_CANCEL_TENANT'
+  | 'PLATFORM_ARCHIVE_TENANT'
+  | 'PLATFORM_VIEW_TENANT_SUMMARY';
+
+export type AuditScopeType = 'platform' | 'organisation';
 
 export interface AuditLog {
   id: string;
@@ -559,6 +613,8 @@ export interface AuditLog {
   action: AuditAction;
   entityType: string;
   entityId: string;
+  scopeType?: AuditScopeType;
+  reason?: string;
   before?: unknown;
   after?: unknown;
   timestamp: string;
@@ -1773,17 +1829,28 @@ export interface OrganisationInvitation extends BaseRecord {
   acceptedByUserId?: string;
 }
 
-export type MembershipStatus = 'active' | 'disabled';
+export type MembershipStatus = 'invited' | 'active' | 'disabled' | 'revoked';
 
 export interface OrganisationMembership extends BaseRecord {
   userId: string;
   email: string;
   displayName?: string;
-  role: AuthRole;
+  role: OrganisationRole | AuthRole;
   membershipStatus: MembershipStatus;
+  isDefaultOrganisation?: boolean;
   joinedAt: string;
   lastActiveAt?: string;
 }
+
+export type PlatformPermission =
+  | 'platform.dashboard.read'
+  | 'platform.organisations.read'
+  | 'platform.organisations.create'
+  | 'platform.organisations.manage_status'
+  | 'platform.users.read'
+  | 'platform.health.read'
+  | 'platform.audit.read'
+  | 'platform.settings.manage';
 
 export type Permission =
   | 'learners.read'
@@ -1805,7 +1872,8 @@ export type Permission =
   | 'automation.manage'
   | 'platform.read'
   | 'platform.manage'
-  | 'users.manage';
+  | 'users.manage'
+  | PlatformPermission;
 
 // ─── Phase 7A: Guardian Portal & External Access ────────────────────
 
@@ -2088,6 +2156,5 @@ export interface GuardianDashboardDto {
   nextUpcomingEvent?: GuardianEventDto;
   nextUpcomingSession?: GuardianSessionDto;
 }
-
 
 
