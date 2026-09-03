@@ -178,4 +178,52 @@ describe('Firestore tenant and authority boundaries', () => {
       status: 'active',
     }));
   });
+
+  it('enforces tenant isolation and anti-escalation on organisationMemberships', async () => {
+    await seed();
+    const adminADb = testEnv.authenticatedContext('admin-a').firestore();
+    const teacherADb = testEnv.authenticatedContext('teacher-a').firestore();
+    const adminBDb = testEnv.authenticatedContext('admin-b').firestore();
+
+    // Admin A can create membership in org-a
+    await assertSucceeds(adminADb.doc('organisationMemberships/mem-teacher-a').set(
+      record('mem-teacher-a', 'org-a', 'admin-a', {
+        userId: 'teacher-a',
+        email: 'teacher@a.test',
+        role: 'teacher',
+        membershipStatus: 'active',
+        isDefaultOrganisation: true,
+        joinedAt: NOW,
+      })
+    ));
+
+    // Anti-escalation: Admin A CANNOT create membership with role super_admin
+    await assertFails(adminADb.doc('organisationMemberships/mem-escalation').set(
+      record('mem-escalation', 'org-a', 'admin-a', {
+        userId: 'admin-a',
+        email: 'admin@a.test',
+        role: 'super_admin',
+        membershipStatus: 'active',
+        joinedAt: NOW,
+      })
+    ));
+
+    // Cross-tenant write: Admin A CANNOT create membership for org-b
+    await assertFails(adminADb.doc('organisationMemberships/mem-cross-org').set(
+      record('mem-cross-org', 'org-b', 'admin-a', {
+        userId: 'teacher-a',
+        email: 'teacher@a.test',
+        role: 'teacher',
+        membershipStatus: 'active',
+        joinedAt: NOW,
+      })
+    ));
+
+    // User can read their own membership
+    await assertSucceeds(teacherADb.doc('organisationMemberships/mem-teacher-a').get());
+
+    // Cross-tenant read: Admin B cannot read org-a membership
+    await assertFails(adminBDb.doc('organisationMemberships/mem-teacher-a').get());
+  });
 });
+

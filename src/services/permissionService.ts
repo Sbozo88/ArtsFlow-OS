@@ -1,4 +1,4 @@
-import type { AuthUser, AuthRole, Permission } from '../types';
+import type { AuthUser, AuthRole, Permission, Organisation, OrganisationMembership, PlatformRole } from '../types';
 
 export const ALL_PERMISSIONS: Permission[] = [
   'learners.read',
@@ -63,14 +63,57 @@ export const ROLE_PERMISSIONS: Record<AuthRole, Permission[]> = {
   learner: []
 };
 
+export interface PermissionEvaluationContext {
+  user?: AuthUser | { role?: AuthRole; platformRole?: PlatformRole } | null;
+  activeOrganisation?: Organisation | null;
+  membership?: OrganisationMembership | null;
+  permission: Permission;
+}
+
 export const permissionService = {
   /**
-   * Evaluates whether a given user has a specific permission.
+   * Evaluates whether a given actor has a specific permission.
+   * Supports both context evaluation ({ user, activeOrganisation, membership, permission })
+   * and legacy direct signature (user, permission).
    */
-  can(user: AuthUser | { role?: AuthRole } | null, permission: Permission): boolean {
-    if (!user || !user.role) return false;
+  can(
+    contextOrUser: PermissionEvaluationContext | AuthUser | { role?: AuthRole } | null,
+    legacyPermission?: Permission
+  ): boolean {
+    // 1. Context-based invocation
+    if (contextOrUser && typeof contextOrUser === 'object' && 'permission' in contextOrUser) {
+      const ctx = contextOrUser as PermissionEvaluationContext;
+      const targetPermission = ctx.permission;
+
+      // If evaluating membership in organisation context:
+      if (ctx.membership) {
+        if (ctx.membership.membershipStatus !== 'active') {
+          return false;
+        }
+        const permissions = ROLE_PERMISSIONS[ctx.membership.role as AuthRole] || [];
+        return permissions.includes(targetPermission);
+      }
+
+      // If evaluating platform super_admin user
+      if (ctx.user && ('platformRole' in ctx.user && ctx.user.platformRole === 'super_admin')) {
+        // Platform permissions always granted to super_admin
+        if (['platform.read', 'platform.manage', 'users.manage'].includes(targetPermission)) {
+          return true;
+        }
+      }
+
+      // Fallback to direct user role evaluation
+      const role = ctx.user?.role;
+      if (!role) return false;
+      const permissions = ROLE_PERMISSIONS[role] || [];
+      return permissions.includes(targetPermission);
+    }
+
+    // 2. Legacy direct invocation can(user, permission)
+    const user = contextOrUser as (AuthUser | { role?: AuthRole } | null);
+    if (!user || !user.role || !legacyPermission) return false;
     const permissions = ROLE_PERMISSIONS[user.role] || [];
-    return permissions.includes(permission);
+    return permissions.includes(legacyPermission);
   },
 
   /**

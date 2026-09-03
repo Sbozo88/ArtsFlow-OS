@@ -178,8 +178,7 @@ service cloud.firestore {
 
     function isSettingsCollection(name) {
       return name in [
-        'organisationCalendarPeriods', 'organisationInvitations',
-        'organisationMemberships'
+        'organisationCalendarPeriods', 'organisationInvitations'
       ];
     }
 
@@ -258,6 +257,21 @@ service cloud.firestore {
       allow read: if inOrganisationOnRead() && isAdmin();
       allow create: if inOrganisationOnCreate(docId) && isInternal();
       allow update, delete: if false;
+    }
+
+    match /organisationMemberships/{membershipId} {
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid ||
+        (inOrganisationOnRead() && canReadSettings())
+      );
+      allow create: if inOrganisationOnCreate(membershipId)
+        && isAdmin()
+        && request.resource.data.role != 'super_admin'
+        && request.resource.data.userId is string;
+      allow update: if inOrganisationOnUpdate()
+        && isAdmin()
+        && request.resource.data.role != 'super_admin';
+      allow delete: if false;
     }
 
     match /{collectionName}/{docId} {
