@@ -31,7 +31,7 @@ service firebase.storage {
 
     // Organisation-isolated storage hierarchies
     match /organisations/{orgId} {
-      
+
       // Branding assets (logos, badges)
       match /branding/{fileName} {
         allow read: if true; // Publicly visible for invoice headers and portal branding

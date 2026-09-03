@@ -119,7 +119,7 @@ describe('ArtsFlow OS Phase 9 — Final Functional & Release Readiness Test Suit
       expect(permissionService.can(financeUser, 'finance.read')).toBe(true);
       expect(permissionService.can(financeUser, 'finance.write')).toBe(true);
       expect(permissionService.can(financeUser, 'finance.reverse')).toBe(true);
-      
+
       expect(permissionService.can(financeUser, 'staff.approve_timesheets')).toBe(false);
       expect(permissionService.can(financeUser, 'staff.verify_timesheets')).toBe(false);
       expect(permissionService.can(financeUser, 'attendance.write')).toBe(false);

@@ -1,11 +1,11 @@
 /**
  * ArtsFlow OS — Safe Demo Seeding System
- * 
+ *
  * Generates realistic, fully populated, fictional demonstration records for:
  * - Organisation: "ArtsFlow Demo Arts Academy"
  * - Programmes: Music & Dance
  * - Groups, Staff, Learners, Guardians, Enrolments, Sessions, Attendance, and Invoices
- * 
+ *
  * STRICT SAFETY LOCK:
  * Automatically aborts and refuses execution in production environments unless
  * explicitly overridden with ALLOW_PRODUCTION_SEED=true.

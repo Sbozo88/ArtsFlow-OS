@@ -37,7 +37,7 @@ export const NotFoundPage: React.FC = () => {
             <ArrowLeft className="w-4 h-4" />
             <span>Go Back</span>
           </button>
-          
+
           <Link
             to={homeLink}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-transparent shadow-2xs text-sm font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"

@@ -8,13 +8,13 @@
 
 export const DEFAULT_ORGANISATION_TIMEZONE = 'Africa/Johannesburg';
 
-export type TimestampLike = 
-  | string 
-  | number 
-  | Date 
-  | { seconds: number; nanoseconds: number } 
-  | { toDate: () => Date } 
-  | null 
+export type TimestampLike =
+  | string
+  | number
+  | Date
+  | { seconds: number; nanoseconds: number }
+  | { toDate: () => Date }
+  | null
   | undefined;
 
 /**

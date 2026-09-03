@@ -6,7 +6,7 @@ export const migration001BaselineSchema: Migration = {
   description: 'Establishes schemaVersion: 1 tracking on organisation settings and system metadata.',
   apply: async (ctx: MigrationContext) => {
     ctx.logger(`[MIGRATION 001] Checking baseline schema version (dryRun: ${ctx.isDryRun})`);
-    
+
     // Validates baseline schema expectations across operational repositories
     const simulatedUpdatedCount = 1;
 

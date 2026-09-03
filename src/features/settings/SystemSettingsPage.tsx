@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
-import { 
-  Sliders, 
-  Save, 
-  CheckCircle2, 
-  AlertCircle, 
-  FileText, 
-  Info, 
-  ShieldCheck, 
-  Activity, 
-  Download, 
-  RefreshCw, 
+import {
+  Sliders,
+  Save,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  Info,
+  ShieldCheck,
+  Activity,
+  Download,
+  RefreshCw,
   Server,
   Radio
 } from 'lucide-react';
 import { SettingsNav } from './components/SettingsNav';
 import { useOrganisationSettings } from '../../hooks/useOrganisationSettings';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  platformOperationsService, 
-  type DataQualityReport, 
-  type IntegrationStatusReport 
+import {
+  platformOperationsService,
+  type DataQualityReport,
+  type IntegrationStatusReport
 } from '../../services/platformOperationsService';
 import type { OrganisationSystemSettings, OrganisationDocumentSettings } from '../../types';
 
