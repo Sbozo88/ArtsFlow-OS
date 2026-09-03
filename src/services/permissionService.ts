@@ -1,4 +1,23 @@
-import type { AuthUser, AuthRole, Permission, Organisation, OrganisationMembership, PlatformRole } from '../types';
+import type {
+  AuthUser,
+  AuthRole,
+  Permission,
+  PlatformPermission,
+  Organisation,
+  OrganisationMembership,
+  PlatformRole
+} from '../types';
+
+export const PLATFORM_PERMISSIONS: PlatformPermission[] = [
+  'platform.dashboard.read',
+  'platform.organisations.read',
+  'platform.organisations.create',
+  'platform.organisations.manage_status',
+  'platform.users.read',
+  'platform.health.read',
+  'platform.audit.read',
+  'platform.settings.manage'
+];
 
 export const ALL_PERMISSIONS: Permission[] = [
   'learners.read',
@@ -24,7 +43,7 @@ export const ALL_PERMISSIONS: Permission[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<AuthRole, Permission[]> = {
-  super_admin: [...ALL_PERMISSIONS],
+  super_admin: [...ALL_PERMISSIONS, ...PLATFORM_PERMISSIONS],
   organisation_admin: [...ALL_PERMISSIONS],
   programme_director: [
     'learners.read',
@@ -77,13 +96,22 @@ export const permissionService = {
    * and legacy direct signature (user, permission).
    */
   can(
-    contextOrUser: PermissionEvaluationContext | AuthUser | { role?: AuthRole } | null,
+    contextOrUser: PermissionEvaluationContext | AuthUser | { role?: AuthRole; platformRole?: PlatformRole } | null,
     legacyPermission?: Permission
   ): boolean {
     // 1. Context-based invocation
     if (contextOrUser && typeof contextOrUser === 'object' && 'permission' in contextOrUser) {
       const ctx = contextOrUser as PermissionEvaluationContext;
       const targetPermission = ctx.permission;
+
+      // Platform permissions require platformRole === 'super_admin' or user.role === 'super_admin'
+      const isPlatformPerm = PLATFORM_PERMISSIONS.includes(targetPermission as PlatformPermission);
+      if (isPlatformPerm) {
+        return (
+          ctx.user?.platformRole === 'super_admin' ||
+          ctx.user?.role === 'super_admin'
+        );
+      }
 
       // If evaluating membership in organisation context:
       if (ctx.membership) {
@@ -94,9 +122,8 @@ export const permissionService = {
         return permissions.includes(targetPermission);
       }
 
-      // If evaluating platform super_admin user
-      if (ctx.user && ('platformRole' in ctx.user && ctx.user.platformRole === 'super_admin')) {
-        // Platform permissions always granted to super_admin
+      // If evaluating platform super_admin user without specific organisation membership
+      if (ctx.user && ctx.user.platformRole === 'super_admin') {
         if (['platform.read', 'platform.manage', 'users.manage'].includes(targetPermission)) {
           return true;
         }
@@ -110,8 +137,19 @@ export const permissionService = {
     }
 
     // 2. Legacy direct invocation can(user, permission)
-    const user = contextOrUser as (AuthUser | { role?: AuthRole } | null);
-    if (!user || !user.role || !legacyPermission) return false;
+    const user = contextOrUser as (AuthUser | { role?: AuthRole; platformRole?: PlatformRole } | null);
+    if (!user || !legacyPermission) return false;
+
+    // Platform permissions require super_admin
+    const isPlatformPerm = PLATFORM_PERMISSIONS.includes(legacyPermission as PlatformPermission);
+    if (isPlatformPerm) {
+      return (
+        user.platformRole === 'super_admin' ||
+        user.role === 'super_admin'
+      );
+    }
+
+    if (!user.role) return false;
     const permissions = ROLE_PERMISSIONS[user.role] || [];
     return permissions.includes(legacyPermission);
   },

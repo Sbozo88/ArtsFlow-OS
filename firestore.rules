@@ -35,6 +35,13 @@ service cloud.firestore {
       ];
     }
 
+    function isPlatformAdmin() {
+      return signedIn() && (
+        role() == 'super_admin' ||
+        (hasUserProfile() && 'platformRole' in userProfile() && userProfile().platformRole == 'super_admin')
+      );
+    }
+
     function isAdmin() {
       return role() in ['super_admin', 'organisation_admin'];
     }
@@ -221,24 +228,25 @@ service cloud.firestore {
 
     match /organisations/{orgId} {
       allow get: if sameOrganisation(orgId)
-        || (signedIn() && orgId == 'org_' + request.auth.uid);
-      allow list: if isAdmin();
-      allow create: if signedIn()
-        && !hasUserProfile()
-        && orgId == 'org_' + request.auth.uid
-        && request.resource.data.keys().hasOnly([
-          'id', 'organisationId', 'name', 'organisationType', 'email', 'phone',
-          'address', 'status', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
-        ])
-        && request.resource.data.id == orgId
-        && request.resource.data.organisationId == orgId
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 160
-        && validNewBaseRecord(orgId);
-      allow update: if sameOrganisation(orgId)
-        && isAdmin()
-        && validBaseRecordUpdate();
+        || (signedIn() && orgId == 'org_' + request.auth.uid)
+        || isPlatformAdmin();
+      allow list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        || (signedIn()
+          && !hasUserProfile()
+          && orgId == 'org_' + request.auth.uid
+          && request.resource.data.keys().hasOnly([
+            'id', 'organisationId', 'name', 'organisationType', 'email', 'phone',
+            'address', 'status', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+          ])
+          && request.resource.data.id == orgId
+          && request.resource.data.organisationId == orgId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 160
+          && validNewBaseRecord(orgId));
+      allow update: if (sameOrganisation(orgId) && isAdmin() && validBaseRecordUpdate())
+        || isPlatformAdmin();
       allow delete: if false;
     }
 
@@ -254,23 +262,28 @@ service cloud.firestore {
     }
 
     match /auditLogs/{docId} {
-      allow read: if inOrganisationOnRead() && isAdmin();
-      allow create: if inOrganisationOnCreate(docId) && isInternal();
+      allow read: if (inOrganisationOnRead() && isAdmin()) || isPlatformAdmin();
+      allow create: if (inOrganisationOnCreate(docId) && isInternal()) || isPlatformAdmin();
       allow update, delete: if false;
     }
 
     match /organisationMemberships/{membershipId} {
       allow read: if signedIn() && (
         resource.data.userId == request.auth.uid ||
-        (inOrganisationOnRead() && canReadSettings())
+        (inOrganisationOnRead() && canReadSettings()) ||
+        isPlatformAdmin()
       );
-      allow create: if inOrganisationOnCreate(membershipId)
+      allow create: if isPlatformAdmin() || (
+        inOrganisationOnCreate(membershipId)
         && isAdmin()
         && request.resource.data.role != 'super_admin'
-        && request.resource.data.userId is string;
-      allow update: if inOrganisationOnUpdate()
+        && request.resource.data.userId is string
+      );
+      allow update: if isPlatformAdmin() || (
+        inOrganisationOnUpdate()
         && isAdmin()
-        && request.resource.data.role != 'super_admin';
+        && request.resource.data.role != 'super_admin'
+      );
       allow delete: if false;
     }
 

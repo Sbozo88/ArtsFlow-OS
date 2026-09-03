@@ -1,0 +1,465 @@
+import React, { useEffect, useState, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import {
+  Building2,
+  Search,
+  Plus,
+  ArrowUpRight,
+  RefreshCw,
+  AlertTriangle,
+  X,
+  Sparkles
+} from 'lucide-react';
+import {
+  platformOrganisationService,
+  type CreateOrganisationInput
+} from '../../../services/platformOrganisationService';
+import { useAuth } from '../../../contexts/AuthContext';
+import type { Organisation, TenantStatus } from '../../../types';
+
+export const PlatformOrganisationsPage: React.FC = () => {
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [organisations, setOrganisations] = useState<Organisation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters & Search
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<TenantStatus | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+
+  // Modal State
+  const [modalOpen, setModalOpen] = useState(searchParams.get('new') === 'true');
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: '',
+    organisationType: 'music_and_dance',
+    primaryAdminEmail: '',
+    primaryAdminName: '',
+    phone: '',
+    address: '',
+    initialStatus: 'active' as TenantStatus
+  });
+
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const list = await platformOrganisationService.listOrganisations();
+      setOrganisations(list);
+    } catch (err) {
+      setError((err as Error).message || 'Failed to fetch organisations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    platformOrganisationService
+      .listOrganisations()
+      .then((list) => {
+        if (isMounted) {
+          setOrganisations(list);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setError((err as Error).message || 'Failed to fetch organisations');
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Filtered List
+  const filteredOrganisations = useMemo(() => {
+    return organisations.filter((org) => {
+      const matchesStatus = statusFilter === 'all' || (org.tenantStatus || 'active') === statusFilter;
+      const matchesType = typeFilter === 'all' || org.organisationType === typeFilter;
+      const term = search.trim().toLowerCase();
+      const matchesSearch =
+        !term ||
+        org.name.toLowerCase().includes(term) ||
+        org.id.toLowerCase().includes(term) ||
+        (org.primaryAdminEmail && org.primaryAdminEmail.toLowerCase().includes(term)) ||
+        (org.slug && org.slug.toLowerCase().includes(term));
+
+      return matchesStatus && matchesType && matchesSearch;
+    });
+  }, [organisations, search, statusFilter, typeFilter]);
+
+  const handleOpenModal = () => {
+    setModalOpen(true);
+    setFormError(null);
+    setDuplicateWarning(null);
+    setSearchParams({ new: 'true' });
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSearchParams({});
+  };
+
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      setFormError('Organisation name is required.');
+      return;
+    }
+
+    try {
+      setFormSubmitting(true);
+      setFormError(null);
+
+      // Check duplicates
+      const dup = await platformOrganisationService.checkDuplicate(
+        formData.name,
+        formData.primaryAdminEmail || undefined
+      );
+      if (dup.isDuplicateName && !duplicateWarning) {
+        setDuplicateWarning('An organisation with this name already exists. Submit again to confirm.');
+        setFormSubmitting(false);
+        return;
+      }
+
+      const input: CreateOrganisationInput = {
+        name: formData.name.trim(),
+        organisationType: formData.organisationType,
+        primaryAdminEmail: formData.primaryAdminEmail.trim() || undefined,
+        primaryAdminName: formData.primaryAdminName.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
+        address: formData.address.trim() || undefined,
+        initialStatus: formData.initialStatus,
+        actorId: user?.uid || 'super_admin'
+      };
+
+      await platformOrganisationService.createOrganisation(input);
+      handleCloseModal();
+      setFormData({
+        name: '',
+        organisationType: 'music_and_dance',
+        primaryAdminEmail: '',
+        primaryAdminName: '',
+        phone: '',
+        address: '',
+        initialStatus: 'active'
+      });
+      await handleRefresh();
+    } catch (err) {
+      setFormError((err as Error).message || 'Failed to create organisation');
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status?: TenantStatus) => {
+    const s = status || 'active';
+    switch (s) {
+      case 'active':
+        return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+      case 'trial':
+        return 'text-sky-400 bg-sky-500/10 border-sky-500/30';
+      case 'provisioning':
+        return 'text-purple-400 bg-purple-500/10 border-purple-500/30';
+      case 'restricted':
+        return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+      case 'suspended':
+        return 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+      case 'cancelled':
+        return 'text-slate-400 bg-slate-700/50 border-slate-600';
+      case 'archived':
+        return 'text-slate-500 bg-slate-800 border-slate-700';
+      default:
+        return 'text-slate-400 bg-slate-800 border-slate-700';
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <Building2 className="w-6 h-6 text-indigo-400" />
+            Organisation Directory
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Directory of all customer organisations and SaaS tenant lifecycle management.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
+            title="Refresh directory"
+            aria-label="Refresh directory"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenModal}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Create Organisation
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-red-900/30 border border-red-700/50 rounded-xl text-red-200 text-sm flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Filter & Search Bar */}
+      <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by organisation name, ID, slug, or admin email..."
+            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as TenantStatus | 'all')}
+            className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+          >
+            <option value="all">All Tenant Statuses</option>
+            <option value="active">Active</option>
+            <option value="trial">Trial</option>
+            <option value="provisioning">Provisioning</option>
+            <option value="restricted">Restricted</option>
+            <option value="suspended">Suspended</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="archived">Archived</option>
+          </select>
+
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+          >
+            <option value="all">All Types</option>
+            <option value="music">Music</option>
+            <option value="dance">Dance</option>
+            <option value="music_and_dance">Music & Dance</option>
+            <option value="drama">Drama</option>
+            <option value="performing_arts">Performing Arts</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Directory Table */}
+      <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                <th className="py-3 px-4">Organisation</th>
+                <th className="py-3 px-4">Type</th>
+                <th className="py-3 px-4">Tenant Status</th>
+                <th className="py-3 px-4">Primary Admin</th>
+                <th className="py-3 px-4">Created</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700/50 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                    Loading organisations...
+                  </td>
+                </tr>
+              ) : filteredOrganisations.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                    No organisations match your search or filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredOrganisations.map((org) => {
+                  const status = org.tenantStatus || 'active';
+                  return (
+                    <tr key={org.id} className="hover:bg-slate-700/30 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-white">{org.name}</div>
+                        <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                          <span className="font-mono text-[10px] text-slate-400">{org.id}</span>
+                          {org.slug && <span className="text-[10px] text-indigo-400 font-mono">/{org.slug}</span>}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-300 capitalize">
+                        {org.organisationType.replace(/_/g, ' ')}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadge(status)}`}>
+                          {status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-300">
+                        {org.primaryAdminEmail || org.email || <span className="text-slate-400">—</span>}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-400">
+                        {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Link
+                          to={`/platform/organisations/${org.id}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors"
+                        >
+                          <span>Manage</span>
+                          <ArrowUpRight className="w-3 h-3" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Create Organisation Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-700">
+              <div className="flex items-center gap-2 text-white font-bold">
+                <Sparkles className="w-5 h-5 text-indigo-400" />
+                <span>Provision New Tenant Organisation</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {formError && (
+              <div className="p-3 bg-red-900/40 border border-red-700 text-xs text-red-200 rounded-lg">
+                {formError}
+              </div>
+            )}
+
+            {duplicateWarning && (
+              <div className="p-3 bg-amber-900/40 border border-amber-700 text-xs text-amber-200 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>{duplicateWarning}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  Organisation Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    setDuplicateWarning(null);
+                  }}
+                  placeholder="e.g. Cape Town Performing Arts Academy"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Organisation Type
+                  </label>
+                  <select
+                    value={formData.organisationType}
+                    onChange={(e) => setFormData({ ...formData, organisationType: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="music_and_dance">Music & Dance</option>
+                    <option value="music">Music</option>
+                    <option value="dance">Dance</option>
+                    <option value="drama">Drama</option>
+                    <option value="performing_arts">Performing Arts</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Initial Status
+                  </label>
+                  <select
+                    value={formData.initialStatus}
+                    onChange={(e) => setFormData({ ...formData, initialStatus: e.target.value as TenantStatus })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="active">Active (Operational)</option>
+                    <option value="provisioning">Provisioning (Setup)</option>
+                    <option value="trial">Trial</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  Primary Admin Email (Optional)
+                </label>
+                <input
+                  type="email"
+                  value={formData.primaryAdminEmail}
+                  onChange={(e) => setFormData({ ...formData, primaryAdminEmail: e.target.value })}
+                  placeholder="admin@school.example.com"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  If provided, an initial invited organisation admin membership will be provisioned.
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-700 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={formSubmitting}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-lg transition-colors shadow-sm"
+                >
+                  {formSubmitting ? 'Provisioning...' : 'Provision Tenant'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

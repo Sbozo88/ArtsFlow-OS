@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
-import { ProtectedRoute, OnboardingRoute } from './components/layout/AuthRoutes';
+import { ProtectedRoute, OnboardingRoute, PlatformRoute } from './components/layout/AuthRoutes';
 import { LoginPage } from './features/auth/LoginPage';
 import { AccessDisabledPage } from './features/auth/AccessDisabledPage';
 import { OnboardingPage } from './features/onboarding/OnboardingPage';
@@ -136,6 +136,16 @@ import { GuardianPortalUnavailablePage } from './features/portal/pages/GuardianP
 import { releaseCapabilities } from './config/releaseCapabilities';
 import { NotFoundPage } from './components/layout/NotFoundPage';
 
+// Platform Super Admin Console Pages (SaaS 1B)
+import { PlatformLayout } from './components/layout/PlatformLayout';
+import { PlatformDashboardPage } from './features/platform/pages/PlatformDashboardPage';
+import { PlatformOrganisationsPage } from './features/platform/pages/PlatformOrganisationsPage';
+import { PlatformOrganisationDetailPage } from './features/platform/pages/PlatformOrganisationDetailPage';
+import { PlatformUsersPage } from './features/platform/pages/PlatformUsersPage';
+import { PlatformHealthPage } from './features/platform/pages/PlatformHealthPage';
+import { PlatformAuditPage } from './features/platform/pages/PlatformAuditPage';
+import { PlatformSettingsPage } from './features/platform/pages/PlatformSettingsPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -172,6 +182,19 @@ function App() {
           {/* Onboarding Route */}
           <Route element={<OnboardingRoute />}>
             <Route path="/onboarding" element={<OnboardingPage />} />
+          </Route>
+
+          {/* SaaS 1B: Platform Super Admin Console Routes */}
+          <Route element={<PlatformRoute />}>
+            <Route path="/platform" element={<PlatformLayout />}>
+              <Route index element={<PlatformDashboardPage />} />
+              <Route path="organisations" element={<PlatformOrganisationsPage />} />
+              <Route path="organisations/:organisationId" element={<PlatformOrganisationDetailPage />} />
+              <Route path="users" element={<PlatformUsersPage />} />
+              <Route path="health" element={<PlatformHealthPage />} />
+              <Route path="audit" element={<PlatformAuditPage />} />
+              <Route path="settings" element={<PlatformSettingsPage />} />
+            </Route>
           </Route>
 
           {/* Protected Application Routes */}

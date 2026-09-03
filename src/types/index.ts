@@ -23,10 +23,20 @@ export interface Organisation extends BaseRecord {
   id: string;
   name: string;
   organisationType: string;
+  slug?: string;
   email?: string;
   phone?: string;
   address?: string;
   tenantStatus?: TenantStatus;
+  primaryAdminEmail?: string;
+  primaryAdminName?: string;
+  suspendedAt?: string;
+  suspendedBy?: string;
+  suspensionReason?: string;
+  restrictedAt?: string;
+  restrictedBy?: string;
+  restrictionReason?: string;
+  lastActiveAt?: string;
   status: RecordStatus;
   createdAt: string;
   updatedAt: string;
@@ -62,6 +72,7 @@ export interface AuthUser {
   displayName: string | null;
   role?: AuthRole; // from custom claims, user doc, or resolved active membership
   platformRole?: PlatformRole;
+  organisationId?: string;
   accountStatus?: 'active' | 'disabled';
   activeMembershipId?: string;
 }
@@ -582,7 +593,18 @@ export type AuditAction =
   | 'GUARDIAN_CREATE_CHANGE_REQUEST'
   | 'GUARDIAN_REVIEW_CHANGE_REQUEST'
   | 'GUARDIAN_DOWNLOAD_DOCUMENT'
-  | 'UPDATE_PORTAL_SETTINGS';
+  | 'UPDATE_PORTAL_SETTINGS'
+  // SaaS 1B: Platform Super Admin Console Actions
+  | 'PLATFORM_CREATE_ORGANISATION'
+  | 'PLATFORM_ACTIVATE_TENANT'
+  | 'PLATFORM_RESTRICT_TENANT'
+  | 'PLATFORM_SUSPEND_TENANT'
+  | 'PLATFORM_RESTORE_TENANT'
+  | 'PLATFORM_CANCEL_TENANT'
+  | 'PLATFORM_ARCHIVE_TENANT'
+  | 'PLATFORM_VIEW_TENANT_SUMMARY';
+
+export type AuditScopeType = 'platform' | 'organisation';
 
 export interface AuditLog {
   id: string;
@@ -591,6 +613,8 @@ export interface AuditLog {
   action: AuditAction;
   entityType: string;
   entityId: string;
+  scopeType?: AuditScopeType;
+  reason?: string;
   before?: unknown;
   after?: unknown;
   timestamp: string;
@@ -1818,6 +1842,16 @@ export interface OrganisationMembership extends BaseRecord {
   lastActiveAt?: string;
 }
 
+export type PlatformPermission =
+  | 'platform.dashboard.read'
+  | 'platform.organisations.read'
+  | 'platform.organisations.create'
+  | 'platform.organisations.manage_status'
+  | 'platform.users.read'
+  | 'platform.health.read'
+  | 'platform.audit.read'
+  | 'platform.settings.manage';
+
 export type Permission =
   | 'learners.read'
   | 'learners.write'
@@ -1838,7 +1872,8 @@ export type Permission =
   | 'automation.manage'
   | 'platform.read'
   | 'platform.manage'
-  | 'users.manage';
+  | 'users.manage'
+  | PlatformPermission;
 
 // ─── Phase 7A: Guardian Portal & External Access ────────────────────
 

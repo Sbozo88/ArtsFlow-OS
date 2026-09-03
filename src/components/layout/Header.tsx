@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Search, Check, ExternalLink, AlertTriangle, Info, AlertCircle, Menu, X } from 'lucide-react';
+import { Bell, Search, Check, ExternalLink, AlertTriangle, Info, AlertCircle, Menu, X, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
@@ -178,6 +178,18 @@ export function Header({ onMenuToggle }: HeaderProps) {
             </div>
           )}
         </div>
+
+        {/* Platform Console Shortcut for Super Admin */}
+        {(authUser?.platformRole === 'super_admin' || authUser?.role === 'super_admin') && (
+          <Link
+            to="/platform"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
+            title="Open ArtsFlow Platform Super Admin Console"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="hidden md:inline">Platform Console</span>
+          </Link>
+        )}
 
         {/* User Profile */}
         <div className="flex items-center gap-2 pl-2 sm:pl-4 border-l border-slate-200">

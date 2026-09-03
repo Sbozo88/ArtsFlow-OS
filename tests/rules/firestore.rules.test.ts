@@ -34,6 +34,7 @@ async function seed() {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
     await Promise.all([
+      db.doc('users/super-admin').set({ email: 'super@test.org', role: 'super_admin', status: 'active' }),
       db.doc('users/admin-a').set(user('org-a', 'organisation_admin')),
       db.doc('users/admin-b').set(user('org-b', 'organisation_admin')),
       db.doc('users/teacher-a').set(user('org-a', 'teacher')),
@@ -224,6 +225,18 @@ describe('Firestore tenant and authority boundaries', () => {
 
     // Cross-tenant read: Admin B cannot read org-a membership
     await assertFails(adminBDb.doc('organisationMemberships/mem-teacher-a').get());
+  });
+
+  it('enforces platform super_admin boundary on organisation directory', async () => {
+    await seed();
+    const superAdminDb = testEnv.authenticatedContext('super-admin').firestore();
+    const orgAdminDb = testEnv.authenticatedContext('admin-a').firestore();
+
+    // Super admin can list all organisations
+    await assertSucceeds(superAdminDb.collection('organisations').get());
+
+    // Organisation admin CANNOT list all organisations across the platform
+    await assertFails(orgAdminDb.collection('organisations').get());
   });
 });
 
