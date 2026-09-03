@@ -4,6 +4,8 @@ import type { Organisation, OrganisationMembership, TenantStatus } from '../type
 
 export interface PlatformKPIs {
   totalOrganisations: number;
+  customerOrganisations: number;
+  demoOrganisations: number;
   activeOrganisations: number;
   trialOrganisations: number;
   restrictedOrganisations: number;
@@ -49,8 +51,16 @@ export const platformMetricsService = {
     const startOfMonthIso = startOfMonth.toISOString();
 
     let newThisMonth = 0;
+    let demoCount = 0;
+    let customerCount = 0;
 
     for (const org of orgs) {
+      if (org.isDemoTenant || org.id === 'org_demo_artsflow') {
+        demoCount++;
+      } else {
+        customerCount++;
+      }
+
       const status: TenantStatus = org.tenantStatus || 'active';
       switch (status) {
         case 'active':
@@ -92,6 +102,8 @@ export const platformMetricsService = {
 
     return {
       totalOrganisations: orgs.length,
+      customerOrganisations: customerCount,
+      demoOrganisations: demoCount,
       activeOrganisations: activeCount,
       trialOrganisations: trialCount,
       restrictedOrganisations: restrictedCount,

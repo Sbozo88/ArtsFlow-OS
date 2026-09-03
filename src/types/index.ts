@@ -39,6 +39,9 @@ export interface Organisation extends BaseRecord {
   restrictionReasonType?: RestrictionReasonType;
   assignedPlanId?: string;
   lastActiveAt?: string;
+  isDemoTenant?: boolean;
+  billingMode?: 'complimentary' | 'manual' | 'automated';
+  onboardingStatus?: string;
   // Founding Partner Pilot Program Fields
   isFoundingPartner?: boolean;
   foundingPartnerNumber?: number; // 1 to 10

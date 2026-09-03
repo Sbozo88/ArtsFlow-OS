@@ -18,7 +18,7 @@
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { db, auth } from '../src/lib/firebase';
-import { DEMO_DATA, DEMO_ORGANISATION_ID } from './seed-demo';
+import { DEMO_DATA, DEMO_ORGANISATION_ID, runDemoSeed } from './seed-demo';
 
 interface BootstrapOptions {
   email: string;
@@ -170,22 +170,8 @@ export async function bootstrapFounderAdmin(options: BootstrapOptions): Promise<
   console.log(`✔ Explicit organisation_admin membership granted for demo tenant.`);
 
   // 4. Seed Essential Operational Demo Records
-  console.log(`[4/5] Seeding demo programmes, groups, and staff...`);
-  for (const prog of DEMO_DATA.programmes) {
-    await setDoc(doc(db, 'programmes', prog.id), { ...prog, status: 'active', updatedAt: now });
-  }
-  for (const grp of DEMO_DATA.groups) {
-    await setDoc(doc(db, 'groups', grp.id), { ...grp, status: 'active', updatedAt: now });
-  }
-  for (const stf of DEMO_DATA.staff) {
-    await setDoc(doc(db, 'staff', stf.id), { ...stf, staffStatus: 'active', updatedAt: now });
-  }
-  for (const lrn of DEMO_DATA.learners) {
-    await setDoc(doc(db, 'learners', lrn.id), { ...lrn, learnerStatus: 'active', updatedAt: now });
-  }
-  for (const grd of DEMO_DATA.guardians) {
-    await setDoc(doc(db, 'guardians', grd.id), { ...grd, status: 'active', updatedAt: now });
-  }
+  console.log(`[4/5] Seeding comprehensive demo records for founder product demonstration...`);
+  await runDemoSeed(false);
   console.log(`✔ Demo operational dataset ready for founder testing.`);
 
   // 5. Password Reset Request & Audit Log

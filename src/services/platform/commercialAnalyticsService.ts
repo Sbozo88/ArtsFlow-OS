@@ -61,6 +61,10 @@ export class CommercialAnalyticsService {
     }
 
     for (const sub of subs) {
+      const org = orgMap.get(sub.organisationId);
+      if (org?.isDemoTenant || sub.organisationId === 'org_demo_artsflow') {
+        continue;
+      }
       const planId = sub.planId || 'plan_starter';
       const plan = planMap.get(planId);
       const planName = plan?.name || planId;
