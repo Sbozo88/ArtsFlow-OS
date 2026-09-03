@@ -10,13 +10,45 @@ export interface BaseRecord {
   status: RecordStatus;
 }
 
+export type TenantStatus =
+  | 'provisioning'
+  | 'trial'
+  | 'active'
+  | 'restricted'
+  | 'suspended'
+  | 'cancelled'
+  | 'archived';
+
 export interface Organisation extends BaseRecord {
   id: string;
   name: string;
   organisationType: string;
+  slug?: string;
   email?: string;
   phone?: string;
   address?: string;
+  tenantStatus?: TenantStatus;
+  primaryAdminEmail?: string;
+  primaryAdminName?: string;
+  suspendedAt?: string;
+  suspendedBy?: string;
+  suspensionReason?: string;
+  restrictedAt?: string;
+  restrictedBy?: string;
+  restrictionReason?: string;
+  restrictionReasonType?: RestrictionReasonType;
+  assignedPlanId?: string;
+  lastActiveAt?: string;
+  isDemoTenant?: boolean;
+  billingMode?: 'complimentary' | 'manual' | 'automated';
+  onboardingStatus?: string;
+  // Founding Partner Pilot Program Fields
+  isFoundingPartner?: boolean;
+  foundingPartnerNumber?: number; // 1 to 10
+  foundingPartnerStartedAt?: string;
+  foundingPriceLockEndsAt?: string;
+  foundingPlanPrice?: number; // Cents ZAR
+  foundingPartnerStatus?: FoundingPartnerStatus;
   status: RecordStatus;
   createdAt: string;
   updatedAt: string;
@@ -24,14 +56,37 @@ export interface Organisation extends BaseRecord {
   updatedBy: string;
 }
 
-export type AuthRole = 'super_admin' | 'organisation_admin' | 'programme_director' | 'teacher' | 'finance' | 'viewer' | 'guardian' | 'learner';
+export type PlatformRole = 'super_admin' | null;
+
+export type OrganisationRole =
+  | 'organisation_admin'
+  | 'programme_director'
+  | 'teacher'
+  | 'finance'
+  | 'viewer';
+
+export type ExternalRole = 'guardian' | 'learner';
+
+export type AuthRole =
+  | 'super_admin'
+  | 'organisation_admin'
+  | 'programme_director'
+  | 'teacher'
+  | 'finance'
+  | 'viewer'
+  | 'guardian'
+  | 'learner';
 
 // Auth User Record (Simplified for Context)
 export interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string | null;
-  role?: AuthRole; // from custom claims or user doc
+  role?: AuthRole; // from custom claims, user doc, or resolved active membership
+  platformRole?: PlatformRole;
+  organisationId?: string;
+  accountStatus?: 'active' | 'disabled';
+  activeMembershipId?: string;
 }
 
 export interface Staff extends BaseRecord {
@@ -550,7 +605,66 @@ export type AuditAction =
   | 'GUARDIAN_CREATE_CHANGE_REQUEST'
   | 'GUARDIAN_REVIEW_CHANGE_REQUEST'
   | 'GUARDIAN_DOWNLOAD_DOCUMENT'
-  | 'UPDATE_PORTAL_SETTINGS';
+  | 'UPDATE_PORTAL_SETTINGS'
+  // SaaS 1B: Platform Super Admin Console Actions
+  | 'PLATFORM_CREATE_ORGANISATION'
+  | 'PLATFORM_ACTIVATE_TENANT'
+  | 'PLATFORM_RESTRICT_TENANT'
+  | 'PLATFORM_SUSPEND_TENANT'
+  | 'PLATFORM_RESTORE_TENANT'
+  | 'PLATFORM_CANCEL_TENANT'
+  | 'PLATFORM_ARCHIVE_TENANT'
+  | 'PLATFORM_VIEW_TENANT_SUMMARY'
+  // SaaS 2A: Plans, Features & Entitlements Actions
+  | 'PLATFORM_CREATE_FEATURE'
+  | 'PLATFORM_UPDATE_FEATURE'
+  | 'PLATFORM_CREATE_PLAN'
+  | 'PLATFORM_UPDATE_PLAN'
+  | 'PLATFORM_ARCHIVE_PLAN'
+  | 'PLATFORM_UPDATE_PLAN_ENTITLEMENT'
+  | 'PLATFORM_RECONCILE_COMMERCIAL_CONFIG'
+  | 'PLATFORM_ASSIGN_PLAN'
+  | 'PLATFORM_CREATE_ENTITLEMENT_OVERRIDE'
+  | 'PLATFORM_UPDATE_ENTITLEMENT_OVERRIDE'
+  | 'PLATFORM_END_ENTITLEMENT_OVERRIDE'
+  // SaaS 2B: Subscriptions & Billing Actions
+  | 'PLATFORM_CREATE_SUBSCRIPTION'
+  | 'PLATFORM_START_TRIAL'
+  | 'PLATFORM_ACTIVATE_SUBSCRIPTION'
+  | 'PLATFORM_MARK_SUBSCRIPTION_PAST_DUE'
+  | 'PLATFORM_CHANGE_SUBSCRIPTION_PLAN'
+  | 'PLATFORM_CANCEL_SUBSCRIPTION'
+  | 'PLATFORM_REACTIVATE_SUBSCRIPTION'
+  | 'PLATFORM_CREATE_COMPLIMENTARY_SUBSCRIPTION'
+  | 'PLATFORM_PROCESS_SAAS_BILLING_EVENT'
+  | 'PLATFORM_RESTRICT_TENANT_FOR_BILLING'
+  | 'PLATFORM_RESTORE_TENANT_AFTER_BILLING'
+  // SaaS 3A: Customer Provisioning & School Onboarding Actions
+  | 'PLATFORM_START_ORGANISATION_PROVISIONING'
+  | 'PLATFORM_COMPLETE_ORGANISATION_PROVISIONING'
+  | 'SELF_SERVICE_ORGANISATION_PROVISIONED'
+  | 'PLATFORM_FAIL_ORGANISATION_PROVISIONING'
+  | 'PLATFORM_RETRY_ORGANISATION_PROVISIONING'
+  | 'ORGANISATION_START_ONBOARDING'
+  | 'ORGANISATION_COMPLETE_ONBOARDING_STEP'
+  | 'ORGANISATION_SKIP_ONBOARDING_STEP'
+  | 'ORGANISATION_COMPLETE_ONBOARDING'
+  // SaaS 3B: Multi-Organisation Users & Membership Switching Actions
+  | 'USER_SWITCH_ORGANISATION'
+  | 'USER_SET_DEFAULT_ORGANISATION'
+  | 'ORGANISATION_MEMBERSHIP_ACTIVATED'
+  | 'ORGANISATION_MEMBERSHIP_DISABLED'
+  | 'ORGANISATION_MEMBERSHIP_REVOKED'
+  // Founding Partner Pilot Program Actions
+  | 'PLATFORM_ASSIGN_FOUNDING_PARTNER'
+  | 'PLATFORM_REMOVE_FOUNDING_PARTNER'
+  | 'PLATFORM_CREATE_FOUNDER_NOTE'
+  | 'PLATFORM_ARCHIVE_FOUNDER_NOTE'
+  | 'CUSTOMER_SUBMIT_FEEDBACK'
+  | 'PLATFORM_UPDATE_FEEDBACK_STATUS'
+  | 'PLATFORM_BOOTSTRAP_FOUNDER';
+
+export type AuditScopeType = 'platform' | 'organisation';
 
 export interface AuditLog {
   id: string;
@@ -559,6 +673,8 @@ export interface AuditLog {
   action: AuditAction;
   entityType: string;
   entityId: string;
+  scopeType?: AuditScopeType;
+  reason?: string;
   before?: unknown;
   after?: unknown;
   timestamp: string;
@@ -1773,17 +1889,54 @@ export interface OrganisationInvitation extends BaseRecord {
   acceptedByUserId?: string;
 }
 
-export type MembershipStatus = 'active' | 'disabled';
+export type MembershipStatus = 'invited' | 'active' | 'disabled' | 'revoked';
 
 export interface OrganisationMembership extends BaseRecord {
   userId: string;
   email: string;
   displayName?: string;
-  role: AuthRole;
+  role: OrganisationRole | AuthRole;
   membershipStatus: MembershipStatus;
+  isDefaultOrganisation?: boolean;
   joinedAt: string;
+  invitedAt?: string;
+  acceptedAt?: string;
+  disabledAt?: string;
+  revokedAt?: string;
   lastActiveAt?: string;
 }
+
+export interface UserPreferences {
+  id: string;
+  userId: string;
+  lastActiveOrganisationId?: string;
+  updatedAt: string;
+}
+
+export interface OrganisationMembershipView {
+  membership: OrganisationMembership;
+  organisation: Organisation;
+}
+
+export type PlatformPermission =
+  | 'platform.dashboard.read'
+  | 'platform.organisations.read'
+  | 'platform.organisations.create'
+  | 'platform.organisations.manage_status'
+  | 'platform.users.read'
+  | 'platform.health.read'
+  | 'platform.audit.read'
+  | 'platform.settings.manage'
+  | 'platform.plans.read'
+  | 'platform.plans.manage'
+  | 'platform.features.read'
+  | 'platform.features.manage'
+  | 'platform.entitlements.manage'
+  | 'platform.subscriptions.read'
+  | 'platform.subscriptions.manage'
+  | 'platform.pricing.manage'
+  | 'platform.provisioning.read'
+  | 'platform.provisioning.manage';
 
 export type Permission =
   | 'learners.read'
@@ -1805,7 +1958,8 @@ export type Permission =
   | 'automation.manage'
   | 'platform.read'
   | 'platform.manage'
-  | 'users.manage';
+  | 'users.manage'
+  | PlatformPermission;
 
 // ─── Phase 7A: Guardian Portal & External Access ────────────────────
 
@@ -2087,6 +2241,706 @@ export interface GuardianDashboardDto {
   learners: GuardianLearnerSummaryDto[];
   nextUpcomingEvent?: GuardianEventDto;
   nextUpcomingSession?: GuardianSessionDto;
+}
+
+// ─── SaaS 2A: Plans, Features & Entitlements ───────────────────────
+
+export type FeatureCategory =
+  | 'core'
+  | 'music'
+  | 'dance'
+  | 'events'
+  | 'finance'
+  | 'communication'
+  | 'documents'
+  | 'analytics'
+  | 'automation'
+  | 'staff'
+  | 'portals'
+  | 'integrations'
+  | 'platform';
+
+export type FeatureType = 'boolean' | 'limit' | 'configuration';
+
+export type FeatureStatus = 'active' | 'inactive' | 'deprecated' | 'experimental';
+
+export interface PlatformFeature {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  category: FeatureCategory;
+  featureType: FeatureType;
+  featureStatus: FeatureStatus;
+  defaultEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export type PlanStatus = 'draft' | 'active' | 'inactive' | 'archived';
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  planStatus: PlanStatus;
+  displayOrder: number;
+  isPublic: boolean;
+  recommended?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export interface PlanEntitlement {
+  id: string;
+  planId: string;
+  featureKey: string;
+  enabled: boolean;
+  limitValue?: number | null;
+  configuration?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export type OverrideType = 'enable' | 'disable' | 'limit' | 'configuration';
+
+export interface OrganisationEntitlementOverride {
+  id: string;
+  organisationId: string;
+  featureKey: string;
+  overrideType: OverrideType;
+  enabled?: boolean;
+  limitValue?: number | null;
+  configuration?: Record<string, unknown>;
+  reason: string;
+  startsAt?: string;
+  expiresAt?: string;
+  createdBy: string;
+  updatedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RecordStatus;
+}
+
+export interface EffectiveEntitlement {
+  organisationId: string;
+  featureKey: string;
+  enabled: boolean;
+  limitValue?: number | null;
+  configuration?: Record<string, unknown>;
+  source: 'plan' | 'override' | 'default' | 'system';
+  sourceId?: string;
+  overrideReason?: string;
+}
+
+// ─── SaaS 2B: Trials, Subscriptions & Commercial Billing ───────────
+
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'paused'
+  | 'cancelled'
+  | 'expired'
+  | 'incomplete';
+
+export type BillingMode = 'provider' | 'manual' | 'complimentary' | 'legacy';
+export type BillingInterval = 'monthly' | 'annual' | 'custom';
+export type RestrictionReasonType =
+  | 'trial_expired'
+  | 'billing_past_due'
+  | 'manual_platform_action'
+  | 'other';
+
+export interface Subscription {
+  id: string;
+  organisationId: string;
+  planId: string;
+  subscriptionStatus: SubscriptionStatus;
+  billingMode: BillingMode;
+  billingInterval: BillingInterval;
+  currency: string;
+  priceAmount: number; // Integer minor units (e.g. 49900 = R499.00)
+
+  trialStartedAt?: string;
+  trialEndsAt?: string;
+
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+
+  cancelAtPeriodEnd: boolean;
+  cancelledAt?: string;
+  cancellationReason?: string;
+
+  pausedAt?: string;
+  reactivatedAt?: string;
+
+  providerType?: string;
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+
+  notes?: string;
+  expiryReason?: string;
+
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export type PriceStatus = 'active' | 'inactive' | 'archived';
+
+export interface PlanPrice {
+  id: string;
+  planId: string;
+  currency: string;
+  billingInterval: BillingInterval;
+  amount: number; // Integer minor units
+  priceStatus: PriceStatus;
+  providerPriceId?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export interface BillingCustomer {
+  id: string;
+  organisationId: string;
+  providerType: string;
+  providerCustomerId: string;
+  billingEmail?: string;
+  billingName?: string;
+  billingPhone?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RecordStatus;
+}
+
+export type CheckoutStatus =
+  | 'created'
+  | 'pending'
+  | 'completed'
+  | 'expired'
+  | 'cancelled'
+  | 'failed';
+
+export interface SaaSCheckoutSession {
+  id: string;
+  organisationId: string;
+  planId: string;
+  priceId: string;
+  providerType: string;
+  providerSessionId?: string;
+  checkoutStatus: CheckoutStatus;
+  checkoutUrl?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RecordStatus;
+}
+
+export type SaaSBillingEventType =
+  | 'checkout_completed'
+  | 'subscription_created'
+  | 'subscription_activated'
+  | 'subscription_updated'
+  | 'subscription_cancelled'
+  | 'invoice_paid'
+  | 'invoice_payment_failed'
+  | 'subscription_paused'
+  | 'subscription_resumed';
+
+export type EventProcessingStatus = 'pending' | 'processed' | 'failed' | 'ignored';
+
+export interface SaaSBillingEvent {
+  id: string;
+  organisationId?: string;
+  providerType: string;
+  providerEventId: string;
+  eventType: SaaSBillingEventType;
+  processingStatus: EventProcessingStatus;
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+  subscriptionId?: string;
+  safePayloadSummary?: Record<string, unknown>;
+  receivedAt: string;
+  processedAt?: string;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RecordStatus;
+}
+
+// ==========================================
+// SaaS 3A: Customer Provisioning & Onboarding
+// ==========================================
+
+export type ProvisioningMode = 'trial' | 'manual_active' | 'complimentary' | 'legacy';
+
+export interface ProvisionOrganisationInput {
+  organisationName: string;
+  organisationType: string;
+  country?: string;
+  timezone?: string;
+  locale?: string;
+  currency?: string;
+  primaryAdminName?: string;
+  primaryAdminEmail: string;
+  planId: string;
+  provisioningMode: ProvisioningMode;
+  trialDays?: number;
+  billingMode?: BillingMode;
+  complimentaryReason?: string;
+  organisationTemplate?: string;
+  contactPhone?: string;
+  website?: string;
+  address?: string;
+  provisioningRequestId?: string;
+}
+
+export type ProvisioningJobStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+export interface ProvisioningJob extends BaseRecord {
+  requestId: string;
+  organisationId: string;
+  organisationName: string;
+  jobStatus: ProvisioningJobStatus;
+  input: ProvisionOrganisationInput;
+  stagesCompleted: string[];
+  currentStage?: string;
+  error?: string;
+  errorReference?: string;
+  createdOrganisationId?: string;
+  createdSubscriptionId?: string;
+  createdInvitationId?: string;
+  completedAt?: string;
+}
+
+export type OnboardingStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'ready_for_review'
+  | 'completed'
+  | 'abandoned';
+
+export type OnboardingStep =
+  | 'welcome'
+  | 'organisation_profile'
+  | 'branding'
+  | 'programme_types'
+  | 'calendar'
+  | 'attendance'
+  | 'finance'
+  | 'staff'
+  | 'programmes_groups'
+  | 'learner_import'
+  | 'guardian_setup'
+  | 'review'
+  | 'go_live';
+
+export interface OrganisationOnboarding extends BaseRecord {
+  onboardingStatus: OnboardingStatus;
+  currentStep: OnboardingStep;
+  completedSteps: OnboardingStep[];
+  skippedSteps: OnboardingStep[];
+  stepData?: Record<string, unknown>;
+  startedAt: string;
+  lastProgressAt: string;
+  completedAt?: string;
+}
+
+export interface OrganisationTemplate {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  programmeTypes: string[];
+  defaultAttendanceThreshold: number;
+  consecutiveAbsenceThreshold: number;
+  defaultGroupCapacity: number;
+  recommendedGroups: Array<{ name: string; type: string; category?: string }>;
+  recommendedAutomationRules?: string[];
+}
+
+// ============================================================================
+// FAST PHASE 4: Customer Lifecycle & Usage / Limits
+// ============================================================================
+
+export type LimitMeterKey =
+  | 'limits.learners'
+  | 'limits.staff_users'
+  | 'limits.storage_mb'
+  | 'limits.monthly_communications'
+  | 'limits.automation_runs';
+
+export type LimitUsageStatus = 'ok' | 'warning' | 'critical' | 'exceeded';
+
+export interface OrganisationUsage extends BaseRecord {
+  organisationId: string;
+  billingPeriod: string; // YYYY-MM for monthly meters, or 'current'
+  learnersCount: number;
+  staffUsersCount: number;
+  storageMb: number;
+  monthlyCommunicationsCount: number;
+  automationRunsCount: number;
+  lastSyncedAt: string;
+}
+
+export interface MeterStatus {
+  key: LimitMeterKey;
+  name: string;
+  description: string;
+  current: number;
+  limit: number | null; // null represents unlimited
+  unit?: string;
+  percentUsed: number;
+  status: LimitUsageStatus;
+  warning: boolean;
+  exceeded: boolean;
+}
+
+export interface OrganisationUsageSummary {
+  organisationId: string;
+  billingPeriod: string;
+  meters: Record<LimitMeterKey, MeterStatus>;
+  anyWarning: boolean;
+  anyCritical: boolean;
+  anyExceeded: boolean;
+  lastSyncedAt: string;
+}
+
+export interface LimitCheckResult {
+  allowed: boolean;
+  key: LimitMeterKey;
+  current: number;
+  limit: number | null;
+  projected: number;
+  percentUsed: number;
+  status: LimitUsageStatus;
+  reason?: string;
+}
+
+export type LifecycleAccessLevel = 'full' | 'read_only_admin' | 'blocked';
+
+export interface LifecycleNoticeBanner {
+  id: string;
+  type: 'info' | 'warning' | 'danger';
+  title: string;
+  message: string;
+  ctaLabel?: string;
+  ctaAction?: 'upgrade' | 'update_billing' | 'contact_support';
+  ctaPath?: string;
+}
+
+export interface CustomerLifecycleState {
+  organisationId: string;
+  tenantStatus: TenantStatus;
+  subscriptionStatus?: SubscriptionStatus;
+  planId: string;
+  planName: string;
+  isOperational: boolean;
+  accessLevel: LifecycleAccessLevel;
+
+  // Trial metadata
+  isTrialing: boolean;
+  trialEndsAt?: string;
+  trialDaysRemaining?: number;
+  isTrialExpiringSoon?: boolean;
+
+  // Past due metadata
+  isPastDue: boolean;
+  pastDueSince?: string;
+  pastDueGraceDaysRemaining?: number;
+  isGraceExpiringSoon?: boolean;
+
+  // Restriction & Suspension metadata
+  isRestricted: boolean;
+  restrictionReason?: string;
+  restrictionReasonType?: RestrictionReasonType;
+  isSuspended: boolean;
+  suspensionReason?: string;
+
+  // Active notices & banners
+  activeBanners: LifecycleNoticeBanner[];
+}
+
+export class PlanLimitExceededError extends Error {
+  readonly limitKey: LimitMeterKey;
+  readonly current: number;
+  readonly limit: number;
+
+  constructor(limitKey: LimitMeterKey, current: number, limit: number, message?: string) {
+    super(
+      message ||
+        `Plan limit exceeded for ${limitKey}: current usage of ${current} has reached plan limit of ${limit}. Please upgrade your plan.`
+    );
+    this.name = 'PlanLimitExceededError';
+    this.limitKey = limitKey;
+    this.current = current;
+    this.limit = limit;
+    Object.setPrototypeOf(this, PlanLimitExceededError.prototype);
+  }
+}
+
+export class TenantRestrictedError extends Error {
+  readonly restrictionReasonType?: RestrictionReasonType;
+
+  constructor(message?: string, restrictionReasonType?: RestrictionReasonType) {
+    super(
+      message ||
+        'This organisation is restricted due to billing or trial expiry. Operational changes are paused until resolved.'
+    );
+    this.name = 'TenantRestrictedError';
+    this.restrictionReasonType = restrictionReasonType;
+    Object.setPrototypeOf(this, TenantRestrictedError.prototype);
+  }
+}
+
+// ============================================================================
+// FAST PHASE 5: Platform Support & Commercial Analytics
+// ============================================================================
+
+export interface CommercialPlanMetric {
+  planId: string;
+  planName: string;
+  activeCount: number;
+  trialCount: number;
+  mrr: number; // in cents or currency minor unit
+  currency: string;
+}
+
+export interface PlatformUsageAggregate {
+  totalLearners: number;
+  totalStaffUsers: number;
+  totalStorageMb: number;
+  totalMonthlyCommunications: number;
+  totalAutomationRuns: number;
+  tenantsNearCapacityCount: number;
+}
+
+export interface TenantAtRisk {
+  organisationId: string;
+  organisationName: string;
+  riskType: 'past_due' | 'trial_expiring_soon' | 'limit_exceeded' | 'suspended';
+  severity: 'critical' | 'warning';
+  detail: string;
+}
+
+export interface CommercialAnalyticsSummary {
+  mrr: number; // total Monthly Recurring Revenue in cents
+  arr: number; // Annual Recurring Revenue (MRR * 12)
+  currency: string;
+  activePaidSubscriptions: number;
+  trialSubscriptions: number;
+  pastDueSubscriptions: number;
+  canceledSubscriptions: number;
+  trialToPaidConversionRate: number; // percentage (0-100)
+  churnRate: number; // percentage (0-100)
+  averageRevenuePerAccount: number; // in cents
+  revenueByPlan: Record<string, CommercialPlanMetric>;
+  platformUsageAggregate: PlatformUsageAggregate;
+  tenantsAtRisk: TenantAtRisk[];
+  generatedAt: string;
+}
+
+export interface PlatformDiagnosticReport {
+  organisationId: string;
+  organisationName: string;
+  tenantStatus: TenantStatus;
+  subscription: Subscription | null;
+  lifecycleState: CustomerLifecycleState;
+  usageSummary: OrganisationUsageSummary | null;
+  memberCount: number;
+  adminCount: number;
+  hasOwnerOrAdmin: boolean;
+  readinessStatus: 'ready' | 'pending' | 'action_required';
+  warnings: string[];
+  healthScore: number; // 0 - 100
+  checkedAt: string;
+}
+
+// ============================================================================
+// Founding Partner Pilot Program & Customer Activation Interfaces
+// ============================================================================
+
+export type FoundingPartnerStatus =
+  | 'candidate'
+  | 'trial'
+  | 'active'
+  | 'converted'
+  | 'declined'
+  | 'withdrawn';
+
+export interface FoundingPartnerStats {
+  allocatedSlots: number;
+  maxSlots: number;
+  remainingSlots: number;
+  isFull: boolean;
+  activePartnersCount: number;
+  trialPartnersCount: number;
+  convertedPartnersCount: number;
+}
+
+export type UnifiedCustomerLifecycleState =
+  | 'PROSPECT'
+  | 'PROVISIONING'
+  | 'TRIAL'
+  | 'ONBOARDING'
+  | 'ACTIVE_TRIAL'
+  | 'CONVERSION_DUE'
+  | 'CUSTOMER'
+  | 'AT_RISK'
+  | 'INACTIVE';
+
+export interface ActivationScoreResult {
+  totalScore: number; // 0 - 100
+  level: 'low' | 'developing' | 'strong' | 'fully_activated';
+  label: string;
+  breakdown: {
+    orgSetup: number;            // max 15
+    adminActivated: number;      // max 10
+    learnersAdded: number;       // max 15
+    staffAdded: number;          // max 10
+    programmeCreated: number;    // max 10
+    groupCreated: number;        // max 10
+    sessionCreated: number;      // max 10
+    attendanceRecorded: number;  // max 10
+    specialistModuleUsed: number;// max 5
+    guardianActivity: number;    // max 5
+  };
+}
+
+export type NeedsAttentionCategory =
+  | 'onboarding_stalled'
+  | 'zero_learners'
+  | 'zero_sessions'
+  | 'trial_expiring'
+  | 'inactive'
+  | 'provisioning_failed'
+  | 'invitation_unaccepted'
+  | 'restricted';
+
+export interface NeedsAttentionItem {
+  organisationId: string;
+  organisationName: string;
+  category: NeedsAttentionCategory;
+  severity: 'critical' | 'warning' | 'info';
+  reason: string;
+  suggestedAction: string;
+  daysSinceProvisioned?: number;
+  daysRemaining?: number;
+}
+
+export type FounderNoteCategory =
+  | 'sales'
+  | 'onboarding'
+  | 'support'
+  | 'feedback'
+  | 'commercial'
+  | 'general';
+
+export interface FounderCustomerNote {
+  id: string;
+  organisationId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  category: FounderNoteCategory;
+  createdAt: string;
+  updatedAt: string;
+  status: 'active' | 'archived';
+}
+
+export type CustomerFeedbackCategory =
+  | 'ease_of_use'
+  | 'onboarding'
+  | 'learners'
+  | 'attendance'
+  | 'music'
+  | 'dance'
+  | 'finance'
+  | 'events'
+  | 'parent_portal'
+  | 'performance'
+  | 'missing_feature'
+  | 'bug'
+  | 'other';
+
+export type CustomerFeedbackStatus =
+  | 'new'
+  | 'reviewed'
+  | 'planned'
+  | 'resolved'
+  | 'declined';
+
+export interface CustomerFeedbackRecord {
+  id: string;
+  organisationId: string;
+  organisationName: string;
+  submittedBy: string;
+  submittedByName?: string;
+  submittedByEmail?: string;
+  category: CustomerFeedbackCategory;
+  rating: number; // 1 to 5
+  comment: string;
+  improvements?: string;
+  canContact?: boolean;
+  status: CustomerFeedbackStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  internalNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversionReadinessSummary {
+  organisationId: string;
+  trialDay: number;
+  trialDaysRemaining: number;
+  activationScore: number;
+  activationLevel: 'low' | 'developing' | 'strong' | 'fully_activated';
+  onboardingPercentage: number;
+  isOnboardingComplete: boolean;
+  professionalFeaturesUsed: string[];
+  suggestedPlanId: 'plan_starter' | 'plan_professional';
+  suggestedPlanName: string;
+  rationale: string;
+  isFoundingPartner: boolean;
+  standardMonthlyPrice: number; // in ZAR
+  foundingMonthlyPrice?: number; // in ZAR
+}
+
+export interface PilotKpis {
+  foundingSlotsAllocated: number;
+  maxFoundingSlots: number;
+  trialsActive: number;
+  trialsExpiringSoon: number;
+  customersConverted: number;
+  starterCustomers: number;
+  professionalCustomers: number;
+  averageActivationScore: number;
+  averageFeedbackRating: number;
+  organisationsNeedingAttentionCount: number;
+  funnel: {
+    provisionedCount: number;
+    adminActivatedCount: number;
+    onboardingCompletedCount: number;
+    activeTrialCount: number;
+    convertedCount: number;
+  };
 }
 
 

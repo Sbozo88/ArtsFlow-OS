@@ -1,70 +1,94 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    function isAuthenticated() {
+    function signedIn() {
       return request.auth != null;
     }
 
-    function isSafeFileType() {
-      // Disallow executable and script binaries
-      return !request.resource.contentType.matches('application/x-msdownload')
-          && !request.resource.contentType.matches('application/x-sh')
-          && !request.resource.contentType.matches('application/x-php')
-          && !request.resource.contentType.matches('application/javascript')
-          && !request.resource.contentType.matches('text/html');
+    function userProfile() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isStandardFileSize() {
-      // Maximum 25MB standard document/audio size
-      return request.resource.size < 25 * 1024 * 1024;
+    function role() {
+      return signedIn()
+        && (!('status' in userProfile()) || userProfile().status == 'active')
+        ? userProfile().role
+        : null;
     }
 
-    function isImageFileSize() {
-      // Maximum 5MB for logos and images
-      return request.resource.size < 5 * 1024 * 1024;
+    function inOrganisation(orgId) {
+      return signedIn()
+        && userProfile().organisationId == orgId
+        && role() in [
+          'super_admin', 'organisation_admin', 'programme_director',
+          'finance', 'teacher', 'viewer'
+        ];
     }
 
-    // Default deny for root or unmanaged paths
+    function canManageDocuments(orgId) {
+      return inOrganisation(orgId)
+        && role() in ['super_admin', 'organisation_admin', 'programme_director', 'teacher'];
+    }
+
+    function canManageBranding(orgId) {
+      return inOrganisation(orgId)
+        && role() in ['super_admin', 'organisation_admin'];
+    }
+
+    function safeDocumentUpload() {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 25 * 1024 * 1024
+        && request.resource.contentType != null
+        && request.resource.contentType in [
+          'application/pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'image/jpeg', 'image/png', 'image/webp', 'text/plain', 'text/csv',
+          'audio/mpeg', 'audio/mp4', 'audio/wav', 'video/mp4'
+        ];
+    }
+
+    function safeImageUpload() {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType != null
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp'];
+    }
+
+    match /organisations/{orgId}/branding/{fileName} {
+      allow read: if inOrganisation(orgId);
+      allow create, update: if canManageBranding(orgId) && safeImageUpload();
+      allow delete: if canManageBranding(orgId);
+    }
+
+    match /organisations/{orgId}/documents/{documentId}/{version}/{fileName} {
+      allow read: if inOrganisation(orgId);
+      allow create, update: if canManageDocuments(orgId) && safeDocumentUpload();
+      allow delete: if canManageDocuments(orgId);
+    }
+
+    match /organisations/{orgId}/learners/{learnerId}/{fileName} {
+      allow read: if inOrganisation(orgId);
+      allow create, update: if canManageDocuments(orgId) && safeDocumentUpload();
+      allow delete: if canManageDocuments(orgId);
+    }
+
+    match /organisations/{orgId}/guardians/{guardianId}/{fileName} {
+      allow read: if inOrganisation(orgId);
+      allow create, update: if canManageDocuments(orgId) && safeDocumentUpload();
+      allow delete: if canManageDocuments(orgId);
+    }
+
+    match /organisations/{orgId}/exports/{fileName} {
+      allow read: if inOrganisation(orgId)
+        && role() in ['super_admin', 'organisation_admin'];
+      allow write: if false;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
-    }
-
-    // Organisation-isolated storage hierarchies
-    match /organisations/{orgId} {
-
-      // Branding assets (logos, badges)
-      match /branding/{fileName} {
-        allow read: if true; // Publicly visible for invoice headers and portal branding
-        allow write: if isAuthenticated() && isImageFileSize() && isSafeFileType();
-      }
-
-      // Operational document repository
-      match /documents/{docPath=**} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated() && isStandardFileSize() && isSafeFileType();
-      }
-
-      // Learner documents & recordings
-      match /learners/{learnerId}/{docPath=**} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated() && isStandardFileSize() && isSafeFileType();
-      }
-
-      // Guardian documents & consent evidence
-      match /guardians/{guardianId}/{docPath=**} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated() && isStandardFileSize() && isSafeFileType();
-      }
-
-      // Organisation data exports
-      match /exports/{exportFile} {
-        allow read, write: if isAuthenticated() && isSafeFileType();
-      }
-
-      // Temporary upload scratch area
-      match /temp/{tempFile} {
-        allow read, write: if isAuthenticated() && isStandardFileSize() && isSafeFileType();
-      }
     }
   }
 }

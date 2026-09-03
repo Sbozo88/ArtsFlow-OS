@@ -1,18 +1,18 @@
 # ArtsFlow OS — Portal User & Access Guide
 
-This guide covers the **Guardian Portal** and **Learner Portal** self-service interfaces in **ArtsFlow OS**.
+This guide covers the current **Guardian Portal** and learner-account isolation in **ArtsFlow OS v1.0**.
 
 ---
 
 ## 1. Overview & Security Isolation
 
-ArtsFlow OS provides two dedicated, relationship-isolated external portals:
+ArtsFlow OS currently provides a guardian interface and a learner access boundary:
 
 1. **Guardian Portal** (`/portal`): Designed for parents, guardians, and fee-payers to oversee their children's arts education.
-2. **Learner Portal** (`/portal/learner`): Designed for enrolled students to view rehearsal timetables, log home practice, review repertoire, and view published assessments.
+2. **Learner Access Notice** (`/learner-portal`): Prevents learner identities from entering the internal administration workspace. Full learner self-service is a post-v1.0 roadmap item.
 
 ### Security Guarantees
-- **Strict Privacy**: A guardian can strictly see only learners linked to their profile in `learnerGuardians`. They cannot view other families, financial details of peers, or internal staff notes.
+- **Guardian Privacy Gate**: Production release requires emulator-backed verification that a guardian can see only explicitly linked learners. Until that gate passes, the portal must not be promoted as production-ready.
 - **Learner Protection**: Students cannot see guardian billing information, debt reminders, or private staff correspondence.
 
 ---
@@ -22,7 +22,7 @@ ArtsFlow OS provides two dedicated, relationship-isolated external portals:
 ### Invitation & First-Time Login
 1. Staff issue an invitation from the student's profile.
 2. The guardian receives an invitation link (`/portal/invite/:token`).
-3. The guardian sets a secure password and verifies their mobile phone number.
+3. The guardian creates or signs into a Firebase Authentication account.
 4. Subsequent logins occur at `/portal/login`.
 
 ### Dashboard & Navigation
@@ -30,22 +30,14 @@ ArtsFlow OS provides two dedicated, relationship-isolated external portals:
 - **Attendance Records** (`/portal/attendance`): View attendance records, percentage compliance, and absence reasons.
 - **Concert & Event Consent** (`/portal/consent`): Review upcoming excursions and digitally sign legal consent forms directly on mobile or desktop.
 - **Transport Tracking** (`/portal/transport`): View scheduled bus departures, assigned vehicles, and passenger manifests.
-- **Invoices & Online Payments** (`/portal/finance`): Inspect invoices, review itemized tuition charges, download official receipts, and settle fees online.
+- **Invoices** (`/portal/finance`): Inspect authorised invoice and receipt records. No online payment gateway is configured.
 - **Documents & Messages** (`/portal/documents`, `/portal/messages`): Access academic certificates, rehearsal schedules, and academy announcements.
 
 ---
 
-## 3. Learner Portal Workflows
+## 3. Learner Accounts
 
-### Accessing the Portal
-- Students access `/portal/login` with their student login credentials.
-- Mobile-optimized bottom navigation allows fast access on smartphones.
-
-### Key Student Features
-- **My Schedule**: Today's and this week's rehearsals, masterclasses, and concert call times.
-- **Practice Logging**: Log home practice minutes, musical pieces studied, and technical exercises completed.
-- **Repertoire & Choreography**: Download sheet music scores, listen to reference audio, and review dance choreography notes.
-- **Assessments & Progress**: View published teacher assessments, skill rubrics, and feedback milestones.
+Learner identities are routed to `/learner-portal`, which currently provides an access notice and sign-out action only. They cannot render internal or guardian routes. Schedule, practice, repertoire, and assessment self-service remain future enhancements.
 
 ---
 

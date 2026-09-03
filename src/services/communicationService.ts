@@ -5,6 +5,8 @@ import { documentRepository } from '../repositories/documentRepository';
 import { communicationDeliveryService } from './communicationDeliveryService';
 import { communicationTemplateService } from './communicationTemplateService';
 import { auditService } from './auditService';
+import { customerLifecycleService } from './customerLifecycleService';
+import { usageMeteringService } from './usageMeteringService';
 import type { 
   Communication, 
   CommunicationRecipient, 
@@ -164,7 +166,28 @@ export const communicationService = {
       throw new Error('Cannot send a cancelled communication.');
     }
 
+    try {
+      await customerLifecycleService.assertCanMutateOperationalData(organisationId, actorId);
+    } catch (err: any) {
+      if (err?.name === 'TenantRestrictedError' || err?.message?.includes('suspended')) {
+        throw err;
+      }
+    }
+
     const recipients = await this.getRecipientsForCommunication(organisationId, communicationId);
+
+    try {
+      await usageMeteringService.assertWithinLimit(
+        organisationId,
+        'limits.monthly_communications',
+        recipients.length || 1
+      );
+    } catch (err: any) {
+      if (err?.name === 'PlanLimitExceededError') {
+        throw err;
+      }
+    }
+
     const attachments = await this.getAttachmentsForCommunication(organisationId, communicationId);
 
     const now = new Date().toISOString();
@@ -232,6 +255,19 @@ export const communicationService = {
 
     await communicationRepository.update(organisationId, actorId, communicationId, updates as never);
     const updated = { ...communication, ...updates };
+
+    if (sentCount > 0) {
+      try {
+        await usageMeteringService.recordMeterConsumption(
+          organisationId,
+          'limits.monthly_communications',
+          sentCount,
+          actorId
+        );
+      } catch {
+        // Non-blocking in mock environments
+      }
+    }
 
     await auditService.log(
       organisationId,

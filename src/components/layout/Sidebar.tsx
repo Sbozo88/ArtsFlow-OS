@@ -22,26 +22,34 @@ import {
   ChevronDown,
   ChevronLeft,
   X,
+  Building2,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
+import { useEntitlements } from '../../contexts/EntitlementContext';
+import { usePermissions } from '../../hooks/usePermission';
+import type { Permission } from '../../types';
 
 // ── Navigation Data ──────────────────────────────────────────────────────────
 
 interface NavChild {
   name: string;
   path: string;
+  featureKey?: string;
 }
 
 interface NavGroup {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
   path?: string;
+  featureKey?: string;
+  permission?: Permission;
   children?: NavChild[];
 }
 
 const navItems: NavGroup[] = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   {
     name: 'People',
     icon: Users,
@@ -71,6 +79,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Music',
     icon: Music,
+    featureKey: 'music.core',
     children: [
       { name: 'Overview', path: '/music' },
       { name: 'Instruments', path: '/music/instruments' },
@@ -83,6 +92,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Dance',
     icon: Activity,
+    featureKey: 'dance.core',
     children: [
       { name: 'Overview', path: '/dance' },
       { name: 'Levels', path: '/dance/levels' },
@@ -96,6 +106,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Events',
     icon: CalendarDays,
+    featureKey: 'events.core',
     children: [
       { name: 'Overview', path: '/events' },
       { name: 'Calendar / List', path: '/events/calendar' },
@@ -106,6 +117,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Consent',
     icon: FileCheck,
+    featureKey: 'events.consent',
     children: [
       { name: 'Requests & Status', path: '/consent' },
       { name: 'Consent Templates', path: '/consent/templates' },
@@ -114,6 +126,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Transport',
     icon: Bus,
+    featureKey: 'events.transport',
     children: [
       { name: 'Fleet & Providers', path: '/transport' },
       { name: 'Transport Reports', path: '/transport/reports' },
@@ -122,6 +135,8 @@ const navItems: NavGroup[] = [
   {
     name: 'Finance',
     icon: Wallet,
+    featureKey: 'finance.core',
+    permission: 'finance.read',
     children: [
       { name: 'Overview', path: '/finance' },
       { name: 'Invoices', path: '/finance/invoices' },
@@ -135,6 +150,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Communication',
     icon: MessageSquare,
+    featureKey: 'communication.core',
     children: [
       { name: 'Overview', path: '/communication' },
       { name: 'Compose Message', path: '/communication/compose' },
@@ -145,6 +161,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Documents',
     icon: FileText,
+    featureKey: 'documents.core',
     children: [
       { name: 'Files Repository', path: '/documents' },
       { name: 'Generate Forms', path: '/documents/generated' },
@@ -155,6 +172,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Analytics',
     icon: BarChart3,
+    featureKey: 'analytics.core',
     children: [
       { name: 'Overview', path: '/analytics' },
       { name: 'Learners', path: '/analytics/learners' },
@@ -168,6 +186,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Automation',
     icon: Zap,
+    featureKey: 'automation.core',
     children: [
       { name: 'Overview', path: '/automation' },
       { name: 'Rules', path: '/automation/rules' },
@@ -178,6 +197,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Staff Operations',
     icon: Briefcase,
+    featureKey: 'staff_operations.core',
     children: [
       { name: 'Overview', path: '/staff-operations' },
       { name: 'Assignments', path: '/staff-operations/assignments' },
@@ -192,6 +212,7 @@ const navItems: NavGroup[] = [
   {
     name: 'Settings',
     icon: SettingsIcon,
+    permission: 'settings.read',
     children: [
       { name: 'Overview', path: '/settings' },
       { name: 'Organisation Profile', path: '/settings/organisation' },
@@ -221,7 +242,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose }: SidebarProps) {
-  const { logout } = useAuth();
+  const { authUser, logout } = useAuth();
   const location = useLocation();
 
   // Track which groups are expanded
@@ -238,6 +259,12 @@ export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose
       return next;
     });
   };
+
+  const { hasFeature } = useEntitlements();
+  const { can } = usePermissions();
+  const visibleNavItems = navItems.filter((item) =>
+    (!item.featureKey || hasFeature(item.featureKey)) && (!item.permission || can(item.permission))
+  );
 
   const sidebarContent = (
     <>
@@ -273,7 +300,7 @@ export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose
 
       {/* Nav Items */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto no-scrollbar">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavItem
             key={item.name}
             item={item}
@@ -292,6 +319,31 @@ export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose
 
       {/* Footer */}
       <div className="p-3 border-t border-slate-800 space-y-1">
+        {authUser?.platformRole === 'super_admin' && (
+          <NavLink
+            to="/platform"
+            onClick={onMobileClose}
+            className={cn(
+              'flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 shadow-xs mb-1',
+              collapsed && 'justify-center'
+            )}
+            title="Platform Administration"
+          >
+            <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
+            {!collapsed && <span className="font-semibold">Platform Admin</span>}
+          </NavLink>
+        )}
+        <NavLink
+          to="/account/organisations"
+          onClick={onMobileClose}
+          className={cn(
+            'flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors text-slate-400 hover:text-white hover:bg-slate-800',
+            collapsed && 'justify-center'
+          )}
+        >
+          <Building2 className="w-4 h-4 shrink-0" />
+          {!collapsed && <span>My Organisations</span>}
+        </NavLink>
         <button
           onClick={() => logout()}
           className={cn(

@@ -9,10 +9,12 @@ import { invoiceRepository } from '../repositories/invoiceRepository';
 import { paymentRepository } from '../repositories/paymentRepository';
 import { paymentAllocationRepository } from '../repositories/paymentAllocationRepository';
 import { financeReconciliationService } from './financeReconciliationService';
+import type { OrganisationMembership } from '../types';
 
 export interface ReleaseMetadata {
   version: string;
   buildDate: string;
+  commitSha: string;
   environment: 'production' | 'staging' | 'development';
   platformName: string;
   schemaVersion: number;
@@ -32,7 +34,7 @@ export interface IntegrationStatusReport {
 
 export interface DataQualityIssue {
   severity: 'warning' | 'error' | 'critical';
-  category: 'orphaned_record' | 'broken_relation' | 'financial_anomaly' | 'data_missing';
+  category: 'orphaned_record' | 'broken_relation' | 'financial_anomaly' | 'data_missing' | 'membership_integrity';
   message: string;
   entityType: string;
   entityId: string;
@@ -59,7 +61,7 @@ export interface DataQualityReport {
 }
 
 export interface BackupStatusReport {
-  lastBackupAt: string;
+  lastBackupAt: string | null;
   backupFrequency: string;
   storageTarget: string;
   status: 'operational' | 'degraded' | 'pending';
@@ -94,7 +96,8 @@ export const platformOperationsService = {
   getReleaseMetadata(): ReleaseMetadata {
     return {
       version: '1.0.0-rc.1',
-      buildDate: '2026-09-02',
+      buildDate: import.meta.env.VITE_BUILD_DATE || 'local build',
+      commitSha: import.meta.env.VITE_COMMIT_SHA || 'unavailable',
       environment: (import.meta.env.MODE as 'production' | 'staging' | 'development') || 'development',
       platformName: 'ArtsFlow OS',
       schemaVersion: 1
@@ -108,24 +111,24 @@ export const platformOperationsService = {
   getIntegrationStatuses(): IntegrationStatusReport {
     return {
       email: {
-        status: 'Sandbox',
-        provider: 'Firebase / SendGrid Client Adapter',
-        notes: 'In-app transactional simulation active. Enterprise API key optional.'
+        status: 'Not Configured',
+        provider: 'No server-side provider',
+        notes: 'Messages can be prepared in-app; no transactional email delivery is configured.'
       },
       sms: {
-        status: 'Sandbox',
-        provider: 'Manual SMS Protocol / Carrier Hook',
-        notes: 'Prepared SMS dispatch active. Carrier direct gateway optional.'
+        status: 'Not Configured',
+        provider: 'No carrier gateway',
+        notes: 'No automated SMS delivery provider is configured.'
       },
       whatsapp: {
-        status: 'Sandbox',
-        provider: 'WhatsApp Click-to-Chat Direct Protocol',
-        notes: 'Direct wa.me protocol active. Enterprise Cloud API optional.'
+        status: 'Connected',
+        provider: 'WhatsApp Click-to-Chat',
+        notes: 'User-initiated wa.me links are available; no WhatsApp Cloud API is configured.'
       },
       payments: {
-        status: 'Sandbox',
-        provider: 'Direct Cash/EFT Ledger & Paystack Webhook Adapter',
-        notes: 'Cash/EFT reconciliation active. Webhook signatures validated in cloud.'
+        status: 'Not Configured',
+        provider: 'Manual cash / EFT ledger',
+        notes: 'Manual payment recording is available; no card gateway or webhook endpoint exists.'
       },
       calendar: {
         status: 'Connected',
@@ -138,9 +141,9 @@ export const platformOperationsService = {
         notes: 'Standard journal & ledger export compatible with Xero/QuickBooks.'
       },
       webhooks: {
-        status: 'Sandbox',
-        provider: 'HMAC-SHA256 Outbound & Inbound Webhooks',
-        notes: 'Webhook delivery engine ready with automated retry and loop protection.'
+        status: 'Not Configured',
+        provider: 'No webhook runtime',
+        notes: 'No Cloud Functions webhook receiver or delivery engine is deployed.'
       }
     };
   },
@@ -443,16 +446,105 @@ export const platformOperationsService = {
   },
 
   /**
-   * Reports live backup status and retention policies.
+   * Reports only verified backup configuration. The browser cannot inspect
+   * Cloud Firestore managed backup state, so unknown state remains explicit.
    */
   getBackupStatus(): BackupStatusReport {
     return {
-      lastBackupAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4h ago
-      backupFrequency: 'Daily Automated Snapshot (02:00 SAST)',
-      storageTarget: 'Google Cloud Storage (Coldline Isolated Vault)',
-      status: 'operational',
-      retentionDays: 90,
-      notes: 'Automated Firestore snapshot verified. Disaster recovery runbook documented in RECOVERY.md.'
+      lastBackupAt: null,
+      backupFrequency: 'Not configured or not verifiable from this client',
+      storageTarget: 'Not configured',
+      status: 'pending',
+      retentionDays: 0,
+      notes: 'Configure and verify managed backups in Google Cloud before marking backup readiness complete.'
     };
+  },
+
+  /**
+   * SaaS 3B: Scans organisation memberships for integrity issues:
+   * - duplicate memberships for the same user in an organisation
+   * - multiple default organisations for the same user
+   * - memberships pointing to non-existent organisations
+   * - memberships with invalid or unrecognized roles
+   * - memberships with invalid status
+   */
+  scanMembershipHealth(memberships: OrganisationMembership[], validOrgIds?: string[]): DataQualityIssue[] {
+    const issues: DataQualityIssue[] = [];
+    const validRoles = ['organisation_admin', 'programme_director', 'teacher', 'finance', 'viewer'];
+    const validStatuses = ['active', 'disabled', 'revoked', 'invited'];
+
+    const userDefaults = new Map<string, string[]>();
+    const seenUserOrgs = new Set<string>();
+
+    for (const m of memberships) {
+      // Check duplicate memberships
+      const key = `${m.userId}_${m.organisationId}`;
+      if (seenUserOrgs.has(key)) {
+        issues.push({
+          severity: 'error',
+          category: 'membership_integrity',
+          message: `Duplicate membership detected for user ${m.userId} in organisation ${m.organisationId}.`,
+          entityType: 'organisationMembership',
+          entityId: m.id
+        });
+      } else {
+        seenUserOrgs.add(key);
+      }
+
+      // Check default organisation counts
+      if (m.isDefaultOrganisation && m.membershipStatus === 'active') {
+        const list = userDefaults.get(m.userId) || [];
+        list.push(m.organisationId);
+        userDefaults.set(m.userId, list);
+      }
+
+      // Check valid role
+      if (!validRoles.includes(m.role)) {
+        issues.push({
+          severity: 'error',
+          category: 'membership_integrity',
+          message: `Membership ${m.id} has unrecognized role "${m.role}".`,
+          entityType: 'organisationMembership',
+          entityId: m.id
+        });
+      }
+
+      // Check valid status
+      if (!validStatuses.includes(m.membershipStatus)) {
+        issues.push({
+          severity: 'error',
+          category: 'membership_integrity',
+          message: `Membership ${m.id} has invalid status "${m.membershipStatus}".`,
+          entityType: 'organisationMembership',
+          entityId: m.id
+        });
+      }
+
+      // Check missing organisation
+      if (validOrgIds && !validOrgIds.includes(m.organisationId)) {
+        issues.push({
+          severity: 'critical',
+          category: 'orphaned_record',
+          message: `Membership ${m.id} references non-existent organisation ${m.organisationId}.`,
+          entityType: 'organisationMembership',
+          entityId: m.id
+        });
+      }
+    }
+
+    // Flag users with multiple defaults
+    for (const [userId, orgs] of userDefaults.entries()) {
+      if (orgs.length > 1) {
+        issues.push({
+          severity: 'warning',
+          category: 'membership_integrity',
+          message: `User ${userId} has ${orgs.length} default organisations set: ${orgs.join(', ')}.`,
+          entityType: 'user',
+          entityId: userId
+        });
+      }
+    }
+
+    return issues;
   }
 };

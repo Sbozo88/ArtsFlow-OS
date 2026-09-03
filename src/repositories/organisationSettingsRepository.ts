@@ -52,6 +52,11 @@ export class OrganisationSettingsRepository extends BaseRepository<OrganisationS
       { merge: true }
     );
   }
+
+  async save(settings: OrganisationSettings): Promise<void> {
+    const docRef = doc(db, this.collectionName, settings.id || settings.organisationId);
+    await setDoc(docRef, settings, { merge: true });
+  }
 }
 
 export const organisationSettingsRepository = new OrganisationSettingsRepository();

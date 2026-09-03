@@ -1,9 +1,11 @@
-import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { organisationInvitationRepository } from '../repositories/organisationInvitationRepository';
 import { organisationMembershipRepository } from '../repositories/organisationMembershipRepository';
 import { staffRepository } from '../repositories/staffRepository';
 import { auditService } from './auditService';
+import { customerLifecycleService } from './customerLifecycleService';
+import { usageMeteringService } from './usageMeteringService';
 import type { 
   OrganisationInvitation, 
   OrganisationMembership, 
@@ -33,6 +35,22 @@ export const userInvitationService = {
     actorId: string,
     input: InviteUserInput
   ): Promise<OrganisationInvitation> {
+    try {
+      await customerLifecycleService.assertCanMutateOperationalData(organisationId, actorId);
+    } catch (err: any) {
+      if (err?.name === 'TenantRestrictedError' || err?.message?.includes('suspended')) {
+        throw err;
+      }
+    }
+
+    try {
+      await usageMeteringService.assertWithinLimit(organisationId, 'limits.staff_users', 1);
+    } catch (err: any) {
+      if (err?.name === 'PlanLimitExceededError') {
+        throw err;
+      }
+    }
+
     const email = input.email.toLowerCase().trim();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new Error('A valid email address is required.');
@@ -158,6 +176,16 @@ export const userInvitationService = {
           joinedAt: now
         }
       );
+      try {
+        await usageMeteringService.recordMeterConsumption(
+          invitation.organisationId,
+          'limits.staff_users',
+          1,
+          acceptingUser.uid
+        );
+      } catch {
+        // Non-blocking in mock environments
+      }
     }
 
     // 3. Update Firestore users collection doc for the user
@@ -224,17 +252,14 @@ export const userInvitationService = {
       }
     }
 
-    await organisationMembershipRepository.updateRole(organisationId, actorId, membershipId, newRole);
-
-    // Update users doc in background
-    try {
-      await updateDoc(doc(db, 'users', existing.userId), {
-        role: newRole,
-        updatedAt: new Date().toISOString()
-      });
-    } catch {
-      // Best-effort doc sync
-    }
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'organisationMemberships', membershipId), {
+      role: newRole,
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorId
+    });
+    batch.update(doc(db, 'users', existing.userId), { role: newRole });
+    await batch.commit();
 
     await auditService.log(
       organisationId,
@@ -266,7 +291,14 @@ export const userInvitationService = {
       }
     }
 
-    await organisationMembershipRepository.updateStatus(organisationId, actorId, membershipId, 'disabled');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'organisationMemberships', membershipId), {
+      membershipStatus: 'disabled',
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorId
+    });
+    batch.update(doc(db, 'users', existing.userId), { status: 'disabled' });
+    await batch.commit();
 
     await auditService.log(
       organisationId,
@@ -286,7 +318,14 @@ export const userInvitationService = {
     const existing = await organisationMembershipRepository.getById(organisationId, membershipId);
     if (!existing) throw new Error(`Membership ${membershipId} not found.`);
 
-    await organisationMembershipRepository.updateStatus(organisationId, actorId, membershipId, 'active');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'organisationMemberships', membershipId), {
+      membershipStatus: 'active',
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorId
+    });
+    batch.update(doc(db, 'users', existing.userId), { status: 'active' });
+    await batch.commit();
 
     await auditService.log(
       organisationId,

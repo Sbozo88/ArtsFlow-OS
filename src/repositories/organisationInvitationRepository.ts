@@ -1,4 +1,5 @@
-import { query, where, getDocs } from 'firebase/firestore';
+import { query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { BaseRepository } from './BaseRepository';
 import type { OrganisationInvitation, InvitationStatus } from '../types';
 
@@ -48,6 +49,11 @@ export class OrganisationInvitationRepository extends BaseRepository<Organisatio
       invitationStatus,
       ...extra
     } as Partial<Omit<OrganisationInvitation, keyof import('../types').BaseRecord>>);
+  }
+
+  async save(invitation: OrganisationInvitation): Promise<void> {
+    const docRef = doc(db, this.collectionName, invitation.id);
+    await setDoc(docRef, invitation, { merge: true });
   }
 }
 

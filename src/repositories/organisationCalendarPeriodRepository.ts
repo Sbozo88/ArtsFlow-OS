@@ -1,4 +1,5 @@
-import { query, where, getDocs } from 'firebase/firestore';
+import { query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { BaseRepository } from './BaseRepository';
 import type { OrganisationCalendarPeriod, CalendarPeriodStatus } from '../types';
 
@@ -34,6 +35,11 @@ export class OrganisationCalendarPeriodRepository extends BaseRepository<Organis
     periodStatus: CalendarPeriodStatus
   ): Promise<void> {
     await this.update(organisationId, actorId, id, { periodStatus } as unknown as Partial<Omit<OrganisationCalendarPeriod, keyof import('../types').BaseRecord>>);
+  }
+
+  async save(period: OrganisationCalendarPeriod): Promise<void> {
+    const docRef = doc(db, this.collectionName, period.id);
+    await setDoc(docRef, period, { merge: true });
   }
 }
 

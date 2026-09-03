@@ -31,7 +31,9 @@ export const OnboardingPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const orgId = `org_${Date.now()}`;
+      // The deterministic ID is enforced by Firestore Rules and prevents a
+      // newly authenticated user from selecting or creating another tenant.
+      const orgId = `org_${user.uid}`;
       
       // 1. Create Organisation
       await organisationService.createOrganisation(orgId, user.uid, {
@@ -39,19 +41,22 @@ export const OnboardingPage: React.FC = () => {
         organisationType: orgType
       });
 
-      // 2. Create Staff Profile
+      // 2. Establish the immutable tenant/role authority record before any
+      // tenant-scoped operational writes are attempted.
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        displayName: user.displayName,
+        organisationId: orgId,
+        role: 'organisation_admin',
+        status: 'active'
+      });
+
+      // 3. Create Staff Profile
       await staffService.createStaff(orgId, user.uid, {
         firstName: user.displayName?.split(' ')[0] || 'Admin',
         lastName: user.displayName?.split(' ').slice(1).join(' ') || 'User',
         email: user.email || '',
         role: 'Administrator'
-      });
-
-      // 3. Create Auth User Profile
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
-        organisationId: orgId,
-        role: 'organisation_admin'
       });
 
       // 4. Refresh Auth Context

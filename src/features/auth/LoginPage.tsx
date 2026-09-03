@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithPopup,
   GoogleAuthProvider,
   RecaptchaVerifier,
@@ -10,10 +11,12 @@ import {
   ApplicationVerifier,
   ConfirmationResult
 } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../lib/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Music } from 'lucide-react';
+import { Music, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -21,9 +24,44 @@ declare global {
   }
 }
 
+function formatAuthError(error: unknown): string {
+  const code = (error as { code?: string })?.code || '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'Incorrect email or password. Please check your credentials and try again.';
+    case 'auth/user-disabled':
+      return 'Your account is currently disabled. Please contact platform support.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email address already exists. Please sign in instead.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters long.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/too-many-requests':
+      return 'Too many failed sign-in attempts. Access is temporarily paused for security. Please reset your password or try again later.';
+    case 'auth/network-request-failed':
+      return 'Unable to connect. Please check your internet connection and try again.';
+    case 'auth/popup-closed-by-user':
+      return 'Google sign-in was cancelled. Please try again.';
+    case 'auth/invalid-verification-code':
+      return 'The SMS verification code entered is incorrect. Please try again.';
+    default: {
+      const msg = (error as Error)?.message || '';
+      return msg.replace(/^Firebase:\s*(Error\s*)?(\(auth\/[^)]+\)\.?\s*)?/i, '') || 'Authentication could not be completed. Please try again.';
+    }
+  }
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
+  const { user, authUser, loading: authLoading } = useAuth();
+
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -35,6 +73,45 @@ export function LoginPage() {
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
+  // If already logged in, redirect intelligently
+  useEffect(() => {
+    if (user && authUser && !authLoading) {
+      if (authUser.platformRole === 'super_admin') {
+        navigate('/platform', { replace: true });
+      } else if (authUser.role === 'guardian') {
+        navigate('/portal', { replace: true });
+      } else if (authUser.role === 'learner') {
+        navigate('/learner-portal', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [user, authUser, authLoading, navigate]);
+
+  const routeUserAfterAuth = async (uid: string) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      const userData = userDoc.exists() ? userDoc.data() : null;
+      const platformRole = userData?.platformRole || (userData?.role === 'super_admin' ? 'super_admin' : null);
+
+      if (platformRole === 'super_admin') {
+        navigate('/platform', { replace: true });
+        return;
+      }
+      if (userData?.role === 'guardian') {
+        navigate('/portal', { replace: true });
+        return;
+      }
+      if (userData?.role === 'learner') {
+        navigate('/learner-portal', { replace: true });
+        return;
+      }
+      navigate('/dashboard', { replace: true });
+    } catch {
+      navigate('/dashboard', { replace: true });
+    }
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -42,13 +119,42 @@ export function LoginPage() {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        await routeUserAfterAuth(cred.user.uid);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        await routeUserAfterAuth(cred.user.uid);
       }
-      navigate('/learners');
     } catch (err: unknown) {
-      setError((err as Error).message || 'Authentication failed');
+      setError(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetSent(true);
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      if (code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many requests. Please wait a moment before trying again.');
+      } else {
+        // Safe generic confirmation prevents account enumeration while reassuring the user
+        setResetSent(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -59,10 +165,10 @@ export function LoginPage() {
     setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      navigate('/learners');
+      const cred = await signInWithPopup(auth, provider);
+      await routeUserAfterAuth(cred.user.uid);
     } catch (err: unknown) {
-      setError((err as Error).message || 'Google sign in failed');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -85,7 +191,7 @@ export function LoginPage() {
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
       setConfirmationResult(confirmation);
     } catch (err: unknown) {
-      setError((err as Error).message || 'Failed to send SMS');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -96,54 +202,136 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await confirmationResult.confirm(verificationCode);
-      navigate('/learners');
+      const cred = await confirmationResult.confirm(verificationCode);
+      await routeUserAfterAuth(cred.user.uid);
     } catch (err: unknown) {
-      setError((err as Error).message || 'Invalid verification code');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="h-12 w-12 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <Music className="h-8 w-8 text-white" />
+          <div className="h-12 w-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
+            <Music className="h-7 w-7 text-white" />
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
-          Sign in to ArtsFlow OS
+        <h2 className="mt-5 text-center text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          {isForgotPassword ? 'Reset Your Password' : (isLogin ? 'Sign in to ArtsFlow OS' : 'Create an account')}
         </h2>
+        <p className="mt-1 text-center text-xs sm:text-sm text-slate-500">
+          {isForgotPassword
+            ? 'Enter your registered email address to receive a secure password reset link.'
+            : 'Operational & SaaS platform for modern arts academies.'}
+        </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-slate-200">
+      <div className="mt-6 sm:mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-5 sm:px-10 shadow-sm sm:rounded-2xl border border-slate-200">
           
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+            <div className="mb-5 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm leading-snug">
               {error}
             </div>
           )}
 
-          {!usePhone ? (
+          {/* FORGOT PASSWORD VIEW */}
+          {isForgotPassword ? (
+            <div>
+              {resetSent ? (
+                <div className="text-center py-4 space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">Password Reset Email Sent</h3>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      If an account is associated with <span className="font-semibold text-slate-800">{email}</span>, you will receive an email shortly with instructions to set your new password.
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setIsForgotPassword(false);
+                        setResetSent(false);
+                        setError('');
+                      }}
+                    >
+                      Return to Sign In
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <form className="space-y-5" onSubmit={handleForgotPassword}>
+                  <Input
+                    label="Registered email address"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. founder@artsflow.example"
+                    required
+                    autoFocus
+                  />
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Sending link...' : 'Send Password Reset Link'}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsForgotPassword(false);
+                      setError('');
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium pt-2 transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to sign in</span>
+                  </button>
+                </form>
+              )}
+            </div>
+          ) : !usePhone ? (
+            /* STANDARD EMAIL / PASSWORD LOGIN */
             <>
-              <form className="space-y-6" onSubmit={handleEmailAuth}>
+              <form className="space-y-5" onSubmit={handleEmailAuth}>
                 <Input
                   label="Email address"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@academy.example"
                   required
                 />
-                <Input
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div>
+                  <Input
+                    label="Password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  {isLogin && (
+                    <div className="mt-1.5 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsForgotPassword(true);
+                          setError('');
+                        }}
+                        className="text-xs font-medium text-indigo-600 hover:text-indigo-500 transition-colors inline-flex items-center gap-1"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>Forgot password?</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Processing...' : (isLogin ? 'Sign in' : 'Sign up')}
                 </Button>
@@ -152,46 +340,66 @@ export function LoginPage() {
               <div className="mt-6">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-300" />
+                    <div className="w-full border-t border-slate-200" />
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-2 text-slate-500">Or continue with</span>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white px-3 text-slate-400 font-medium">Or continue with</span>
                   </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <Button variant="outline" onClick={handleGoogleSignIn} disabled={loading} className="w-full">
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <Button variant="outline" onClick={handleGoogleSignIn} disabled={loading} className="w-full text-xs">
                     Google
                   </Button>
-                  <Button variant="outline" onClick={() => setUsePhone(true)} disabled={loading} className="w-full">
+                  <Button variant="outline" onClick={() => setUsePhone(true)} disabled={loading} className="w-full text-xs">
                     Phone
                   </Button>
                 </div>
               </div>
 
-              <div className="mt-6 text-center text-sm text-slate-600">
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
-                <button 
-                  onClick={() => setIsLogin(!isLogin)} 
-                  className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
-                >
-                  {isLogin ? 'Sign up' : 'Sign in'}
-                </button>
+              <div className="mt-6 text-center text-xs text-slate-500">
+                {isLogin ? (
+                  <>
+                    <span>Don't have an account? </span>
+                    <Link
+                      to="/start-trial"
+                      className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors ml-0.5"
+                    >
+                      Start 14-Day Free Trial
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <span>Already have an account? </span>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(true);
+                        setError('');
+                      }} 
+                      className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors ml-0.5"
+                    >
+                      Sign in
+                    </button>
+                  </>
+                )}
               </div>
             </>
           ) : (
-            <div className="space-y-6">
+            /* PHONE AUTH VIEW */
+            <div className="space-y-5">
               {!confirmationResult ? (
                 <>
                   <Input
-                    label="Phone Number (e.g. +1234567890)"
+                    label="Phone Number (e.g. +27825550100)"
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="+27825550100"
                     required
                   />
                   <Button onClick={handleSendCode} className="w-full" disabled={loading || !phoneNumber}>
-                    Send Verification Code
+                    {loading ? 'Sending code...' : 'Send Verification Code'}
                   </Button>
                 </>
               ) : (
@@ -201,25 +409,29 @@ export function LoginPage() {
                     type="text"
                     value={verificationCode}
                     onChange={(e) => setVerificationCode(e.target.value)}
+                    placeholder="6-digit code"
                     required
                   />
                   <Button onClick={handleVerifyCode} className="w-full" disabled={loading || !verificationCode}>
-                    Verify Code
+                    {loading ? 'Verifying...' : 'Verify Code'}
                   </Button>
                 </>
               )}
               
               <div id="recaptcha-container"></div>
 
-              <div className="mt-6 text-center">
+              <div className="mt-4 text-center">
                 <button 
+                  type="button"
                   onClick={() => {
                     setUsePhone(false);
                     setConfirmationResult(null);
+                    setError('');
                   }} 
-                  className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+                  className="text-xs font-medium text-indigo-600 hover:text-indigo-500 transition-colors inline-flex items-center gap-1"
                 >
-                  Back to Email/Password
+                  <ArrowLeft className="w-3 h-3" />
+                  <span>Back to Email/Password</span>
                 </button>
               </div>
             </div>

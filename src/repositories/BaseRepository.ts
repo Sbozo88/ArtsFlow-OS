@@ -7,6 +7,7 @@ import {
   query, 
   where, 
   updateDoc,
+  limit,
   DocumentData,
   QueryConstraint
 } from 'firebase/firestore';
@@ -14,6 +15,7 @@ import { db } from '../lib/firebase';
 import type { BaseRecord } from '../types';
 
 export class BaseRepository<T extends BaseRecord> {
+  private static readonly MAX_ORGANISATION_QUERY_RESULTS = 250;
   protected collectionName: string;
 
   constructor(collectionName: string) {
@@ -82,7 +84,8 @@ export class BaseRepository<T extends BaseRecord> {
       this.getCollection(), 
       where('organisationId', '==', orgId),
       where('status', '!=', 'deleted'),
-      ...additionalConstraints
+      ...additionalConstraints,
+      limit(BaseRepository.MAX_ORGANISATION_QUERY_RESULTS)
     );
     
     const snapshot = await getDocs(q);

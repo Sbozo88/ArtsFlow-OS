@@ -3,6 +3,8 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useGuardianPortal, GuardianPortalProvider } from '../../../hooks/useGuardianPortal';
 import { ShieldAlert, LogOut } from 'lucide-react';
+import { releaseCapabilities } from '../../../config/releaseCapabilities';
+import { GuardianPortalUnavailablePage } from '../pages/GuardianPortalUnavailablePage';
 
 const InnerGuardianRoute: React.FC = () => {
   const { context, loading, error } = useGuardianPortal();
@@ -51,7 +53,11 @@ const InnerGuardianRoute: React.FC = () => {
 };
 
 export const GuardianProtectedRoute: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user, authUser, loading } = useAuth();
+
+  if (!releaseCapabilities.guardianPortal) {
+    return <GuardianPortalUnavailablePage />;
+  }
 
   if (loading) {
     return (
@@ -63,6 +69,18 @@ export const GuardianProtectedRoute: React.FC = () => {
 
   if (!user) {
     return <Navigate to="/portal/login" replace />;
+  }
+
+  if (authUser?.accountStatus === 'disabled') {
+    return <Navigate to="/access-disabled" replace />;
+  }
+
+  if (authUser?.role === 'learner') {
+    return <Navigate to="/learner-portal" replace />;
+  }
+
+  if (authUser?.role !== 'guardian') {
+    return <Navigate to="/" replace />;
   }
 
   return (

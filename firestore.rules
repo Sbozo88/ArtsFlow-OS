@@ -1,598 +1,551 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Helper functions
-    function isAuthenticated() {
+    function signedIn() {
       return request.auth != null;
     }
 
-    // A user is considered in an organisation if their user record's organisationId matches
-    function isUserInOrg(orgId) {
-      return isAuthenticated() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organisationId == orgId
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasUserProfile() {
+      return signedIn() && exists(userPath());
+    }
+
+    function userProfile() {
+      return get(userPath()).data;
+    }
+
+    function role() {
+      return hasUserProfile()
+        && (!('status' in userProfile()) || userProfile().status == 'active')
+        ? userProfile().role
+        : null;
+    }
+
+    function organisationId() {
+      return hasUserProfile() ? userProfile().organisationId : null;
+    }
+
+    function isInternal() {
+      return role() in [
+        'super_admin', 'organisation_admin', 'programme_director',
+        'finance', 'teacher', 'viewer'
+      ];
+    }
+
+    function isPlatformAdmin() {
+      return signedIn() && (
+        role() == 'super_admin' ||
+        (hasUserProfile() && 'platformRole' in userProfile() && userProfile().platformRole == 'super_admin')
       );
     }
-    
-    function isOrgUnchanged() {
-      return !('organisationId' in request.resource.data) || 
-             (resource.data.organisationId == request.resource.data.organisationId);
-    }
-    
-    function hasCreatedBy() {
-      return 'createdBy' in request.resource.data && request.resource.data.createdBy != null;
+
+    function isAdmin() {
+      return role() in ['super_admin', 'organisation_admin'];
     }
 
-    // Special rule for users collection
+    function isProgrammeManager() {
+      return role() in ['super_admin', 'organisation_admin', 'programme_director'];
+    }
+
+    function isTeacher() {
+      return role() in ['super_admin', 'organisation_admin', 'programme_director', 'teacher'];
+    }
+
+    function isFinance() {
+      return role() in ['super_admin', 'organisation_admin', 'finance'];
+    }
+
+    function isViewer() {
+      return isInternal();
+    }
+
+    function sameOrganisation(orgId) {
+      return isInternal() && organisationId() == orgId;
+    }
+
+    function validStatus(value) {
+      return value in ['active', 'inactive', 'archived', 'deleted'];
+    }
+
+    function validNewBaseRecord(docId) {
+      return request.resource.data.id == docId
+        && request.resource.data.organisationId is string
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && validStatus(request.resource.data.status)
+        && request.resource.data.keys().size() <= 80;
+    }
+
+    function validBaseRecordUpdate() {
+      return request.resource.data.id == resource.data.id
+        && request.resource.data.organisationId == resource.data.organisationId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedBy == request.auth.uid
+        && validStatus(request.resource.data.status)
+        && request.resource.data.keys().size() <= 80;
+    }
+
+    function inOrganisationOnRead() {
+      return sameOrganisation(resource.data.organisationId);
+    }
+
+    function inOrganisationOnCreate(docId) {
+      return sameOrganisation(request.resource.data.organisationId)
+        && validNewBaseRecord(docId);
+    }
+
+    function inOrganisationOnUpdate() {
+      return sameOrganisation(resource.data.organisationId)
+        && validBaseRecordUpdate();
+    }
+
+    function isPeopleCollection(name) {
+      return name in [
+        'learners', 'guardians', 'learnerGuardians', 'programmes',
+        'programmeGroups', 'enrolments', 'followUps', 'instruments',
+        'instrumentAllocations', 'repertoire', 'sessionRepertoire',
+        'practiceLogs', 'musicAssessments', 'danceLevels', 'choreography',
+        'sessionChoreography', 'dancePracticeLogs', 'danceAssessments',
+        'costumes', 'costumeAllocations'
+      ];
+    }
+
+    function isStaffCollection(name) {
+      return name == 'staff';
+    }
+
+    function canReadAttendanceOrEvents() {
+      return role() in [
+        'super_admin', 'organisation_admin', 'programme_director', 'teacher', 'viewer'
+      ];
+    }
+
+    function canReadStaff() {
+      return role() in ['super_admin', 'organisation_admin', 'programme_director', 'viewer'];
+    }
+
+    function canReadSettings() {
+      return role() in ['super_admin', 'organisation_admin', 'programme_director', 'finance', 'viewer'];
+    }
+
+    function archiveAuthorityPreserved() {
+      return request.resource.data.status == resource.data.status || isAdmin();
+    }
+
+    function isAttendanceCollection(name) {
+      return name in ['sessions', 'attendance'];
+    }
+
+    function isEventCollection(name) {
+      return name in [
+        'events', 'eventGroups', 'eventParticipants', 'eventStaff',
+        'eventScheduleItems', 'eventPerformanceItems', 'eventAttendance',
+        'consentTemplates', 'consentRequests', 'consentSubmissions',
+        'transportProviders', 'transportVehicles', 'eventTransportPlans',
+        'transportPassengers'
+      ];
+    }
+
+    function isFinanceCollection(name) {
+      return name in [
+        'chargeTypes', 'charges', 'invoices', 'invoiceLineItems', 'payments',
+        'paymentAllocations', 'financeAdjustments'
+      ];
+    }
+
+    function isCommunicationCollection(name) {
+      return name in [
+        'communications', 'communicationRecipients', 'communicationTemplates',
+        'communicationAttachments', 'documents', 'documentVersions',
+        'documentTemplates', 'documentLinks'
+      ];
+    }
+
+    function isAutomationCollection(name) {
+      return name in [
+        'operationalAlerts', 'automationRules', 'automationExecutions',
+        'notifications', 'notificationPreferences'
+      ];
+    }
+
+    function isWorkforceCollection(name) {
+      return name in [
+        'staffAssignments', 'staffAvailability', 'staffWorkRecords',
+        'timesheets', 'timesheetEntries', 'staffSubstitutions'
+      ];
+    }
+
+    function isSettingsCollection(name) {
+      return name in [
+        'organisationCalendarPeriods', 'organisationInvitations'
+      ];
+    }
+
+    function isPortalCollection(name) {
+      return name in [
+        'guardianPortalAccess', 'guardianInvitations', 'learnerPortalAccess',
+        'learnerInvitations', 'portalChangeRequests'
+      ];
+    }
+
     match /users/{userId} {
-      // User can read/write their own auth profile
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list: if isAdmin();
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'email', 'displayName', 'organisationId', 'role', 'status'
+        ])
+        && request.resource.data.organisationId == 'org_' + request.auth.uid
+        && request.resource.data.role == 'organisation_admin'
+        && request.resource.data.status == 'active'
+        && exists(/databases/$(database)/documents/organisations/$(request.resource.data.organisationId));
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'email', 'displayName'
+        ]);
+      allow update: if isAdmin()
+        && resource.data.organisationId == organisationId()
+        && request.resource.data.organisationId == resource.data.organisationId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'email', 'displayName', 'role', 'status'
+        ])
+        && request.resource.data.role in [
+          'organisation_admin', 'programme_director', 'finance', 'teacher', 'viewer'
+        ]
+        && request.resource.data.status in ['active', 'disabled'];
+      allow delete: if false;
     }
 
-    // Organisations
     match /organisations/{orgId} {
-      allow read: if isUserInOrg(orgId);
-      allow create: if isAuthenticated();
-      allow update: if isUserInOrg(orgId);
-      allow delete: if false; 
-    }
-
-    // ─── Phase 1A Collections ────────────────────────────────────
-
-    match /learners/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // soft delete only
-    }
-
-    match /guardians/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; 
-    }
-
-    match /learnerGuardians/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; 
-    }
-
-    match /staff/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; 
-    }
-
-    match /programmes/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; 
-    }
-
-    match /programmeGroups/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; 
-    }
-
-    // ─── Phase 1B Collections ────────────────────────────────────
-
-    match /enrolments/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
+      allow get: if sameOrganisation(orgId)
+        || (signedIn() && orgId == 'org_' + request.auth.uid)
+        || isPlatformAdmin();
+      allow list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        || (signedIn()
+          && !hasUserProfile()
+          && orgId == 'org_' + request.auth.uid
+          && request.resource.data.keys().hasOnly([
+            'id', 'organisationId', 'name', 'organisationType', 'slug', 'email', 'phone',
+            'address', 'tenantStatus', 'assignedPlanId', 'billingMode', 'onboardingStatus',
+            'status', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+          ])
+          && request.resource.data.id == orgId
+          && request.resource.data.organisationId == orgId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 160
+          && (!('tenantStatus' in request.resource.data) || request.resource.data.tenantStatus == 'trial')
+          && (!('assignedPlanId' in request.resource.data) || request.resource.data.assignedPlanId == 'plan_professional')
+          && (!('billingMode' in request.resource.data) || request.resource.data.billingMode == 'manual')
+          && validNewBaseRecord(orgId));
+      allow update: if isPlatformAdmin()
+        || (sameOrganisation(orgId) && isAdmin() && validBaseRecordUpdate()
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              'assignedPlanId', 'tenantStatus', 'suspensionReason', 'restrictionReason'
+            ]));
       allow delete: if false;
     }
-
-    match /sessions/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /attendance/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /followUps/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    // ─── Phase 2A Collections (Music) ────────────────────────────
-
-    match /instruments/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /instrumentAllocations/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /repertoire/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /sessionRepertoire/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // soft delete or actual delete is allowed in service, wait, service uses delete(). Let's allow actual delete for sessionRepertoire
-    }
-
-    match /practiceLogs/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if isUserInOrg(resource.data.organisationId); // service allows delete
-    }
-
-    match /musicAssessments/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if isUserInOrg(resource.data.organisationId); // service allows delete
-    }
-
-    // ─── Phase 2B Collections (Dance) ────────────────────────────
-
-    match /danceLevels/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /choreography/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /sessionChoreography/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /dancePracticeLogs/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if isUserInOrg(resource.data.organisationId);
-    }
-
-    match /danceAssessments/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if isUserInOrg(resource.data.organisationId);
-    }
-
-    match /costumes/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /costumeAllocations/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    // ─── Phase 3A Collections (Events) ───────────────────────────
-
-    match /events/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /eventGroups/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /eventParticipants/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /eventStaff/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /eventScheduleItems/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /eventPerformanceItems/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /eventAttendance/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    // ─── Phase 3B Collections (Consent & Transport) ───────────────
-
-    match /consentTemplates/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /consentRequests/{docId} {
-      // Allow direct document get for guardian submission token, but restrict listing to organization members
-      allow get: if isUserInOrg(resource.data.organisationId) || resource != null;
-      allow list: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if (isUserInOrg(resource.data.organisationId) || resource != null) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /consentSubmissions/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if request.resource.data.organisationId != null;
-      // Verified consent evidence cannot be altered except when superseding
-      allow update: if (isUserInOrg(resource.data.organisationId) || resource != null) && isOrgUnchanged()
-                    && (resource.data.submissionStatus != 'verified' || request.resource.data.submissionStatus == 'superseded');
-      allow delete: if false; // Immutable evidence
-    }
-
-    match /transportProviders/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /transportVehicles/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /eventTransportPlans/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /transportPassengers/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    // ─── Phase 4A Collections: Finance & Payments ─────────────────
-
-    match /chargeTypes/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Archive only
-    }
-
-    match /charges/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Cannot delete charges, waive/cancel only
-    }
-
-    match /invoices/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Invoices are permanent financial records
-    }
-
-    match /invoiceLineItems/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /payments/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Payments cannot be deleted, reverse only
-    }
-
-    match /paymentAllocations/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if isUserInOrg(resource.data.organisationId); // Allowed during payment reversal rollback
-    }
-
-    match /financeAdjustments/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /invoiceCounters/{docId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    match /paymentCounters/{docId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // ─── Phase 4B Collections (Communication & Documents) ─────────
-
-    match /communications/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Communications are historical audit records
-    }
-
-    match /communicationRecipients/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /communicationTemplates/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Archive only
-    }
-
-    match /communicationAttachments/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /documents/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Archive only
-    }
-
-    match /documentVersions/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Immutable version history
-    }
-
-    match /documentTemplates/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Archive only
-    }
-
-    match /documentLinks/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if isUserInOrg(resource.data.organisationId); // Allowed for unlinking documents
-    }
-
-    // ─── Phase 5A Collections (Operational Intelligence) ──────────
-
-    match /operationalAlerts/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    // ─── Phase 5B Collections (Workflow Automation & Notifications) ─
-
-    match /automationRules/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if isUserInOrg(resource.data.organisationId);
-    }
-
-    match /automationExecutions/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update, delete: if false; // Immutable execution history & system evidence
-    }
-
-    match /notifications/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false; // Dismiss only
-    }
-
-    match /notificationPreferences/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    // ─── Phase 6A Collections (Staff Operations, Timesheets & Workload) ───
-
-    match /staffAssignments/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /staffAvailability/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /staffWorkRecords/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /timesheets/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /timesheetEntries/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /staffSubstitutions/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    // ─── Phase 6B Collections: Organisation Settings & Access ──────
 
     match /organisationSettings/{orgId} {
-      allow read: if isUserInOrg(orgId) || request.auth != null;
-      allow create: if isUserInOrg(orgId) || request.auth != null;
-      allow update: if isUserInOrg(orgId);
+      allow read: if sameOrganisation(orgId) && isViewer();
+      allow create: if isPlatformAdmin() || (
+        sameOrganisation(orgId)
+        && isAdmin()
+        && request.resource.data.organisationId == orgId
+      ) || (
+        signedIn()
+        && orgId == 'org_' + request.auth.uid
+        && request.resource.data.organisationId == orgId
+      );
+      allow update: if sameOrganisation(orgId)
+        && isAdmin()
+        && request.resource.data.organisationId == resource.data.organisationId;
       allow delete: if false;
     }
-
-    match /organisationCalendarPeriods/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId) && hasCreatedBy();
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    match /organisationInvitations/{docId} {
-      allow read: if request.auth != null;
-      allow create: if isUserInOrg(request.resource.data.organisationId);
-      allow update: if request.auth != null;
-      allow delete: if false;
-    }
-
-    match /organisationMemberships/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
-      allow create: if isUserInOrg(request.resource.data.organisationId) || request.auth != null;
-      allow update: if isUserInOrg(resource.data.organisationId) && isOrgUnchanged();
-      allow delete: if false;
-    }
-
-    // ─── Phase 7A Collections: Guardian Portal & External Access ───
-
-    match /guardianPortalAccess/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
-      allow create: if isUserInOrg(request.resource.data.organisationId) || request.auth != null;
-      allow update: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
-      allow delete: if false;
-    }
-
-    match /guardianInvitations/{docId} {
-      allow get: if isUserInOrg(resource.data.organisationId) || resource != null; // Allow direct token lookup prior to auth
-      allow list: if isUserInOrg(resource.data.organisationId); // Prevent public enumeration of invitations
-      allow create: if isUserInOrg(request.resource.data.organisationId);
-      allow update: if isUserInOrg(resource.data.organisationId) || request.auth != null;
-      allow delete: if false;
-    }
-
-    // ─── Phase 7B Collections: Learner Portal & External Access ────
-
-    match /learnerPortalAccess/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
-      allow create: if isUserInOrg(request.resource.data.organisationId) || request.auth != null;
-      allow update: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
-      allow delete: if false;
-    }
-
-    match /learnerInvitations/{docId} {
-      allow get: if isUserInOrg(resource.data.organisationId) || resource != null;
-      allow list: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId);
-      allow update: if isUserInOrg(resource.data.organisationId) || request.auth != null;
-      allow delete: if false;
-    }
-
-    match /portalChangeRequests/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId) || (request.auth != null && resource.data.userId == request.auth.uid);
-      allow create: if isUserInOrg(request.resource.data.organisationId) || (request.auth != null && request.resource.data.userId == request.auth.uid);
-      allow update: if isUserInOrg(resource.data.organisationId);
-      allow delete: if false;
-    }
-
-    // ─── Audit Logs ──────────────────────────────────────────────
 
     match /auditLogs/{docId} {
-      allow read: if isUserInOrg(resource.data.organisationId);
-      allow create: if isUserInOrg(request.resource.data.organisationId);
-      allow update, delete: if false; // Cannot be edited or deleted
+      allow read: if (inOrganisationOnRead() && isAdmin()) || isPlatformAdmin();
+      allow create: if (inOrganisationOnCreate(docId) && isInternal()) || isPlatformAdmin();
+      allow update, delete: if false;
+    }
+
+    match /invoiceCounters/{counterId} {
+      allow get: if isFinance() && resource.data.organisationId == organisationId();
+      allow list: if false;
+      allow create: if isFinance()
+        && request.resource.data.keys().hasOnly([
+          'organisationId', 'year', 'currentSequence', 'updatedAt'
+        ])
+        && request.resource.data.organisationId == organisationId()
+        && request.resource.data.year is int
+        && request.resource.data.currentSequence == 1
+        && request.resource.data.updatedAt is string;
+      allow update: if isFinance()
+        && resource.data.organisationId == organisationId()
+        && request.resource.data.organisationId == resource.data.organisationId
+        && request.resource.data.year == resource.data.year
+        && request.resource.data.currentSequence == resource.data.currentSequence + 1
+        && request.resource.data.updatedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentSequence', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /paymentCounters/{counterId} {
+      allow get: if isFinance() && resource.data.organisationId == organisationId();
+      allow list: if false;
+      allow create: if isFinance()
+        && request.resource.data.keys().hasOnly([
+          'organisationId', 'year', 'currentSequence', 'updatedAt'
+        ])
+        && request.resource.data.organisationId == organisationId()
+        && request.resource.data.year is int
+        && request.resource.data.currentSequence == 1
+        && request.resource.data.updatedAt is string;
+      allow update: if isFinance()
+        && resource.data.organisationId == organisationId()
+        && request.resource.data.organisationId == resource.data.organisationId
+        && request.resource.data.year == resource.data.year
+        && request.resource.data.currentSequence == resource.data.currentSequence + 1
+        && request.resource.data.updatedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentSequence', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /organisationMemberships/{membershipId} {
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid ||
+        (inOrganisationOnRead() && canReadSettings()) ||
+        isPlatformAdmin()
+      );
+      allow create: if isPlatformAdmin() || (
+        inOrganisationOnCreate(membershipId)
+        && isAdmin()
+        && request.resource.data.role != 'super_admin'
+        && request.resource.data.userId is string
+      ) || (
+        signedIn()
+        && request.resource.data.organisationId == 'org_' + request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.role == 'organisation_admin'
+        && request.resource.data.membershipStatus == 'active'
+        && request.resource.data.status == 'active'
+      );
+      allow update: if isPlatformAdmin() || (
+        inOrganisationOnUpdate()
+        && isAdmin()
+        && request.resource.data.role != 'super_admin'
+      );
+      allow delete: if false;
+    }
+
+    // SaaS 2A: Platform Plans, Features & Entitlements Security Rules
+    match /platformFeatures/{featureKey} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /subscriptionPlans/{planId} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /planEntitlements/{entitlementId} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /organisationEntitlementOverrides/{overrideId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow write: if isPlatformAdmin();
+    }
+
+    // SaaS 2B: Trials, Subscriptions & Commercial Billing Security Rules
+    match /subscriptions/{subscriptionId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow create: if isPlatformAdmin() || (
+        signedIn()
+        && request.resource.data.organisationId == 'org_' + request.auth.uid
+        && request.resource.data.planId == 'plan_professional'
+        && request.resource.data.subscriptionStatus == 'trialing'
+        && request.resource.data.priceAmount == 0
+        && request.resource.data.billingMode == 'manual'
+        && request.resource.data.status == 'active'
+      );
+      allow update, delete: if isPlatformAdmin();
+    }
+
+    match /planPrices/{priceId} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /billingCustomers/{customerId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow write: if isPlatformAdmin();
+    }
+
+    match /saasCheckoutSessions/{sessionId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow create: if isPlatformAdmin() || (
+        signedIn() &&
+        role() == 'organisation_admin' &&
+        sameOrganisation(request.resource.data.organisationId)
+      );
+      allow update, delete: if isPlatformAdmin();
+    }
+
+    match /saasBillingEvents/{eventId} {
+      allow read: if isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
+    // SaaS 3A: Customer Provisioning & School Onboarding Security Rules
+    match /organisationOnboarding/{onboardingId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow create: if isPlatformAdmin() || (
+        signedIn() &&
+        role() == 'organisation_admin' &&
+        sameOrganisation(request.resource.data.organisationId)
+      ) || (
+        signedIn() &&
+        request.resource.data.organisationId == 'org_' + request.auth.uid
+      );
+      allow update: if isPlatformAdmin() || (
+        signedIn() &&
+        role() == 'organisation_admin' &&
+        sameOrganisation(resource.data.organisationId) &&
+        request.resource.data.organisationId == resource.data.organisationId
+      ) || (
+        signedIn() &&
+        resource.data.organisationId == 'org_' + request.auth.uid &&
+        request.resource.data.organisationId == resource.data.organisationId
+      );
+      allow delete: if false;
+    }
+
+    match /provisioningJobs/{jobId} {
+      allow read: if isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /organisationTemplates/{templateId} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    // SaaS Fast Phase 4: Usage & Metering Security Rules
+    match /organisationUsage/{usageId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow write: if isPlatformAdmin();
+    }
+
+    // SaaS v1.1 Founding Pilot: Internal Founder Notes (Platform Super Admin Only)
+    match /platformCustomerNotes/{noteId} {
+      allow read, write: if isPlatformAdmin();
+    }
+
+    // SaaS v1.1 Founding Pilot: Customer Feedback (Tenant submit/read own, Platform Admin manage all)
+    match /customerFeedback/{feedbackId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow create: if signedIn() && sameOrganisation(request.resource.data.organisationId) && isInternal();
+      allow update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    match /{collectionName}/{docId} {
+      allow read: if isPeopleCollection(collectionName)
+        && inOrganisationOnRead() && isViewer();
+      allow create: if isPeopleCollection(collectionName)
+        && isProgrammeManager() && inOrganisationOnCreate(docId);
+      allow update: if isPeopleCollection(collectionName)
+        && isProgrammeManager() && inOrganisationOnUpdate()
+        && archiveAuthorityPreserved();
+
+      allow read: if isStaffCollection(collectionName)
+        && inOrganisationOnRead() && canReadStaff();
+      allow create: if isStaffCollection(collectionName)
+        && isAdmin() && inOrganisationOnCreate(docId);
+      allow update: if isStaffCollection(collectionName)
+        && isAdmin() && inOrganisationOnUpdate();
+
+      allow read: if isAttendanceCollection(collectionName)
+        && inOrganisationOnRead() && canReadAttendanceOrEvents();
+      allow create: if isAttendanceCollection(collectionName)
+        && isTeacher() && inOrganisationOnCreate(docId);
+      allow update: if isAttendanceCollection(collectionName)
+        && isTeacher() && inOrganisationOnUpdate();
+
+      allow read: if isEventCollection(collectionName)
+        && inOrganisationOnRead() && canReadAttendanceOrEvents();
+      allow create: if isEventCollection(collectionName)
+        && isProgrammeManager() && inOrganisationOnCreate(docId);
+      allow update: if isEventCollection(collectionName)
+        && isProgrammeManager() && inOrganisationOnUpdate();
+
+      allow read: if isFinanceCollection(collectionName)
+        && inOrganisationOnRead()
+        && role() in ['super_admin', 'organisation_admin', 'finance', 'viewer'];
+      allow create: if isFinanceCollection(collectionName)
+        && isFinance() && inOrganisationOnCreate(docId);
+      allow update: if isFinanceCollection(collectionName)
+        && isFinance() && inOrganisationOnUpdate();
+
+      allow read: if isCommunicationCollection(collectionName)
+        && inOrganisationOnRead() && isViewer();
+      allow create: if isCommunicationCollection(collectionName)
+        && isTeacher() && inOrganisationOnCreate(docId);
+      allow update: if isCommunicationCollection(collectionName)
+        && isTeacher() && inOrganisationOnUpdate();
+
+      allow read: if isAutomationCollection(collectionName)
+        && inOrganisationOnRead()
+        && role() in ['super_admin', 'organisation_admin', 'programme_director'];
+      allow create: if isAutomationCollection(collectionName)
+        && isAdmin() && inOrganisationOnCreate(docId);
+      allow update: if isAutomationCollection(collectionName)
+        && isAdmin() && inOrganisationOnUpdate();
+
+      allow read: if isWorkforceCollection(collectionName)
+        && inOrganisationOnRead()
+        && role() in ['super_admin', 'organisation_admin', 'programme_director', 'viewer'];
+      allow create: if isWorkforceCollection(collectionName)
+        && isProgrammeManager() && inOrganisationOnCreate(docId);
+      allow update: if isWorkforceCollection(collectionName)
+        && isProgrammeManager() && inOrganisationOnUpdate();
+
+      allow read: if isSettingsCollection(collectionName)
+        && inOrganisationOnRead() && canReadSettings();
+      allow create: if isSettingsCollection(collectionName)
+        && isAdmin() && inOrganisationOnCreate(docId);
+      allow update: if isSettingsCollection(collectionName)
+        && isAdmin() && inOrganisationOnUpdate();
+
+      allow read: if isPortalCollection(collectionName)
+        && inOrganisationOnRead() && isAdmin();
+      allow create: if isPortalCollection(collectionName)
+        && isAdmin() && inOrganisationOnCreate(docId);
+      allow update: if isPortalCollection(collectionName)
+        && isAdmin() && inOrganisationOnUpdate();
+
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

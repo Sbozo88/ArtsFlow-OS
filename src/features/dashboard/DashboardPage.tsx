@@ -35,11 +35,39 @@ import {
   Bell,
   AlertTriangle,
   ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { organisationOnboardingService } from '../../services/onboarding/organisationOnboardingService';
+import type { OrganisationOnboarding } from '../../types';
 
 export const DashboardPage: React.FC = () => {
   useDocumentTitle('Dashboard');
+  const { authUser, organisationId } = useAuth();
+  const [onboarding, setOnboarding] = React.useState<OrganisationOnboarding | null>(null);
+  const [dismissChecklist, setDismissChecklist] = React.useState<boolean>(() => {
+    return typeof window !== 'undefined' && organisationId
+      ? localStorage.getItem(`af_dismiss_checklist_${organisationId}`) === 'true'
+      : false;
+  });
+
+  const handleDismissChecklist = () => {
+    if (organisationId) {
+      localStorage.setItem(`af_dismiss_checklist_${organisationId}`, 'true');
+      setDismissChecklist(true);
+    }
+  };
+
+  React.useEffect(() => {
+    let isMounted = true;
+    if (authUser?.role === 'organisation_admin' && organisationId) {
+      organisationOnboardingService.getOnboarding(organisationId).then((ob) => {
+        if (isMounted) setOnboarding(ob);
+      }).catch(() => {});
+    }
+    return () => { isMounted = false; };
+  }, [authUser?.role, organisationId]);
 
   const { learners, loading: loadingLearners } = useLearners();
   const { guardians, loading: loadingGuardians } = useGuardians();
@@ -106,6 +134,118 @@ export const DashboardPage: React.FC = () => {
           { label: 'Add Learner', onClick: () => window.location.href = '/learners', icon: Users, variant: 'primary' },
         ]}
       />
+
+      {/* SaaS 3A: Finish setting up ArtsFlow Setup Card */}
+      {authUser?.role === 'organisation_admin' && onboarding && onboarding.onboardingStatus !== 'completed' && (
+        <div className="p-4 bg-gradient-to-r from-indigo-900/40 via-slate-800 to-indigo-950/30 border border-indigo-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-sm font-semibold text-white">Finish setting up ArtsFlow</h3>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300">
+                {onboarding.completedSteps?.length || 0} of 12 steps complete
+              </span>
+            </div>
+            <p className="text-xs text-slate-300">
+              Configure your organisation, programmes, and staff to get ready for go-live.
+            </p>
+          </div>
+          <Link
+            to="/onboarding"
+            className="self-start sm:self-auto py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20 shrink-0"
+          >
+            Continue Setup
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
+      {/* SaaS 3A / v1.1 First-Run Post-Onboarding Experience */}
+      {authUser?.role === 'organisation_admin' && onboarding?.onboardingStatus === 'completed' && !dismissChecklist && (
+        <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/40 rounded-2xl text-white shadow-lg space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Welcome to ArtsFlow OS</h3>
+                <p className="text-xs text-slate-300">
+                  Your organisation is live! Here is your quick checklist to begin operating:
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleDismissChecklist}
+              className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-1">
+            <Link
+              to="/learners"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 1</span>
+                <span className="text-emerald-400 font-bold">{learners.length > 0 ? '✓ Added' : 'Pending'}</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Add Learners</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Roster or CSV import</span>
+            </Link>
+
+            <Link
+              to="/staff"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 2</span>
+                <span className="text-slate-400 font-bold">Invite</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Invite Teachers</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Assign permissions</span>
+            </Link>
+
+            <Link
+              to="/sessions"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 3</span>
+                <span className="text-slate-400 font-bold">Schedule</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Schedule Session</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Create term timetable</span>
+            </Link>
+
+            <Link
+              to="/attendance"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 4</span>
+                <span className="text-slate-400 font-bold">Register</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Mark Attendance</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Mobile-friendly register</span>
+            </Link>
+
+            <Link
+              to="/music"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 5</span>
+                <span className="text-slate-400 font-bold">Explore</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Music & Dance</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Instruments & syllabus</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Failed Automation Banner */}
       {failedExecutions.length > 0 && (

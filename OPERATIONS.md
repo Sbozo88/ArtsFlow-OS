@@ -13,19 +13,16 @@ This runbook provides administrative and site reliability procedures for maintai
    npm run typecheck
    npm run lint
    npm test
+   npm run test:rules
    npm run build
    ```
 
 ### Deploy Commands
 ```bash
-# 1. Deploy Firestore Security Rules & Indexes
-npx firebase deploy --only firestore:rules,firestore:indexes
-
-# 2. Deploy Cloud Storage Security Rules
-npx firebase deploy --only storage
-
-# 3. Build and Deploy Web Application to Firebase Hosting
-npm run build && npx firebase deploy --only hosting
+# Validates, then deploys Hosting and Firestore rules/indexes to the explicit
+# artflow-os Firebase project. Storage is excluded until the Firebase Storage
+# product is provisioned for this project.
+npm run release:firebase
 ```
 
 ---
@@ -54,7 +51,7 @@ If a critical failure or regression occurs after deployment:
 Navigate to **Settings → System Preferences** (`/settings/system`):
 - **Version & Build**: Confirm active version is `1.0.0-rc.1`.
 - **Integration Status**: Review status badges (Connected, Sandbox, Disabled).
-- **Automated Snapshots**: Check backup freshness (daily snapshot target).
+- **Backups**: The application reports backup state as pending until a managed policy is configured and independently verified.
 
 ### Running a Data Quality Scan
 1. In **Settings → System Preferences**, click **Scan Data Quality**.
@@ -71,7 +68,7 @@ Navigate to **Settings → System Preferences** (`/settings/system`):
 ### Safe Data Export
 1. Navigate to **Settings → System Preferences**.
 2. Click **Export Data (JSON)**.
-3. The platform generates an encrypted/sanitized export containing all learners, guardians, staff, groups, and invoices.
+3. The browser generates a JSON export containing selected learners, guardians, staff, groups, invoices, and payments. The download is not encrypted by the application.
 4. All secrets, auth tokens, and API credentials are automatically stripped before download.
 
 ### Learner CSV Import
@@ -85,19 +82,15 @@ Navigate to **Settings → System Preferences** (`/settings/system`):
 
 | Provider / Channel | Operational State | Diagnostic Step |
 | :--- | :--- | :--- |
-| **Email** | Sandbox / Client Simulated | Inspect browser console or logs for simulated dispatch IDs. |
-| **SMS** | Prepared Link | Verify recipient phone format (must include country code). |
+| **Email** | Not configured | Configure a trusted server-side provider before claiming delivery. |
+| **SMS** | Not configured | Configure a trusted server-side carrier gateway before claiming delivery. |
 | **WhatsApp** | Direct `wa.me` Protocol | Check URL parameters and phone sanitization. |
-| **Payment Gateway** | Paystack / Card Webhooks | Verify webhook endpoint in provider dashboard; verify HMAC signature. |
+| **Payment Gateway** | Not configured | Manual cash/EFT ledger operations remain available. |
 | **Calendar Feeds** | iCal / RFC 5545 | Verify timezone is set to `Africa/Johannesburg` in Organisation Settings. |
 | **Accounting** | CSV Export | Use Finance Reports (`/finance/reports`) to download general ledger. |
 
 ---
 
-## 6. Backup Review & Retention Policy
+## 6. Backup Readiness Gate
 
-- **Snapshot Engine**: Managed Google Cloud Firestore export service.
-- **Schedule**: Nightly at 02:00 SAST.
-- **Destination**: Dedicated, access-restricted Google Cloud Storage bucket (`Coldline` tier).
-- **Retention**: 90 days rolling retention.
-- For complete restoration instructions, refer to [RECOVERY.md](./RECOVERY.md).
+No verified managed backup policy is recorded in this repository. Before production approval, configure a Firestore backup/export policy in Google Cloud, record its destination and retention outside client code, perform a test restore in a non-production project, and attach evidence to the release. See [RECOVERY.md](./RECOVERY.md) for the restore procedure.

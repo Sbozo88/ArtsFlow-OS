@@ -1,11 +1,17 @@
 import { musicAssessmentRepository } from '../repositories/musicAssessmentRepository';
 import { learnerRepository } from '../repositories/learnerRepository';
 import { staffRepository } from '../repositories/staffRepository';
+import { entitlementResolverService } from './entitlementResolverService';
 import { auditService } from './auditService';
 import type { MusicAssessment } from '../types';
 
 export const musicAssessmentService = {
   async createAssessment(orgId: string, actorId: string, data: Omit<MusicAssessment, 'id' | 'organisationId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'status'>): Promise<MusicAssessment> {
+    const isEntitled = await entitlementResolverService.hasFeature(orgId, 'music.core');
+    if (!isEntitled) {
+      throw new Error(`Organisation is not entitled to feature 'music.core'.`);
+    }
+
     // Validate org isolation
     const learner = await learnerRepository.getById(orgId, data.learnerId);
     if (!learner) throw new Error('Learner not found');
