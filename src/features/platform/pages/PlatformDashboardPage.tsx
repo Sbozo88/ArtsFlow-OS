@@ -10,12 +10,18 @@ import {
   ArrowUpRight,
   Sparkles,
   CheckCircle2,
-  Clock
+  Clock,
+  Package
 } from 'lucide-react';
 import { platformMetricsService, type PlatformKPIs } from '../../../services/platformMetricsService';
+import { platformOrganisationService } from '../../../services/platformOrganisationService';
+import { subscriptionPlanService } from '../../../services/subscriptionPlanService';
+import type { SubscriptionPlan } from '../../../types';
 
 export const PlatformDashboardPage: React.FC = () => {
   const [kpis, setKpis] = useState<PlatformKPIs | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [planCounts, setPlanCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,8 +29,20 @@ export const PlatformDashboardPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await platformMetricsService.getPlatformKPIs();
+      const [data, allPlans, orgs] = await Promise.all([
+        platformMetricsService.getPlatformKPIs(),
+        subscriptionPlanService.listPlans(),
+        platformOrganisationService.listOrganisations()
+      ]);
       setKpis(data);
+      setPlans(allPlans);
+
+      const counts: Record<string, number> = {};
+      for (const org of orgs) {
+        const pId = org.assignedPlanId || 'plan_legacy_full';
+        counts[pId] = (counts[pId] || 0) + 1;
+      }
+      setPlanCounts(counts);
     } catch (err) {
       setError((err as Error).message || 'Failed to load platform metrics');
     } finally {
@@ -34,11 +52,21 @@ export const PlatformDashboardPage: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    platformMetricsService
-      .getPlatformKPIs()
-      .then((data) => {
+    Promise.all([
+      platformMetricsService.getPlatformKPIs(),
+      subscriptionPlanService.listPlans(),
+      platformOrganisationService.listOrganisations()
+    ])
+      .then(([data, allPlans, orgs]) => {
         if (isMounted) {
           setKpis(data);
+          setPlans(allPlans);
+          const counts: Record<string, number> = {};
+          for (const org of orgs) {
+            const pId = org.assignedPlanId || 'plan_legacy_full';
+            counts[pId] = (counts[pId] || 0) + 1;
+          }
+          setPlanCounts(counts);
           setLoading(false);
         }
       })
@@ -194,6 +222,41 @@ export const PlatformDashboardPage: React.FC = () => {
               {(kpis?.cancelledOrganisations ?? 0) + (kpis?.archivedOrganisations ?? 0)}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Organisations by Commercial Plan (Section 81-82) */}
+      <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
+            <Package className="w-4 h-4 text-indigo-400" />
+            Organisations by Commercial Plan
+          </h2>
+          <Link
+            to="/platform/plans"
+            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+          >
+            Manage plans
+            <ArrowUpRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {plans.length === 0 ? (
+            <div className="col-span-full py-4 text-center text-xs text-slate-500">
+              Loading plan distribution...
+            </div>
+          ) : (
+            plans.map((p) => {
+              const count = planCounts[p.id] || planCounts[p.code] || 0;
+              return (
+                <div key={p.id} className="p-3 bg-slate-900/60 rounded-lg border border-slate-700/50">
+                  <div className="text-xs text-slate-400 font-medium truncate">{p.name}</div>
+                  <div className="text-xl font-bold text-white mt-1">{count}</div>
+                  <div className="text-[10px] font-mono text-indigo-400 mt-0.5">{p.code}</div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

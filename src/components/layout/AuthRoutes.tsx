@@ -1,7 +1,9 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useEntitlements } from '../../contexts/EntitlementContext';
 import { PlatformAccessDeniedPage } from '../../features/platform/pages/PlatformAccessDeniedPage';
+import { FeatureAccessDeniedPage } from '../../features/platform/pages/FeatureAccessDeniedPage';
 
 const INTERNAL_ROLES = new Set([
   'super_admin',
@@ -68,4 +70,15 @@ export const PlatformRoute: React.FC = () => {
   }
 
   return <Outlet />;
+};
+
+export const FeatureRoute: React.FC<{ feature: string; children?: React.ReactNode }> = ({ feature, children }) => {
+  const { hasFeature, loading } = useEntitlements();
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!hasFeature(feature)) {
+    return <FeatureAccessDeniedPage feature={feature} />;
+  }
+
+  return children ? <>{children}</> : <Outlet />;
 };

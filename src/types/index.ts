@@ -36,6 +36,7 @@ export interface Organisation extends BaseRecord {
   restrictedAt?: string;
   restrictedBy?: string;
   restrictionReason?: string;
+  assignedPlanId?: string;
   lastActiveAt?: string;
   status: RecordStatus;
   createdAt: string;
@@ -602,7 +603,18 @@ export type AuditAction =
   | 'PLATFORM_RESTORE_TENANT'
   | 'PLATFORM_CANCEL_TENANT'
   | 'PLATFORM_ARCHIVE_TENANT'
-  | 'PLATFORM_VIEW_TENANT_SUMMARY';
+  | 'PLATFORM_VIEW_TENANT_SUMMARY'
+  // SaaS 2A: Plans, Features & Entitlements Actions
+  | 'PLATFORM_CREATE_FEATURE'
+  | 'PLATFORM_UPDATE_FEATURE'
+  | 'PLATFORM_CREATE_PLAN'
+  | 'PLATFORM_UPDATE_PLAN'
+  | 'PLATFORM_ARCHIVE_PLAN'
+  | 'PLATFORM_UPDATE_PLAN_ENTITLEMENT'
+  | 'PLATFORM_ASSIGN_PLAN'
+  | 'PLATFORM_CREATE_ENTITLEMENT_OVERRIDE'
+  | 'PLATFORM_UPDATE_ENTITLEMENT_OVERRIDE'
+  | 'PLATFORM_END_ENTITLEMENT_OVERRIDE';
 
 export type AuditScopeType = 'platform' | 'organisation';
 
@@ -1850,7 +1862,12 @@ export type PlatformPermission =
   | 'platform.users.read'
   | 'platform.health.read'
   | 'platform.audit.read'
-  | 'platform.settings.manage';
+  | 'platform.settings.manage'
+  | 'platform.plans.read'
+  | 'platform.plans.manage'
+  | 'platform.features.read'
+  | 'platform.features.manage'
+  | 'platform.entitlements.manage';
 
 export type Permission =
   | 'learners.read'
@@ -2155,6 +2172,106 @@ export interface GuardianDashboardDto {
   learners: GuardianLearnerSummaryDto[];
   nextUpcomingEvent?: GuardianEventDto;
   nextUpcomingSession?: GuardianSessionDto;
+}
+
+// ─── SaaS 2A: Plans, Features & Entitlements ───────────────────────
+
+export type FeatureCategory =
+  | 'core'
+  | 'music'
+  | 'dance'
+  | 'events'
+  | 'finance'
+  | 'communication'
+  | 'documents'
+  | 'analytics'
+  | 'automation'
+  | 'staff'
+  | 'portals'
+  | 'integrations'
+  | 'platform';
+
+export type FeatureType = 'boolean' | 'limit' | 'configuration';
+
+export type FeatureStatus = 'active' | 'inactive' | 'deprecated' | 'experimental';
+
+export interface PlatformFeature {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  category: FeatureCategory;
+  featureType: FeatureType;
+  featureStatus: FeatureStatus;
+  defaultEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export type PlanStatus = 'draft' | 'active' | 'inactive' | 'archived';
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  planStatus: PlanStatus;
+  displayOrder: number;
+  isPublic: boolean;
+  recommended?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export interface PlanEntitlement {
+  id: string;
+  planId: string;
+  featureKey: string;
+  enabled: boolean;
+  limitValue?: number | null;
+  configuration?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export type OverrideType = 'enable' | 'disable' | 'limit' | 'configuration';
+
+export interface OrganisationEntitlementOverride {
+  id: string;
+  organisationId: string;
+  featureKey: string;
+  overrideType: OverrideType;
+  enabled?: boolean;
+  limitValue?: number | null;
+  configuration?: Record<string, unknown>;
+  reason: string;
+  startsAt?: string;
+  expiresAt?: string;
+  createdBy: string;
+  updatedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RecordStatus;
+}
+
+export interface EffectiveEntitlement {
+  organisationId: string;
+  featureKey: string;
+  enabled: boolean;
+  limitValue?: number | null;
+  configuration?: Record<string, unknown>;
+  source: 'plan' | 'override' | 'default' | 'system';
+  sourceId?: string;
+  overrideReason?: string;
 }
 
 

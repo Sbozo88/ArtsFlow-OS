@@ -279,6 +279,7 @@ export const PlatformOrganisationsPage: React.FC = () => {
                 <th className="py-3 px-4">Organisation</th>
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Tenant Status</th>
+                <th className="py-3 px-4">Assigned Plan</th>
                 <th className="py-3 px-4">Primary Admin</th>
                 <th className="py-3 px-4">Created</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -287,19 +288,20 @@ export const PlatformOrganisationsPage: React.FC = () => {
             <tbody className="divide-y divide-slate-700/50 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-xs text-slate-400">
                     Loading organisations...
                   </td>
                 </tr>
               ) : filteredOrganisations.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-xs text-slate-400">
                     No organisations match your search or filters.
                   </td>
                 </tr>
               ) : (
                 filteredOrganisations.map((org) => {
                   const status = org.tenantStatus || 'active';
+                  const planLabel = org.assignedPlanId ? org.assignedPlanId.replace(/^plan_/, '') : 'legacy_full';
                   return (
                     <tr key={org.id} className="hover:bg-slate-700/30 transition-colors">
                       <td className="py-3.5 px-4">
@@ -315,6 +317,11 @@ export const PlatformOrganisationsPage: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadge(status)}`}>
                           {status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs">
+                        <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-indigo-300">
+                          {planLabel}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-xs text-slate-300">

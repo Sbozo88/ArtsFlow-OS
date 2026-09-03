@@ -16,7 +16,12 @@ export const PLATFORM_PERMISSIONS: PlatformPermission[] = [
   'platform.users.read',
   'platform.health.read',
   'platform.audit.read',
-  'platform.settings.manage'
+  'platform.settings.manage',
+  'platform.plans.read',
+  'platform.plans.manage',
+  'platform.features.read',
+  'platform.features.manage',
+  'platform.entitlements.manage'
 ];
 
 export const ALL_PERMISSIONS: Permission[] = [
@@ -174,5 +179,15 @@ export const permissionService = {
    */
   hasAny(user: AuthUser | { role?: AuthRole } | null, permissions: Permission[]): boolean {
     return permissions.some(p => this.can(user, p));
+  },
+
+  /**
+   * Evaluates if a platformRole has a specific PlatformPermission.
+   */
+  hasPlatformPermission(platformRole: PlatformRole | undefined, permission: PlatformPermission): boolean {
+    if (platformRole === 'super_admin') {
+      return PLATFORM_PERMISSIONS.includes(permission);
+    }
+    return false;
   }
 };

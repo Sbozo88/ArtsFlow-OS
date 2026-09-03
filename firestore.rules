@@ -245,8 +245,11 @@ service cloud.firestore {
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 160
           && validNewBaseRecord(orgId));
-      allow update: if (sameOrganisation(orgId) && isAdmin() && validBaseRecordUpdate())
-        || isPlatformAdmin();
+      allow update: if isPlatformAdmin()
+        || (sameOrganisation(orgId) && isAdmin() && validBaseRecordUpdate()
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              'assignedPlanId', 'tenantStatus', 'suspensionReason', 'restrictionReason'
+            ]));
       allow delete: if false;
     }
 
@@ -285,6 +288,27 @@ service cloud.firestore {
         && request.resource.data.role != 'super_admin'
       );
       allow delete: if false;
+    }
+
+    // SaaS 2A: Platform Plans, Features & Entitlements Security Rules
+    match /platformFeatures/{featureKey} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /subscriptionPlans/{planId} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /planEntitlements/{entitlementId} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /organisationEntitlementOverrides/{overrideId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow write: if isPlatformAdmin();
     }
 
     match /{collectionName}/{docId} {

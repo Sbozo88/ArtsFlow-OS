@@ -7,6 +7,7 @@ import { paymentAllocationRepository } from '../repositories/paymentAllocationRe
 import { learnerRepository } from '../repositories/learnerRepository';
 import { auditService } from './auditService';
 import { organisationSettingsService } from './organisationSettingsService';
+import { entitlementResolverService } from './entitlementResolverService';
 import { addMoney, subtractMoney } from '../lib/money';
 import type { Invoice, InvoiceLineItem, InvoiceStatus } from '../types';
 
@@ -101,6 +102,11 @@ export const invoiceService = {
     input: CreateInvoiceInput,
     actorId: string
   ): Promise<{ invoice: Invoice; lineItems: InvoiceLineItem[] }> {
+    const isEntitled = await entitlementResolverService.hasFeature(organisationId, 'finance.core');
+    if (!isEntitled) {
+      throw new Error(`Organisation is not entitled to feature 'finance.core'.`);
+    }
+
     if (!input.chargeIds || input.chargeIds.length === 0) {
       throw new Error('At least one charge must be selected to create an invoice.');
     }

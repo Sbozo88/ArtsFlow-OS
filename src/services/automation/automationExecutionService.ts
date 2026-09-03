@@ -4,6 +4,7 @@ import { followUpRepository } from '../../repositories/followUpRepository';
 import { notificationRepository } from '../../repositories/notificationRepository';
 import { automationEvaluationService } from './automationEvaluationService';
 import { automationActionService, type ActionResult } from './automationActionService';
+import { entitlementResolverService } from '../entitlementResolverService';
 import { auditService } from '../auditService';
 import type { 
   AutomationExecution, 
@@ -29,6 +30,11 @@ export const automationExecutionService = {
     actorId: string,
     isDryRun = false
   ): Promise<RunRuleResult> {
+    const isEntitled = await entitlementResolverService.hasFeature(organisationId, 'automation.core');
+    if (!isEntitled) {
+      throw new Error(`Organisation is not entitled to feature 'automation.core'.`);
+    }
+
     const rule = await automationRuleRepository.getById(organisationId, ruleId);
     if (!rule) throw new Error(`Automation rule not found: ${ruleId}`);
 

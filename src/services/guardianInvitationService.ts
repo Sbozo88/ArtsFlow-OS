@@ -2,6 +2,7 @@ import { guardianInvitationRepository } from '../repositories/guardianInvitation
 import { guardianPortalAccessRepository } from '../repositories/guardianPortalAccessRepository';
 import { guardianRepository } from '../repositories/guardianRepository';
 import { organisationRepository } from '../repositories/organisationRepository';
+import { entitlementResolverService } from './entitlementResolverService';
 import { auditService } from './auditService';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -36,6 +37,11 @@ export const guardianInvitationService = {
     actorId: string,
     customExpiryDays: number = 7
   ): Promise<InviteGuardianResult> {
+    const hasPortal = await entitlementResolverService.hasFeature(organisationId, 'guardian_portal');
+    if (!hasPortal) {
+      throw new Error(`Organisation is not entitled to feature 'guardian_portal'.`);
+    }
+
     const guardian = await guardianRepository.getById(organisationId, guardianId);
     if (!guardian || guardian.status === 'deleted') {
       throw new Error('Guardian record not found.');
