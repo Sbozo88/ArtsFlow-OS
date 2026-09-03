@@ -9,6 +9,7 @@ import { invoiceRepository } from '../repositories/invoiceRepository';
 import { paymentRepository } from '../repositories/paymentRepository';
 import { paymentAllocationRepository } from '../repositories/paymentAllocationRepository';
 import { financeReconciliationService } from './financeReconciliationService';
+import type { OrganisationMembership } from '../types';
 
 export interface ReleaseMetadata {
   version: string;
@@ -33,7 +34,7 @@ export interface IntegrationStatusReport {
 
 export interface DataQualityIssue {
   severity: 'warning' | 'error' | 'critical';
-  category: 'orphaned_record' | 'broken_relation' | 'financial_anomaly' | 'data_missing';
+  category: 'orphaned_record' | 'broken_relation' | 'financial_anomaly' | 'data_missing' | 'membership_integrity';
   message: string;
   entityType: string;
   entityId: string;
@@ -457,5 +458,93 @@ export const platformOperationsService = {
       retentionDays: 0,
       notes: 'Configure and verify managed backups in Google Cloud before marking backup readiness complete.'
     };
+  },
+
+  /**
+   * SaaS 3B: Scans organisation memberships for integrity issues:
+   * - duplicate memberships for the same user in an organisation
+   * - multiple default organisations for the same user
+   * - memberships pointing to non-existent organisations
+   * - memberships with invalid or unrecognized roles
+   * - memberships with invalid status
+   */
+  scanMembershipHealth(memberships: OrganisationMembership[], validOrgIds?: string[]): DataQualityIssue[] {
+    const issues: DataQualityIssue[] = [];
+    const validRoles = ['organisation_admin', 'programme_director', 'teacher', 'finance', 'viewer'];
+    const validStatuses = ['active', 'disabled', 'revoked', 'invited'];
+
+    const userDefaults = new Map<string, string[]>();
+    const seenUserOrgs = new Set<string>();
+
+    for (const m of memberships) {
+      // Check duplicate memberships
+      const key = `${m.userId}_${m.organisationId}`;
+      if (seenUserOrgs.has(key)) {
+        issues.push({
+          severity: 'error',
+          category: 'membership_integrity',
+          message: `Duplicate membership detected for user ${m.userId} in organisation ${m.organisationId}.`,
+          entityType: 'organisationMembership',
+          entityId: m.id
+        });
+      } else {
+        seenUserOrgs.add(key);
+      }
+
+      // Check default organisation counts
+      if (m.isDefaultOrganisation && m.membershipStatus === 'active') {
+        const list = userDefaults.get(m.userId) || [];
+        list.push(m.organisationId);
+        userDefaults.set(m.userId, list);
+      }
+
+      // Check valid role
+      if (!validRoles.includes(m.role)) {
+        issues.push({
+          severity: 'error',
+          category: 'membership_integrity',
+          message: `Membership ${m.id} has unrecognized role "${m.role}".`,
+          entityType: 'organisationMembership',
+          entityId: m.id
+        });
+      }
+
+      // Check valid status
+      if (!validStatuses.includes(m.membershipStatus)) {
+        issues.push({
+          severity: 'error',
+          category: 'membership_integrity',
+          message: `Membership ${m.id} has invalid status "${m.membershipStatus}".`,
+          entityType: 'organisationMembership',
+          entityId: m.id
+        });
+      }
+
+      // Check missing organisation
+      if (validOrgIds && !validOrgIds.includes(m.organisationId)) {
+        issues.push({
+          severity: 'critical',
+          category: 'orphaned_record',
+          message: `Membership ${m.id} references non-existent organisation ${m.organisationId}.`,
+          entityType: 'organisationMembership',
+          entityId: m.id
+        });
+      }
+    }
+
+    // Flag users with multiple defaults
+    for (const [userId, orgs] of userDefaults.entries()) {
+      if (orgs.length > 1) {
+        issues.push({
+          severity: 'warning',
+          category: 'membership_integrity',
+          message: `User ${userId} has ${orgs.length} default organisations set: ${orgs.join(', ')}.`,
+          entityType: 'user',
+          entityId: userId
+        });
+      }
+    }
+
+    return issues;
   }
 };

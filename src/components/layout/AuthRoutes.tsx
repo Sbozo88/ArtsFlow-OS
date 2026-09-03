@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useEntitlements } from '../../contexts/EntitlementContext';
 import { PlatformAccessDeniedPage } from '../../features/platform/pages/PlatformAccessDeniedPage';
 import { FeatureAccessDeniedPage } from '../../features/platform/pages/FeatureAccessDeniedPage';
+import { useActiveOrganisation } from '../../contexts/ActiveOrganisationContext';
 
 const INTERNAL_ROLES = new Set([
   'super_admin',
@@ -15,9 +16,10 @@ const INTERNAL_ROLES = new Set([
 ]);
 
 export const ProtectedRoute: React.FC = () => {
-  const { user, authUser, organisationId, loading } = useAuth();
+  const { user, authUser, loading } = useAuth();
+  const { activeOrganisationId: organisationId, availableOrganisations, isResolvingOrganisation } = useActiveOrganisation();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading || isResolvingOrganisation) return <div className="min-h-screen flex items-center justify-center">Resolving organisation…</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (authUser?.accountStatus === 'disabled') return <Navigate to="/access-disabled" replace />;
   
@@ -31,6 +33,8 @@ export const ProtectedRoute: React.FC = () => {
   }
 
   if (user && !organisationId) {
+    if (availableOrganisations.length > 1) return <Navigate to="/select-organisation" replace />;
+    if (authUser?.platformRole === 'super_admin' && availableOrganisations.length === 0) return <Navigate to="/platform" replace />;
     return <Navigate to="/onboarding" replace />;
   }
 
@@ -42,7 +46,8 @@ export const ProtectedRoute: React.FC = () => {
 };
 
 export const OnboardingRoute: React.FC = () => {
-  const { user, authUser, organisationId, loading } = useAuth();
+  const { user, authUser, loading } = useAuth();
+  const { activeOrganisationId: organisationId } = useActiveOrganisation();
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;
@@ -64,7 +69,7 @@ export const PlatformRoute: React.FC = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (authUser?.accountStatus === 'disabled') return <Navigate to="/access-disabled" replace />;
 
-  const isSuperAdmin = authUser?.platformRole === 'super_admin' || authUser?.role === 'super_admin';
+  const isSuperAdmin = authUser?.platformRole === 'super_admin';
   if (!isSuperAdmin) {
     return <PlatformAccessDeniedPage />;
   }

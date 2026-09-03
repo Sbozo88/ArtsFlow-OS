@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext';
+import { useActiveOrganisation } from './ActiveOrganisationContext';
 import { entitlementResolverService } from '../services/entitlementResolverService';
 import type { EffectiveEntitlement } from '../types';
 
@@ -24,7 +24,7 @@ const EntitlementContext = createContext<EntitlementContextType>({
 export const useEntitlements = () => useContext(EntitlementContext);
 
 export const EntitlementProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { organisationId } = useAuth();
+  const { activeOrganisationId: organisationId } = useActiveOrganisation();
   const [entitlements, setEntitlements] = useState<Record<string, EffectiveEntitlement>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

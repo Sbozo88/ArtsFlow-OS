@@ -3,8 +3,8 @@ import { Bell, Search, Check, ExternalLink, AlertTriangle, Info, AlertCircle, Me
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
-import { useOrganisationSettings } from '../../hooks/useOrganisationSettings';
 import type { AlertSeverity } from '../../types';
+import { OrganisationSwitcher } from './OrganisationSwitcher';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -13,13 +13,10 @@ interface HeaderProps {
 export function Header({ onMenuToggle }: HeaderProps) {
   const { user, authUser } = useAuth();
   const navigate = useNavigate();
-  const { settings } = useOrganisationSettings();
   const { unreadCount, recentUnread, markAsRead, markAllAsRead } = useUnreadNotifications();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const orgName = settings?.profile?.name || 'ArtsFlow OS';
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -68,10 +65,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Organisation name */}
-        <span className="hidden sm:block text-sm font-semibold text-slate-700 truncate max-w-[180px]">
-          {orgName}
-        </span>
+        <div className="hidden sm:block"><OrganisationSwitcher /></div>
 
         {/* Search */}
         <div className="relative hidden sm:block w-64 lg:w-80">
@@ -180,7 +174,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
         </div>
 
         {/* Platform Console Shortcut for Super Admin */}
-        {(authUser?.platformRole === 'super_admin' || authUser?.role === 'super_admin') && (
+        {authUser?.platformRole === 'super_admin' && (
           <Link
             to="/platform"
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"

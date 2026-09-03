@@ -19,6 +19,7 @@ import { SessionDetailPage } from './features/sessions/SessionDetailPage';
 import { AttendancePage } from './features/attendance/AttendancePage';
 import { FollowUpsPage } from './features/followUps/FollowUpsPage';
 import { AuthProvider } from './contexts/AuthContext';
+import { ActiveOrganisationProvider } from './contexts/ActiveOrganisationContext';
 import { EntitlementProvider } from './contexts/EntitlementContext';
 import { MusicDashboardPage } from './features/music/MusicDashboardPage';
 import { InstrumentsPage } from './features/music/InstrumentsPage';
@@ -153,11 +154,14 @@ import { PlatformSubscriptionsPage } from './features/platform/pages/PlatformSub
 import { OrganisationBillingPage } from './features/billing/pages/OrganisationBillingPage';
 import { BillingCheckoutReturnPage } from './features/billing/pages/BillingCheckoutReturnPage';
 import { OrganisationOnboardingPage } from './features/onboarding/pages/OrganisationOnboardingPage';
+import { OrganisationSelectionPage } from './features/account/OrganisationSelectionPage';
+import { MyOrganisationsPage } from './features/account/MyOrganisationsPage';
 
 function App() {
   return (
     <AuthProvider>
-      <EntitlementProvider>
+      <ActiveOrganisationProvider>
+        <EntitlementProvider>
         <Router>
           <Routes>
             {/* Public Routes */}
@@ -168,6 +172,7 @@ function App() {
             <Route path="/portal/login" element={releaseCapabilities.guardianPortal ? <GuardianLoginPage /> : <GuardianPortalUnavailablePage />} />
             <Route path="/portal/invite/:token" element={releaseCapabilities.guardianPortal ? <GuardianInvitationAcceptPage /> : <GuardianPortalUnavailablePage />} />
             <Route path="/learner-portal" element={<LearnerPortalNoticePage />} />
+            <Route path="/select-organisation" element={<OrganisationSelectionPage />} />
 
             {/* Guardian Portal Protected Routes (Phase 7A) */}
             <Route element={<FeatureRoute feature="guardian_portal" />}>
@@ -222,6 +227,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Layout />}>
                 <Route index element={<DashboardPage />} />
+                <Route path="account/organisations" element={<MyOrganisationsPage />} />
                 <Route path="learners" element={<LearnersPage />} />
                 <Route path="learners/:id" element={<LearnerProfilePage />} />
                 <Route path="guardians" element={<GuardiansPage />} />
@@ -365,7 +371,8 @@ function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Router>
-      </EntitlementProvider>
+        </EntitlementProvider>
+      </ActiveOrganisationProvider>
     </AuthProvider>
   );
 }

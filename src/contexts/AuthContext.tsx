@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { 
   User as FirebaseUser, 
   onAuthStateChanged,
@@ -8,6 +8,12 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { AuthUser, OrganisationMembership, PlatformRole } from '../types';
 import { organisationMembershipRepository } from '../repositories/organisationMembershipRepository';
+import { organisationRepository } from '../repositories/organisationRepository';
+import { userPreferencesRepository } from '../repositories/userPreferencesRepository';
+import { tenantAccessService } from '../services/tenantAccessService';
+import { tenantContextService } from '../services/tenantContextService';
+import { entitlementResolverService } from '../services/entitlementResolverService';
+import { organisationSettingsService } from '../services/organisationSettingsService';
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -16,6 +22,8 @@ interface AuthContextType {
   activeMembership: OrganisationMembership | null;
   memberships: OrganisationMembership[];
   switchOrganisation: (orgId: string) => Promise<void>;
+  isSwitchingOrganisation: boolean;
+  organisationError: string | null;
   loading: boolean;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
@@ -28,6 +36,8 @@ const AuthContext = createContext<AuthContextType>({
   activeMembership: null,
   memberships: [],
   switchOrganisation: async () => {},
+  isSwitchingOrganisation: false,
+  organisationError: null,
   loading: true,
   logout: async () => {},
   refreshAuth: async () => {},
@@ -42,8 +52,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeMembership, setActiveMembership] = useState<OrganisationMembership | null>(null);
   const [memberships, setMemberships] = useState<OrganisationMembership[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSwitchingOrganisation, setIsSwitchingOrganisation] = useState(false);
+  const [organisationError, setOrganisationError] = useState<string | null>(null);
+  const resolutionGeneration = useRef(0);
 
-  const fetchUserDoc = async (
+  const fetchUserDoc = useCallback(async (
     uid: string,
     email: string | null,
     displayName: string | null,
@@ -64,22 +77,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Could not query organisationMemberships, falling back to user document:', err);
       }
 
-      setMemberships(userMemberships);
+      const activeMemberships = userMemberships.filter(m => m.membershipStatus === 'active');
 
       // 3. Resolve Active Membership
       let resolvedMembership: OrganisationMembership | null = null;
-      if (userMemberships.length > 0) {
+      if (activeMemberships.length > 0) {
         if (targetOrgId) {
-          resolvedMembership = userMemberships.find(m => m.organisationId === targetOrgId) || null;
+          resolvedMembership = activeMemberships.find(m => m.organisationId === targetOrgId) || null;
         }
-        if (!resolvedMembership) {
+        if (!resolvedMembership && !targetOrgId) {
+          const preferences = await userPreferencesRepository.get(uid).catch(() => null);
           resolvedMembership =
-            userMemberships.find(m => m.isDefaultOrganisation && m.membershipStatus === 'active') ||
-            userMemberships.find(m => m.membershipStatus === 'active') ||
-            userMemberships[0];
+            activeMemberships.find(m => m.organisationId === preferences?.lastActiveOrganisationId) ||
+            activeMemberships.find(m => m.isDefaultOrganisation) ||
+            (activeMemberships.length === 1 ? activeMemberships[0] : null);
         }
       }
 
+      setMemberships(userMemberships);
       setActiveMembership(resolvedMembership);
 
       // 4. Resolve Organisation ID and Role (with legacy fallback)
@@ -89,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (resolvedMembership) {
         resolvedOrgId = resolvedMembership.organisationId;
         resolvedRole = resolvedMembership.role;
-      } else if (userData?.organisationId) {
+      } else if (userMemberships.length === 0 && userData?.organisationId && userData?.role !== 'super_admin') {
         // Fallback: Legacy v1.0 user document
         resolvedOrgId = userData.organisationId;
         resolvedRole = userData.role;
@@ -115,11 +130,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setActiveMembership(null);
       setMemberships([]);
     }
-  };
+  }, []);
 
   const switchOrganisation = async (newOrgId: string) => {
-    if (user) {
+    if (!user || newOrgId === organisationId) return;
+    const generation = ++resolutionGeneration.current;
+    setIsSwitchingOrganisation(true);
+    setOrganisationError(null);
+    try {
+      const membership = await organisationMembershipRepository.getByUserAndOrg(user.uid, newOrgId);
+      const organisation = await organisationRepository.getById(newOrgId);
+      const validation = tenantAccessService.validateAccess(membership, organisation);
+      if (!validation.allowed) {
+        throw new Error(tenantAccessService.getAccessError(validation.reason));
+      }
+
+      await userPreferencesRepository.setLastActiveOrganisation(user.uid, newOrgId);
+      if (generation !== resolutionGeneration.current) return;
+
+      if (organisationId) {
+        entitlementResolverService.invalidateCache(organisationId);
+        organisationSettingsService.invalidateCache(organisationId);
+      }
       await fetchUserDoc(user.uid, user.email, user.displayName, newOrgId);
+      await tenantContextService.recordOrganisationSwitch(user.uid, organisationId, newOrgId, user.uid);
+    } catch (error) {
+      if (generation === resolutionGeneration.current) {
+        setOrganisationError((error as Error).message || "We couldn't switch organisations. Your current workspace has not changed.");
+      }
+      throw error;
+    } finally {
+      if (generation === resolutionGeneration.current) setIsSwitchingOrganisation(false);
     }
   };
 
@@ -144,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [fetchUserDoc]);
 
   const logout = async () => {
     await signOut(auth);
@@ -159,6 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeMembership,
         memberships,
         switchOrganisation,
+        isSwitchingOrganisation,
+        organisationError,
         loading,
         logout,
         refreshAuth
