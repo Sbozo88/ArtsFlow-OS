@@ -24,7 +24,9 @@ export const PLATFORM_PERMISSIONS: PlatformPermission[] = [
   'platform.entitlements.manage',
   'platform.subscriptions.read',
   'platform.subscriptions.manage',
-  'platform.pricing.manage'
+  'platform.pricing.manage',
+  'platform.provisioning.read',
+  'platform.provisioning.manage'
 ];
 
 export const ALL_PERMISSIONS: Permission[] = [

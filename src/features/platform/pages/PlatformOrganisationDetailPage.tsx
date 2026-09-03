@@ -16,7 +16,8 @@ import {
   Layers,
   Sliders,
   Check,
-  CreditCard
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 import { platformOrganisationService } from '../../../services/platformOrganisationService';
 import { tenantLifecycleService } from '../../../services/tenantLifecycleService';
@@ -27,6 +28,10 @@ import { entitlementResolverService } from '../../../services/entitlementResolve
 import { organisationMembershipRepository } from '../../../repositories/organisationMembershipRepository';
 import { auditLogRepository } from '../../../repositories/auditLogRepository';
 import { subscriptionRepository } from '../../../repositories/subscriptionRepository';
+import { organisationOnboardingRepository } from '../../../repositories/organisationOnboardingRepository';
+import { provisioningJobRepository } from '../../../repositories/provisioningJobRepository';
+import { organisationReadinessService, type ReadinessReport } from '../../../services/onboarding/organisationReadinessService';
+import { organisationProvisioningService } from '../../../services/provisioning/organisationProvisioningService';
 import { STANDARD_PLATFORM_FEATURES } from '../../../config/platformFeaturesRegistry';
 import { useAuth } from '../../../contexts/AuthContext';
 import type {
@@ -38,7 +43,9 @@ import type {
   EffectiveEntitlement,
   OrganisationEntitlementOverride,
   OverrideType,
-  Subscription
+  Subscription,
+  OrganisationOnboarding,
+  ProvisioningJob
 } from '../../../types';
 
 export const PlatformOrganisationDetailPage: React.FC = () => {
@@ -53,6 +60,10 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
   const [effectiveEntitlements, setEffectiveEntitlements] = useState<Record<string, EffectiveEntitlement>>({});
   const [overrides, setOverrides] = useState<OrganisationEntitlementOverride[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [onboarding, setOnboarding] = useState<OrganisationOnboarding | null>(null);
+  const [provisioningJob, setProvisioningJob] = useState<ProvisioningJob | null>(null);
+  const [readiness, setReadiness] = useState<ReadinessReport | null>(null);
+  const [retryingJob, setRetryingJob] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -135,9 +146,13 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
       auditLogRepository.getByOrganisation(organisationId),
       entitlementResolverService.getOrganisationEntitlements(organisationId),
       entitlementOverrideService.listOverrides(organisationId),
-      subscriptionPlanService.listPlans()
+      subscriptionPlanService.listPlans(),
+      subscriptionRepository.getPrimarySubscription(organisationId),
+      organisationOnboardingRepository.getByOrganisationId(organisationId),
+      provisioningJobRepository.getByOrganisationId(organisationId),
+      organisationReadinessService.evaluateReadiness(organisationId)
     ])
-      .then(([org, mems, logs, ents, ovrs, allPlans]) => {
+      .then(([org, mems, logs, ents, ovrs, allPlans, sub, ob, job, read]) => {
         if (!isMounted) return;
         if (!org) {
           setError(`Organisation '${organisationId}' not found.`);
@@ -148,6 +163,10 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
           setEffectiveEntitlements(ents);
           setOverrides(ovrs);
           setPlans(allPlans);
+          setSubscription(sub);
+          setOnboarding(ob);
+          setProvisioningJob(job);
+          setReadiness(read);
 
           const resolvedPlan =
             allPlans.find((p) => p.id === (org.assignedPlanId || 'plan_legacy_full')) ||
@@ -313,6 +332,19 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
     }
   };
 
+  const handleRetryProvisioning = async () => {
+    if (!provisioningJob || !authUser) return;
+    try {
+      setRetryingJob(true);
+      await organisationProvisioningService.retryProvisioning(authUser.uid, provisioningJob.id);
+      await loadOrganisationData();
+    } catch (err) {
+      alert((err as Error).message || 'Failed to retry provisioning');
+    } finally {
+      setRetryingJob(false);
+    }
+  };
+
   const getStatusBadge = (status?: TenantStatus) => {
     const s = status || 'active';
     switch (s) {
@@ -468,6 +500,80 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
                   Contact Email
                 </span>
                 <span className="text-slate-200 font-mono mt-1 block">{organisation?.email || '—'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SaaS 3A: Customer Provisioning & Onboarding Status Card */}
+          <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-700 pb-3">
+              <div>
+                <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                  Provisioning & Onboarding Status
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Tenant provisioning lifecycle, admin invitation, and setup readiness.
+                </p>
+              </div>
+
+              {provisioningJob?.jobStatus === 'failed' && (
+                <button
+                  type="button"
+                  onClick={handleRetryProvisioning}
+                  disabled={retryingJob}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${retryingJob ? 'animate-spin' : ''}`} />
+                  Retry Provisioning
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="p-3 bg-slate-900/60 border border-slate-700/50 rounded-lg space-y-1">
+                <span className="text-slate-400 uppercase tracking-wider block font-semibold text-[10px]">
+                  Provisioning Job
+                </span>
+                <span className={`inline-block font-semibold px-2 py-0.5 rounded text-[11px] ${
+                  provisioningJob?.jobStatus === 'completed'
+                    ? 'text-emerald-400 bg-emerald-500/10'
+                    : provisioningJob?.jobStatus === 'failed'
+                    ? 'text-rose-400 bg-rose-500/10'
+                    : 'text-indigo-400 bg-indigo-500/10'
+                }`}>
+                  {(provisioningJob?.jobStatus || 'completed').toUpperCase()}
+                </span>
+                {provisioningJob?.error && (
+                  <p className="text-[11px] text-rose-300 mt-1">{provisioningJob.error}</p>
+                )}
+              </div>
+
+              <div className="p-3 bg-slate-900/60 border border-slate-700/50 rounded-lg space-y-1">
+                <span className="text-slate-400 uppercase tracking-wider block font-semibold text-[10px]">
+                  Onboarding Progress
+                </span>
+                <span className="font-semibold text-white block text-sm">
+                  {(onboarding?.onboardingStatus || 'completed').replace(/_/g, ' ').toUpperCase()}
+                </span>
+                <span className="text-slate-400 block text-[11px]">
+                  {onboarding?.completedSteps?.length || 12} of 12 steps complete
+                </span>
+              </div>
+
+              <div className="p-3 bg-slate-900/60 border border-slate-700/50 rounded-lg space-y-1">
+                <span className="text-slate-400 uppercase tracking-wider block font-semibold text-[10px]">
+                  Go-Live Readiness
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`font-semibold text-sm ${readiness?.isReady ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {readiness?.percentage || 100}% Ready
+                  </span>
+                  {readiness?.isReady && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                </div>
+                <span className="text-slate-400 block text-[11px]">
+                  {readiness?.isReady ? 'All required conditions met' : 'Setup incomplete'}
+                </span>
               </div>
             </div>
           </div>

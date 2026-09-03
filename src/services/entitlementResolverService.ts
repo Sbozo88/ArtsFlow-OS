@@ -223,6 +223,13 @@ export class EntitlementResolverService {
     return ent.enabled === true;
   }
 
+  async isFeatureEnabled(
+    organisationId: string,
+    featureKey: string
+  ): Promise<boolean> {
+    return this.hasFeature(organisationId, featureKey);
+  }
+
   /**
    * Returns the numeric limit value for an organisation feature, or null for unlimited.
    */

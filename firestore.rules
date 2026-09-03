@@ -342,6 +342,33 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    // SaaS 3A: Customer Provisioning & School Onboarding Security Rules
+    match /organisationOnboarding/{onboardingId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow create: if isPlatformAdmin() || (
+        signedIn() &&
+        role() == 'organisation_admin' &&
+        sameOrganisation(request.resource.data.organisationId)
+      );
+      allow update: if isPlatformAdmin() || (
+        signedIn() &&
+        role() == 'organisation_admin' &&
+        sameOrganisation(resource.data.organisationId) &&
+        request.resource.data.organisationId == resource.data.organisationId
+      );
+      allow delete: if false;
+    }
+
+    match /provisioningJobs/{jobId} {
+      allow read: if isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /organisationTemplates/{templateId} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
     match /{collectionName}/{docId} {
       allow read: if isPeopleCollection(collectionName)
         && inOrganisationOnRead() && isViewer();

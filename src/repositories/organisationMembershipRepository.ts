@@ -77,6 +77,13 @@ export class OrganisationMembershipRepository extends BaseRepository<Organisatio
   ): Promise<void> {
     await this.update(organisationId, actorId, id, { membershipStatus } as unknown as Partial<Omit<OrganisationMembership, keyof import('../types').BaseRecord>>);
   }
+
+  async save(membership: OrganisationMembership): Promise<void> {
+    const { doc, setDoc } = await import('firebase/firestore');
+    const { db } = await import('../lib/firebase');
+    const docRef = doc(db, this.collectionName, membership.id);
+    await setDoc(docRef, membership, { merge: true });
+  }
 }
 
 export const organisationMembershipRepository = new OrganisationMembershipRepository();

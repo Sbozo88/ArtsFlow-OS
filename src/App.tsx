@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { ProtectedRoute, OnboardingRoute, PlatformRoute, FeatureRoute } from './components/layout/AuthRoutes';
 import { LoginPage } from './features/auth/LoginPage';
@@ -152,6 +152,7 @@ import { PlatformFeaturesPage } from './features/platform/pages/PlatformFeatures
 import { PlatformSubscriptionsPage } from './features/platform/pages/PlatformSubscriptionsPage';
 import { OrganisationBillingPage } from './features/billing/pages/OrganisationBillingPage';
 import { BillingCheckoutReturnPage } from './features/billing/pages/BillingCheckoutReturnPage';
+import { OrganisationOnboardingPage } from './features/onboarding/pages/OrganisationOnboardingPage';
 
 function App() {
   return (
@@ -209,6 +210,12 @@ function App() {
                 <Route path="audit" element={<PlatformAuditPage />} />
                 <Route path="settings" element={<PlatformSettingsPage />} />
               </Route>
+            </Route>
+
+            {/* SaaS 3A: Customer Guided Onboarding */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/onboarding" element={<OrganisationOnboardingPage />} />
+              <Route path="/setup" element={<Navigate to="/onboarding" replace />} />
             </Route>
 
             {/* Protected Application Routes */}

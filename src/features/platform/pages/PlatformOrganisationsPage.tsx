@@ -11,11 +11,14 @@ import {
   Sparkles
 } from 'lucide-react';
 import {
-  platformOrganisationService,
-  type CreateOrganisationInput
+  platformOrganisationService
 } from '../../../services/platformOrganisationService';
+import { organisationProvisioningService } from '../../../services/provisioning/organisationProvisioningService';
+import { onboardingTemplateService } from '../../../services/onboarding/onboardingTemplateService';
+import { subscriptionPlanRepository } from '../../../repositories/subscriptionPlanRepository';
+import { organisationOnboardingRepository } from '../../../repositories/organisationOnboardingRepository';
 import { useAuth } from '../../../contexts/AuthContext';
-import type { Organisation, TenantStatus } from '../../../types';
+import type { Organisation, TenantStatus, SubscriptionPlan, OrganisationTemplate, ProvisioningMode } from '../../../types';
 
 export const PlatformOrganisationsPage: React.FC = () => {
   const { user } = useAuth();
@@ -35,6 +38,10 @@ export const PlatformOrganisationsPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [templates, setTemplates] = useState<OrganisationTemplate[]>([]);
+  const [onboardingMap, setOnboardingMap] = useState<Map<string, string>>(new Map());
+
   const [formData, setFormData] = useState({
     name: '',
     organisationType: 'music_and_dance',
@@ -42,15 +49,32 @@ export const PlatformOrganisationsPage: React.FC = () => {
     primaryAdminName: '',
     phone: '',
     address: '',
-    initialStatus: 'active' as TenantStatus
+    country: 'South Africa',
+    currency: 'ZAR',
+    timezone: 'Africa/Johannesburg',
+    planId: 'plan_professional',
+    provisioningMode: 'trial' as ProvisioningMode,
+    trialDays: 14,
+    organisationTemplate: 'school_music'
   });
 
   const handleRefresh = async () => {
     try {
       setLoading(true);
       setError(null);
-      const list = await platformOrganisationService.listOrganisations();
+      const [list, plansData, obList] = await Promise.all([
+        platformOrganisationService.listOrganisations(),
+        subscriptionPlanRepository.getAll(),
+        organisationOnboardingRepository.getAll()
+      ]);
       setOrganisations(list);
+      setPlans(plansData);
+      setTemplates(onboardingTemplateService.listTemplates());
+      const map = new Map<string, string>();
+      for (const ob of obList) {
+        map.set(ob.organisationId, ob.onboardingStatus);
+      }
+      setOnboardingMap(map);
     } catch (err) {
       setError((err as Error).message || 'Failed to fetch organisations');
     } finally {
@@ -60,19 +84,27 @@ export const PlatformOrganisationsPage: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    platformOrganisationService
-      .listOrganisations()
-      .then((list) => {
-        if (isMounted) {
-          setOrganisations(list);
-          setLoading(false);
+    Promise.all([
+      platformOrganisationService.listOrganisations(),
+      subscriptionPlanRepository.getAll(),
+      organisationOnboardingRepository.getAll()
+    ])
+      .then(([list, plansData, obList]) => {
+        if (!isMounted) return;
+        setOrganisations(list);
+        setPlans(plansData);
+        setTemplates(onboardingTemplateService.listTemplates());
+        const map = new Map<string, string>();
+        for (const ob of obList) {
+          map.set(ob.organisationId, ob.onboardingStatus);
         }
+        setOnboardingMap(map);
+        setLoading(false);
       })
       .catch((err) => {
-        if (isMounted) {
-          setError((err as Error).message || 'Failed to fetch organisations');
-          setLoading(false);
-        }
+        if (!isMounted) return;
+        setError((err as Error).message || 'Failed to fetch organisations');
+        setLoading(false);
       });
 
     return () => {
@@ -131,18 +163,22 @@ export const PlatformOrganisationsPage: React.FC = () => {
         return;
       }
 
-      const input: CreateOrganisationInput = {
-        name: formData.name.trim(),
+      await organisationProvisioningService.provisionOrganisation(user?.uid || 'super_admin', {
+        organisationName: formData.name.trim(),
         organisationType: formData.organisationType,
-        primaryAdminEmail: formData.primaryAdminEmail.trim() || undefined,
+        primaryAdminEmail: formData.primaryAdminEmail.trim(),
         primaryAdminName: formData.primaryAdminName.trim() || undefined,
-        phone: formData.phone.trim() || undefined,
+        contactPhone: formData.phone.trim() || undefined,
         address: formData.address.trim() || undefined,
-        initialStatus: formData.initialStatus,
-        actorId: user?.uid || 'super_admin'
-      };
+        country: formData.country,
+        currency: formData.currency,
+        timezone: formData.timezone,
+        planId: formData.planId || (plans[0]?.id ?? 'plan_professional'),
+        provisioningMode: formData.provisioningMode,
+        trialDays: formData.trialDays,
+        organisationTemplate: formData.organisationTemplate || undefined
+      });
 
-      await platformOrganisationService.createOrganisation(input);
       handleCloseModal();
       setFormData({
         name: '',
@@ -151,13 +187,33 @@ export const PlatformOrganisationsPage: React.FC = () => {
         primaryAdminName: '',
         phone: '',
         address: '',
-        initialStatus: 'active'
+        country: 'South Africa',
+        currency: 'ZAR',
+        timezone: 'Africa/Johannesburg',
+        planId: 'plan_professional',
+        provisioningMode: 'trial',
+        trialDays: 14,
+        organisationTemplate: 'school_music'
       });
       await handleRefresh();
     } catch (err) {
-      setFormError((err as Error).message || 'Failed to create organisation');
+      setFormError((err as Error).message || 'Failed to provision organisation');
     } finally {
       setFormSubmitting(false);
+    }
+  };
+
+  const getOnboardingBadge = (obStatus?: string) => {
+    switch (obStatus) {
+      case 'completed':
+        return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+      case 'ready_for_review':
+        return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+      case 'in_progress':
+        return 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30';
+      case 'not_started':
+      default:
+        return 'text-slate-400 bg-slate-800 border-slate-700';
     }
   };
 
@@ -279,6 +335,7 @@ export const PlatformOrganisationsPage: React.FC = () => {
                 <th className="py-3 px-4">Organisation</th>
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Tenant Status</th>
+                <th className="py-3 px-4">Onboarding</th>
                 <th className="py-3 px-4">Assigned Plan</th>
                 <th className="py-3 px-4">Primary Admin</th>
                 <th className="py-3 px-4">Created</th>
@@ -288,19 +345,20 @@ export const PlatformOrganisationsPage: React.FC = () => {
             <tbody className="divide-y divide-slate-700/50 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-xs text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-xs text-slate-400">
                     Loading organisations...
                   </td>
                 </tr>
               ) : filteredOrganisations.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-xs text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-xs text-slate-400">
                     No organisations match your search or filters.
                   </td>
                 </tr>
               ) : (
                 filteredOrganisations.map((org) => {
                   const status = org.tenantStatus || 'active';
+                  const obStatus = onboardingMap.get(org.id) || (status === 'provisioning' ? 'in_progress' : 'completed');
                   const planLabel = org.assignedPlanId ? org.assignedPlanId.replace(/^plan_/, '') : 'legacy_full';
                   return (
                     <tr key={org.id} className="hover:bg-slate-700/30 transition-colors">
@@ -317,6 +375,11 @@ export const PlatformOrganisationsPage: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadge(status)}`}>
                           {status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${getOnboardingBadge(obStatus)}`}>
+                          {obStatus.replace(/_/g, ' ').toUpperCase()}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-xs">
@@ -397,54 +460,119 @@ export const PlatformOrganisationsPage: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  Organisation Type
+                </label>
+                <select
+                  value={formData.organisationType}
+                  onChange={(e) => setFormData({ ...formData, organisationType: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="music_and_dance">Music & Dance</option>
+                  <option value="music">Music</option>
+                  <option value="dance">Dance</option>
+                  <option value="drama">Drama</option>
+                  <option value="performing_arts">Performing Arts</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Organisation Type
+                    Primary Admin Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.primaryAdminEmail}
+                    onChange={(e) => setFormData({ ...formData, primaryAdminEmail: e.target.value })}
+                    placeholder="admin@school.example.com"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Primary Admin Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.primaryAdminName}
+                    onChange={(e) => setFormData({ ...formData, primaryAdminName: e.target.value })}
+                    placeholder="e.g. Principal Jane Doe"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Subscription Plan *
                   </label>
                   <select
-                    value={formData.organisationType}
-                    onChange={(e) => setFormData({ ...formData, organisationType: e.target.value })}
+                    value={formData.planId}
+                    onChange={(e) => setFormData({ ...formData, planId: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
                   >
-                    <option value="music_and_dance">Music & Dance</option>
-                    <option value="music">Music</option>
-                    <option value="dance">Dance</option>
-                    <option value="drama">Drama</option>
-                    <option value="performing_arts">Performing Arts</option>
+                    {plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.code})
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Initial Status
+                    Provisioning Mode
                   </label>
                   <select
-                    value={formData.initialStatus}
-                    onChange={(e) => setFormData({ ...formData, initialStatus: e.target.value as TenantStatus })}
+                    value={formData.provisioningMode}
+                    onChange={(e) => setFormData({ ...formData, provisioningMode: e.target.value as ProvisioningMode })}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
                   >
-                    <option value="active">Active (Operational)</option>
-                    <option value="provisioning">Provisioning (Setup)</option>
-                    <option value="trial">Trial</option>
+                    <option value="trial">14-Day Commercial Trial</option>
+                    <option value="manual_active">Manual Contract (Active)</option>
+                    <option value="complimentary">Complimentary Grant</option>
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  Primary Admin Email (Optional)
-                </label>
-                <input
-                  type="email"
-                  value={formData.primaryAdminEmail}
-                  onChange={(e) => setFormData({ ...formData, primaryAdminEmail: e.target.value })}
-                  placeholder="admin@school.example.com"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  If provided, an initial invited organisation admin membership will be provisioned.
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Organisation Template
+                  </label>
+                  <select
+                    value={formData.organisationTemplate}
+                    onChange={(e) => setFormData({ ...formData, organisationTemplate: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">None (Generic)</option>
+                    {templates.map((t) => (
+                      <option key={t.id} value={t.code}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                    Currency & Country
+                  </label>
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="ZAR">ZAR (South Africa)</option>
+                    <option value="USD">USD (United States)</option>
+                    <option value="GBP">GBP (United Kingdom)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-slate-700 flex justify-end gap-2">

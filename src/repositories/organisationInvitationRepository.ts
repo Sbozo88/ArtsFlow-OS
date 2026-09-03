@@ -49,6 +49,13 @@ export class OrganisationInvitationRepository extends BaseRepository<Organisatio
       ...extra
     } as Partial<Omit<OrganisationInvitation, keyof import('../types').BaseRecord>>);
   }
+
+  async save(invitation: OrganisationInvitation): Promise<void> {
+    const { doc, setDoc } = await import('firebase/firestore');
+    const { db } = await import('../lib/firebase');
+    const docRef = doc(db, this.collectionName, invitation.id);
+    await setDoc(docRef, invitation, { merge: true });
+  }
 }
 
 export const organisationInvitationRepository = new OrganisationInvitationRepository();
