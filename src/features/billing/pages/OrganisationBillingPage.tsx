@@ -3,9 +3,7 @@ import {
   CreditCard,
   Clock,
   AlertTriangle,
-  Info,
-  Layers,
-  CheckCircle2
+  Info
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { subscriptionResolverService } from '../../../services/billing/subscriptionResolverService';
@@ -13,6 +11,7 @@ import { subscriptionPlanRepository } from '../../../repositories/subscriptionPl
 import { organisationRepository } from '../../../repositories/organisationRepository';
 import { billingCustomerRepository } from '../../../repositories/billingCustomerRepository';
 import { UsageMetersCard } from '../components/UsageMetersCard';
+import { PlanComparisonView } from '../components/PlanComparisonView';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import type {
   Subscription,
@@ -197,31 +196,8 @@ export const OrganisationBillingPage: React.FC = () => {
       {/* Real-time Usage & Plan Limits Meter Card */}
       <UsageMetersCard />
 
-      {/* Plan Features Overview */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-xs">
-        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <Layers className="w-5 h-5 text-indigo-600" />
-          <span>Included Feature Capabilities</span>
-        </h3>
-        <p className="text-xs text-slate-500">
-          Features enabled under your active {plan?.name || 'subscription'} tier. Custom overrides may expand these entitlements.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-          {[
-            'Core Student & Class Management',
-            'Full Attendance & Session Tracking',
-            'Staff Roster & Time Verification',
-            'Music & Dance Creative Modules',
-            'Events & Rehearsal Scheduling',
-            'Workflow Automation Engine'
-          ].map((feature) => (
-            <div key={feature} className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{feature}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Plan Features & Upgrade Opportunity Overview */}
+      <PlanComparisonView currentPlanCode={plan?.code} />
     </div>
   );
 };

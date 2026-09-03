@@ -55,7 +55,7 @@ export const METER_DEFINITIONS: Record<LimitMeterKey, MeterMetadata> = {
 
 export class UsageMeteringService {
   public static readonly WARNING_THRESHOLD_PERCENT = 80;
-  public static readonly CRITICAL_THRESHOLD_PERCENT = 95;
+  public static readonly CRITICAL_THRESHOLD_PERCENT = 90;
 
   /**
    * Determine the usage status based on current consumption vs plan limit.

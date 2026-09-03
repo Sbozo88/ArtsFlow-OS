@@ -34,39 +34,65 @@ export const STANDARD_PLANS: PlanDefinition[] = [
   {
     plan: {
       id: 'plan_starter',
-      name: 'Starter',
+      name: 'ArtsFlow Starter',
       code: 'starter',
-      description: 'Essential student administration, group classes, attendance, and guardian portal.',
+      description: 'Essential student administration, group classes, attendance, music & dance tracking, core finance, and guardian portal.',
       planStatus: 'active',
       displayOrder: 1,
       isPublic: true,
       recommended: false
     },
     entitlements: {
+      // Core
       'core.learners': true,
       'core.guardians': true,
       'core.staff': true,
       'core.programmes': true,
       'core.groups': true,
       'core.attendance': true,
-      'events.core': true,
       'communication.core': true,
       'documents.core': true,
       'guardian_portal': true,
+      // Music (Standard on all plans — ArtsFlow identity)
+      'music.core': true,
+      'music.instruments': true,
+      'music.repertoire': true,
+      'music.practice': true,
+      'music.assessments': true,
+      // Dance (Standard on all plans — ArtsFlow identity)
+      'dance.core': true,
+      'dance.choreography': true,
+      'dance.practice': true,
+      'dance.assessments': true,
+      'dance.costumes': true,
+      // Core Finance
+      'finance.core': true,
+      'finance.reporting': false,
+      // Analytics & Automation
+      'analytics.core': true,
+      'analytics.advanced': false,
+      'automation.core': false,
+      // Staff Ops & Events (Professional Boundaries)
+      'events.core': false,
+      'events.transport': false,
+      'events.consent': false,
+      'staff_operations.core': false,
+      // Numeric Limits
       'limits.learners': { enabled: true, limitValue: 100 },
-      'limits.staff_users': { enabled: true, limitValue: 5 },
-      'limits.storage_mb': { enabled: true, limitValue: 1000 },
-      'limits.monthly_communications': { enabled: true, limitValue: 200 }
+      'limits.staff_users': { enabled: true, limitValue: 10 },
+      'limits.storage_mb': { enabled: true, limitValue: 5000 }, // 5 GB
+      'limits.monthly_communications': { enabled: true, limitValue: 200 },
+      'limits.automation_runs': { enabled: false, limitValue: 0 }
     }
   },
 
-  // 3. Professional Plan
+  // 3. Professional Plan (Most Popular / Recommended)
   {
     plan: {
       id: 'plan_professional',
-      name: 'Professional',
+      name: 'ArtsFlow Professional',
       code: 'professional',
-      description: 'Comprehensive arts academy operations with Music, Dance, Events, and School Invoicing.',
+      description: 'Run your complete arts operation with Events, Transport, Consent, Staff Timesheets, Advanced Analytics, and Automation.',
       planStatus: 'active',
       displayOrder: 2,
       isPublic: true,
@@ -92,28 +118,33 @@ export const STANDARD_PLANS: PlanDefinition[] = [
       'dance.practice': true,
       'dance.assessments': true,
       'dance.costumes': true,
-      // Events & Consent
+      // Events, Transport & Consent
       'events.core': true,
       'events.transport': true,
       'events.consent': true,
-      // Finance
+      // Finance & Reporting
       'finance.core': true,
-      // Staff Ops
+      'finance.reporting': true,
+      // Staff Operations
       'staff_operations.core': true,
       // Communications & Portals
       'communication.core': true,
       'documents.core': true,
-      'analytics.core': true,
       'guardian_portal': true,
-      // Limits
-      'limits.learners': { enabled: true, limitValue: 350 },
-      'limits.staff_users': { enabled: true, limitValue: 20 },
-      'limits.storage_mb': { enabled: true, limitValue: 5000 },
-      'limits.monthly_communications': { enabled: true, limitValue: 1000 }
+      // Analytics & Automation
+      'analytics.core': true,
+      'analytics.advanced': true,
+      'automation.core': true,
+      // Numeric Limits
+      'limits.learners': { enabled: true, limitValue: 500 },
+      'limits.staff_users': { enabled: true, limitValue: 50 },
+      'limits.storage_mb': { enabled: true, limitValue: 25000 }, // 25 GB
+      'limits.monthly_communications': { enabled: true, limitValue: 2000 },
+      'limits.automation_runs': { enabled: true, limitValue: 1000 }
     }
   },
 
-  // 4. Premium Plan
+  // 4. Premium Plan (Internal / Custom non-public compatibility tier)
   {
     plan: {
       id: 'plan_premium',
@@ -122,7 +153,7 @@ export const STANDARD_PLANS: PlanDefinition[] = [
       description: 'Advanced workflow automation, financial reporting, and integrations for scaling arts organisations.',
       planStatus: 'active',
       displayOrder: 3,
-      isPublic: true,
+      isPublic: false,
       recommended: false
     },
     entitlements: {
@@ -168,7 +199,7 @@ export const STANDARD_PLANS: PlanDefinition[] = [
     }
   },
 
-  // 5. Enterprise Plan
+  // 5. Enterprise Plan (Internal / Dedicated tier)
   {
     plan: {
       id: 'plan_enterprise',
@@ -177,7 +208,7 @@ export const STANDARD_PLANS: PlanDefinition[] = [
       description: 'Unlimited institutional access, student portal, custom developer API, and dedicated tier.',
       planStatus: 'active',
       displayOrder: 4,
-      isPublic: true,
+      isPublic: false,
       recommended: false
     },
     entitlements: STANDARD_PLATFORM_FEATURES.reduce<Record<string, { enabled: boolean; limitValue: null }>>((acc, f) => {

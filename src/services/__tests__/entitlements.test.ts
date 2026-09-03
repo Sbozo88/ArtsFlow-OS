@@ -83,11 +83,16 @@ describe('SaaS 2A — Plans, Features & Entitlements Test Suite', () => {
       const learnerRecord = records.find((r) => r.featureKey === 'core.learners');
       expect(learnerRecord?.enabled).toBe(true);
 
+      // Music and Dance are included in Starter (ArtsFlow identity)
       const musicRecord = records.find((r) => r.featureKey === 'music.core');
-      expect(musicRecord?.enabled).toBe(false);
+      expect(musicRecord?.enabled).toBe(true);
 
-      const financeRecord = records.find((r) => r.featureKey === 'finance.core');
-      expect(financeRecord?.enabled).toBe(false);
+      const danceRecord = records.find((r) => r.featureKey === 'dance.core');
+      expect(danceRecord?.enabled).toBe(true);
+
+      // Events is a Professional boundary
+      const eventsRecord = records.find((r) => r.featureKey === 'events.core');
+      expect(eventsRecord?.enabled).toBe(false);
     });
 
     it('validates feature dependencies correctly', () => {
@@ -135,7 +140,7 @@ describe('SaaS 2A — Plans, Features & Entitlements Test Suite', () => {
   });
 
   describe('3. Standard Plan Feature Resolution', () => {
-    it('restricts modular features for Starter tier', async () => {
+    it('enables core, music, dance, finance and restricts events/automation for Starter tier', async () => {
       vi.spyOn(organisationRepository, 'getById').mockResolvedValue(mockStarterOrg);
       vi.spyOn(subscriptionPlanRepository, 'getById').mockResolvedValue(null);
       vi.spyOn(organisationEntitlementOverrideRepository, 'getByOrganisation').mockResolvedValue([]);
@@ -144,18 +149,22 @@ describe('SaaS 2A — Plans, Features & Entitlements Test Suite', () => {
       const hasMusic = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'music.core');
       const hasDance = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'dance.core');
       const hasFinance = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'finance.core');
+      const hasEvents = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'events.core');
+      const hasAutomation = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'automation.core');
 
       expect(hasLearners).toBe(true);
-      expect(hasMusic).toBe(false);
-      expect(hasDance).toBe(false);
-      expect(hasFinance).toBe(false);
+      expect(hasMusic).toBe(true);
+      expect(hasDance).toBe(true);
+      expect(hasFinance).toBe(true);
+      expect(hasEvents).toBe(false);
+      expect(hasAutomation).toBe(false);
 
       // Starter learner limit
       const learnerLimit = await entitlementResolverService.getLimit(ORG_STARTER_ID, 'limits.learners');
       expect(learnerLimit).toBe(100);
     });
 
-    it('enables music, dance, events, finance for Professional tier', async () => {
+    it('enables music, dance, events, finance, automation, and staff ops for Professional tier', async () => {
       vi.spyOn(organisationRepository, 'getById').mockResolvedValue(mockProOrg);
       vi.spyOn(subscriptionPlanRepository, 'getById').mockResolvedValue(null);
       vi.spyOn(organisationEntitlementOverrideRepository, 'getByOrganisation').mockResolvedValue([]);
@@ -163,13 +172,19 @@ describe('SaaS 2A — Plans, Features & Entitlements Test Suite', () => {
       const hasMusic = await entitlementResolverService.hasFeature(ORG_PRO_ID, 'music.core');
       const hasDance = await entitlementResolverService.hasFeature(ORG_PRO_ID, 'dance.core');
       const hasFinance = await entitlementResolverService.hasFeature(ORG_PRO_ID, 'finance.core');
+      const hasEvents = await entitlementResolverService.hasFeature(ORG_PRO_ID, 'events.core');
       const hasAutomation = await entitlementResolverService.hasFeature(ORG_PRO_ID, 'automation.core');
+      const hasStaffOps = await entitlementResolverService.hasFeature(ORG_PRO_ID, 'staff_operations.core');
 
       expect(hasMusic).toBe(true);
       expect(hasDance).toBe(true);
       expect(hasFinance).toBe(true);
-      // Automation is premium/enterprise only
-      expect(hasAutomation).toBe(false);
+      expect(hasEvents).toBe(true);
+      expect(hasAutomation).toBe(true);
+      expect(hasStaffOps).toBe(true);
+
+      const proLearnerLimit = await entitlementResolverService.getLimit(ORG_PRO_ID, 'limits.learners');
+      expect(proLearnerLimit).toBe(500);
     });
   });
 
@@ -181,9 +196,9 @@ describe('SaaS 2A — Plans, Features & Entitlements Test Suite', () => {
       const activeOverride: OrganisationEntitlementOverride = {
         id: 'ovr_123',
         organisationId: ORG_STARTER_ID,
-        featureKey: 'music.core',
+        featureKey: 'events.core',
         overrideType: 'enable',
-        reason: 'Special music pilot trial for Q1',
+        reason: 'Special events pilot trial for Q1',
         startsAt: '2026-01-01T00:00:00Z',
         status: 'active',
         createdAt: '2026-01-01T00:00:00Z',
@@ -194,13 +209,13 @@ describe('SaaS 2A — Plans, Features & Entitlements Test Suite', () => {
 
       vi.spyOn(organisationEntitlementOverrideRepository, 'getActiveByOrganisation').mockResolvedValue([activeOverride]);
 
-      const hasMusic = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'music.core');
-      expect(hasMusic).toBe(true);
+      const hasEvents = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'events.core');
+      expect(hasEvents).toBe(true);
 
       const ents = await entitlementResolverService.getOrganisationEntitlements(ORG_STARTER_ID);
-      expect(ents['music.core'].enabled).toBe(true);
-      expect(ents['music.core'].source).toBe('override');
-      expect(ents['music.core'].overrideReason).toBe('Special music pilot trial for Q1');
+      expect(ents['events.core'].enabled).toBe(true);
+      expect(ents['events.core'].source).toBe('override');
+      expect(ents['events.core'].overrideReason).toBe('Special events pilot trial for Q1');
     });
 
     it('overrides plan to force-disable a feature', async () => {
@@ -237,9 +252,9 @@ describe('SaaS 2A — Plans, Features & Entitlements Test Suite', () => {
       // Verify active overrides filter returns empty when override expired
       vi.spyOn(organisationEntitlementOverrideRepository, 'getActiveByOrganisation').mockResolvedValue([]);
 
-      const hasMusic = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'music.core');
+      const hasEvents = await entitlementResolverService.hasFeature(ORG_STARTER_ID, 'events.core');
       // Should fall back to plan entitlement (starter => false)
-      expect(hasMusic).toBe(false);
+      expect(hasEvents).toBe(false);
     });
 
     it('requires a mandatory justification reason to create an override', async () => {

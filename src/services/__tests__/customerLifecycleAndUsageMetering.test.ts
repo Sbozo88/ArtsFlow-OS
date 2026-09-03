@@ -315,7 +315,7 @@ describe('Fast Phase 4: Customer Lifecycle & Usage Metering Service', () => {
       const summary = await usageMeteringService.getUsageMeters(orgId);
 
       expect(summary.meters['limits.learners'].percentUsed).toBe(90);
-      expect(summary.meters['limits.learners'].status).toBe('warning');
+      expect(summary.meters['limits.learners'].status).toBe('critical');
 
       expect(summary.meters['limits.staff_users'].percentUsed).toBe(40);
       expect(summary.meters['limits.staff_users'].status).toBe('ok');

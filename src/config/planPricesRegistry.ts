@@ -25,8 +25,8 @@ export const STANDARD_TEST_PRICES: PlanPriceConfig[] = [
     planId: 'plan_professional',
     planCode: 'professional',
     currency: 'ZAR',
-    monthlyAmount: 129900, // R1,299.00 / month
-    annualAmount: 1299000  // R12,990.00 / year
+    monthlyAmount: 99900,  // R999.00 / month
+    annualAmount: 999000   // R9,990.00 / year (~17% discount)
   },
   {
     planId: 'plan_premium',
