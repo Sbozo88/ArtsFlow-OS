@@ -54,14 +54,11 @@ export const OnboardingRoute: React.FC = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (authUser?.accountStatus === 'disabled') return <Navigate to="/access-disabled" replace />;
   
+  if (authUser?.role === 'guardian') return <Navigate to="/portal" replace />;
+  if (authUser?.role === 'learner') return <Navigate to="/learner-portal" replace />;
+
   if (authUser?.platformRole === 'super_admin' && !organisationId) {
     return <Navigate to="/platform" replace />;
-  }
-
-  if (user && organisationId) {
-    if (authUser?.role === 'guardian') return <Navigate to="/portal" replace />;
-    if (authUser?.role === 'learner') return <Navigate to="/learner-portal" replace />;
-    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

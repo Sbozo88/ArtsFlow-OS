@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -83,7 +83,7 @@ export function LoginPage() {
       } else if (authUser.role === 'learner') {
         navigate('/learner-portal', { replace: true });
       } else {
-        navigate('/', { replace: true });
+        navigate('/dashboard', { replace: true });
       }
     }
   }, [user, authUser, authLoading, navigate]);
@@ -106,9 +106,9 @@ export function LoginPage() {
         navigate('/learner-portal', { replace: true });
         return;
       }
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch {
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   };
 
@@ -358,17 +358,31 @@ export function LoginPage() {
               </div>
 
               <div className="mt-6 text-center text-xs text-slate-500">
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setIsLogin(!isLogin);
-                    setError('');
-                  }} 
-                  className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors ml-0.5"
-                >
-                  {isLogin ? 'Sign up' : 'Sign in'}
-                </button>
+                {isLogin ? (
+                  <>
+                    <span>Don't have an account? </span>
+                    <Link
+                      to="/start-trial"
+                      className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors ml-0.5"
+                    >
+                      Start 14-Day Free Trial
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <span>Already have an account? </span>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(true);
+                        setError('');
+                      }} 
+                      className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors ml-0.5"
+                    >
+                      Sign in
+                    </button>
+                  </>
+                )}
               </div>
             </>
           ) : (

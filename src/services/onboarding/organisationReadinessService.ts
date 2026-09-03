@@ -103,13 +103,11 @@ export class OrganisationReadinessService {
     // 5. Groups Created Check
     let groupCount: number;
     try {
-      const groupQ = query(
-        collection(db, 'groups'),
-        where('organisationId', '==', organisationId),
-        where('status', '!=', 'deleted')
-      );
-      const groupSnap = await getDocs(groupQ);
-      groupCount = groupSnap.size;
+      const [progGroupsSnap, groupsSnap] = await Promise.all([
+        getDocs(query(collection(db, 'programmeGroups'), where('organisationId', '==', organisationId), where('status', '!=', 'deleted'))).catch(() => null),
+        getDocs(query(collection(db, 'groups'), where('organisationId', '==', organisationId), where('status', '!=', 'deleted'))).catch(() => null)
+      ]);
+      groupCount = (progGroupsSnap?.size || 0) + (groupsSnap?.size || 0);
     } catch {
       groupCount = 0;
     }

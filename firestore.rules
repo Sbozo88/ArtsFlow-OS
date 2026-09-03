@@ -235,14 +235,18 @@ service cloud.firestore {
           && !hasUserProfile()
           && orgId == 'org_' + request.auth.uid
           && request.resource.data.keys().hasOnly([
-            'id', 'organisationId', 'name', 'organisationType', 'email', 'phone',
-            'address', 'status', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+            'id', 'organisationId', 'name', 'organisationType', 'slug', 'email', 'phone',
+            'address', 'tenantStatus', 'assignedPlanId', 'billingMode', 'onboardingStatus',
+            'status', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
           ])
           && request.resource.data.id == orgId
           && request.resource.data.organisationId == orgId
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 160
+          && (!('tenantStatus' in request.resource.data) || request.resource.data.tenantStatus == 'trial')
+          && (!('assignedPlanId' in request.resource.data) || request.resource.data.assignedPlanId == 'plan_professional')
+          && (!('billingMode' in request.resource.data) || request.resource.data.billingMode == 'manual')
           && validNewBaseRecord(orgId));
       allow update: if isPlatformAdmin()
         || (sameOrganisation(orgId) && isAdmin() && validBaseRecordUpdate()
@@ -254,9 +258,15 @@ service cloud.firestore {
 
     match /organisationSettings/{orgId} {
       allow read: if sameOrganisation(orgId) && isViewer();
-      allow create: if sameOrganisation(orgId)
+      allow create: if isPlatformAdmin() || (
+        sameOrganisation(orgId)
         && isAdmin()
-        && request.resource.data.organisationId == orgId;
+        && request.resource.data.organisationId == orgId
+      ) || (
+        signedIn()
+        && orgId == 'org_' + request.auth.uid
+        && request.resource.data.organisationId == orgId
+      );
       allow update: if sameOrganisation(orgId)
         && isAdmin()
         && request.resource.data.organisationId == resource.data.organisationId;
@@ -326,6 +336,13 @@ service cloud.firestore {
         && isAdmin()
         && request.resource.data.role != 'super_admin'
         && request.resource.data.userId is string
+      ) || (
+        signedIn()
+        && request.resource.data.organisationId == 'org_' + request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.role == 'organisation_admin'
+        && request.resource.data.membershipStatus == 'active'
+        && request.resource.data.status == 'active'
       );
       allow update: if isPlatformAdmin() || (
         inOrganisationOnUpdate()
@@ -359,7 +376,16 @@ service cloud.firestore {
     // SaaS 2B: Trials, Subscriptions & Commercial Billing Security Rules
     match /subscriptions/{subscriptionId} {
       allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
-      allow write: if isPlatformAdmin();
+      allow create: if isPlatformAdmin() || (
+        signedIn()
+        && request.resource.data.organisationId == 'org_' + request.auth.uid
+        && request.resource.data.planId == 'plan_professional'
+        && request.resource.data.subscriptionStatus == 'trialing'
+        && request.resource.data.priceAmount == 0
+        && request.resource.data.billingMode == 'manual'
+        && request.resource.data.status == 'active'
+      );
+      allow update, delete: if isPlatformAdmin();
     }
 
     match /planPrices/{priceId} {
@@ -394,11 +420,18 @@ service cloud.firestore {
         signedIn() &&
         role() == 'organisation_admin' &&
         sameOrganisation(request.resource.data.organisationId)
+      ) || (
+        signedIn() &&
+        request.resource.data.organisationId == 'org_' + request.auth.uid
       );
       allow update: if isPlatformAdmin() || (
         signedIn() &&
         role() == 'organisation_admin' &&
         sameOrganisation(resource.data.organisationId) &&
+        request.resource.data.organisationId == resource.data.organisationId
+      ) || (
+        signedIn() &&
+        resource.data.organisationId == 'org_' + request.auth.uid &&
         request.resource.data.organisationId == resource.data.organisationId
       );
       allow delete: if false;

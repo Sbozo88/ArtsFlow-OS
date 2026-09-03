@@ -18,7 +18,14 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { LearnersPage } from './features/learners/LearnersPage';
 import { LearnerProfilePage } from './features/learners/LearnerProfilePage';
 import { OrganisationSelectionPage } from './features/account/OrganisationSelectionPage';
-import { OnboardingPage } from './features/onboarding/OnboardingPage';
+import { LandingPage } from './features/landing/LandingPage';
+import { PricingPage } from './features/landing/PricingPage';
+import { SelfServiceSignupPage } from './features/auth/SelfServiceSignupPage';
+import { VerifyEmailPage } from './features/auth/VerifyEmailPage';
+import { TermsPage } from './features/legal/TermsPage';
+import { PrivacyPage } from './features/legal/PrivacyPage';
+import { useAuth } from './contexts/AuthContext';
+import { useActiveOrganisation } from './contexts/ActiveOrganisationContext';
 
 // Core layout shells
 import { PlatformLayout } from './components/layout/PlatformLayout';
@@ -178,6 +185,45 @@ const PageFallback = () => (
   </div>
 );
 
+function LandingOrDashboardGate() {
+  const { user, authUser, loading } = useAuth();
+  const { activeOrganisationId: organisationId, isResolvingOrganisation } = useActiveOrganisation();
+
+  if (loading || isResolvingOrganisation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white" role="status" aria-live="polite">
+        <LoadingState message="Loading ArtsFlow OS…" size="md" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LandingPage />;
+  }
+
+  if (authUser?.accountStatus === 'disabled') {
+    return <Navigate to="/access-disabled" replace />;
+  }
+
+  if (authUser?.platformRole === 'super_admin') {
+    return <Navigate to="/platform" replace />;
+  }
+
+  if (authUser?.role === 'guardian') {
+    return <Navigate to="/portal" replace />;
+  }
+
+  if (authUser?.role === 'learner') {
+    return <Navigate to="/learner-portal" replace />;
+  }
+
+  if (!organisationId) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -187,7 +233,16 @@ function App() {
             <Router>
               <Suspense fallback={<PageFallback />}>
                 <Routes>
-                  {/* Public Routes */}
+                  {/* Public Marketing & Acquisition Routes */}
+                  <Route path="/" element={<LandingOrDashboardGate />} />
+                  <Route path="/pricing" element={<PricingPage />} />
+                  <Route path="/start-trial" element={<SelfServiceSignupPage />} />
+                  <Route path="/signup" element={<SelfServiceSignupPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/verify-email" element={<VerifyEmailPage />} />
+
+                  {/* Public Operational Routes */}
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/access-disabled" element={<AccessDisabledPage />} />
                   <Route path="/access-denied" element={<FeatureAccessDeniedPage />} />
@@ -219,11 +274,6 @@ function App() {
                     </Route>
                   </Route>
 
-                  {/* Onboarding Route */}
-                  <Route element={<OnboardingRoute />}>
-                    <Route path="/onboarding" element={<OnboardingPage />} />
-                  </Route>
-
                   {/* SaaS 1B: Platform Super Admin Console Routes */}
                   <Route element={<PlatformRoute />}>
                     <Route path="/platform" element={<PlatformLayout />}>
@@ -243,15 +293,15 @@ function App() {
                   </Route>
 
                   {/* SaaS 3A: Customer Guided Onboarding */}
-                  <Route element={<ProtectedRoute />}>
+                  <Route element={<OnboardingRoute />}>
                     <Route path="/onboarding" element={<OrganisationOnboardingPage />} />
                     <Route path="/setup" element={<Navigate to="/onboarding" replace />} />
                   </Route>
 
                   {/* Protected Application Routes */}
                   <Route element={<ProtectedRoute />}>
-                    <Route path="/" element={<Layout />}>
-                      <Route index element={<DashboardPage />} />
+                    <Route element={<Layout />}>
+                      <Route path="/dashboard" element={<DashboardPage />} />
                       <Route path="account/organisations" element={<MyOrganisationsPage />} />
                       <Route path="learners" element={<LearnersPage />} />
                       <Route path="learners/:id" element={<LearnerProfilePage />} />

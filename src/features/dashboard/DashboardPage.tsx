@@ -46,6 +46,18 @@ export const DashboardPage: React.FC = () => {
   useDocumentTitle('Dashboard');
   const { authUser, organisationId } = useAuth();
   const [onboarding, setOnboarding] = React.useState<OrganisationOnboarding | null>(null);
+  const [dismissChecklist, setDismissChecklist] = React.useState<boolean>(() => {
+    return typeof window !== 'undefined' && organisationId
+      ? localStorage.getItem(`af_dismiss_checklist_${organisationId}`) === 'true'
+      : false;
+  });
+
+  const handleDismissChecklist = () => {
+    if (organisationId) {
+      localStorage.setItem(`af_dismiss_checklist_${organisationId}`, 'true');
+      setDismissChecklist(true);
+    }
+  };
 
   React.useEffect(() => {
     let isMounted = true;
@@ -145,6 +157,93 @@ export const DashboardPage: React.FC = () => {
             Continue Setup
             <ArrowRight className="w-4 h-4" />
           </Link>
+        </div>
+      )}
+
+      {/* SaaS 3A / v1.1 First-Run Post-Onboarding Experience */}
+      {authUser?.role === 'organisation_admin' && onboarding?.onboardingStatus === 'completed' && !dismissChecklist && (
+        <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/40 rounded-2xl text-white shadow-lg space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Welcome to ArtsFlow OS</h3>
+                <p className="text-xs text-slate-300">
+                  Your organisation is live! Here is your quick checklist to begin operating:
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleDismissChecklist}
+              className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-1">
+            <Link
+              to="/learners"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 1</span>
+                <span className="text-emerald-400 font-bold">{learners.length > 0 ? '✓ Added' : 'Pending'}</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Add Learners</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Roster or CSV import</span>
+            </Link>
+
+            <Link
+              to="/staff"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 2</span>
+                <span className="text-slate-400 font-bold">Invite</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Invite Teachers</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Assign permissions</span>
+            </Link>
+
+            <Link
+              to="/sessions"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 3</span>
+                <span className="text-slate-400 font-bold">Schedule</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Schedule Session</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Create term timetable</span>
+            </Link>
+
+            <Link
+              to="/attendance"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 4</span>
+                <span className="text-slate-400 font-bold">Register</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Mark Attendance</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Mobile-friendly register</span>
+            </Link>
+
+            <Link
+              to="/music"
+              className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 hover:bg-slate-800 transition group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold">Step 5</span>
+                <span className="text-slate-400 font-bold">Explore</span>
+              </div>
+              <span className="text-sm font-bold text-white mt-2 group-hover:text-indigo-400 transition-colors">Music & Dance</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Instruments & syllabus</span>
+            </Link>
+          </div>
         </div>
       )}
 

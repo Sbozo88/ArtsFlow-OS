@@ -49,7 +49,7 @@ interface NavGroup {
 }
 
 const navItems: NavGroup[] = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   {
     name: 'People',
     icon: Users,
