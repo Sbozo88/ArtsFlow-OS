@@ -54,12 +54,16 @@ function formatAuthError(error: unknown): string {
   }
 }
 
-export function LoginPage() {
+interface LoginPageProps {
+  initialForgotPassword?: boolean;
+}
+
+export function LoginPage({ initialForgotPassword = false }: LoginPageProps = {}) {
   const navigate = useNavigate();
   const { user, authUser, loading: authLoading } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(initialForgotPassword);
   const [resetSent, setResetSent] = useState(false);
 
   const [email, setEmail] = useState('');
