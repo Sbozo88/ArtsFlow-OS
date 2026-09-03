@@ -18,7 +18,18 @@ import { onboardingTemplateService } from '../../../services/onboarding/onboardi
 import { subscriptionPlanRepository } from '../../../repositories/subscriptionPlanRepository';
 import { organisationOnboardingRepository } from '../../../repositories/organisationOnboardingRepository';
 import { useAuth } from '../../../contexts/AuthContext';
-import type { Organisation, TenantStatus, SubscriptionPlan, OrganisationTemplate, ProvisioningMode } from '../../../types';
+import { PilotKpiBanner } from '../components/PilotKpiBanner';
+import { FoundingPartnerTrackerCard } from '../components/FoundingPartnerTrackerCard';
+import { customerActivationService } from '../../../services/platform/customerActivationService';
+import type {
+  Organisation,
+  TenantStatus,
+  SubscriptionPlan,
+  OrganisationTemplate,
+  ProvisioningMode,
+  PilotKpis,
+  NeedsAttentionItem
+} from '../../../types';
 
 export const PlatformOrganisationsPage: React.FC = () => {
   const { user } = useAuth();
@@ -26,6 +37,11 @@ export const PlatformOrganisationsPage: React.FC = () => {
   const [organisations, setOrganisations] = useState<Organisation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Pilot & Founding Partner State
+  const [pilotKpis, setPilotKpis] = useState<PilotKpis | null>(null);
+  const [attentionMap, setAttentionMap] = useState<Map<string, NeedsAttentionItem>>(new Map());
+  const [quickFilter, setQuickFilter] = useState<'all' | 'trials' | 'onboarding' | 'founding' | 'attention' | 'converted'>('all');
 
   // Filters & Search
   const [search, setSearch] = useState('');
@@ -62,14 +78,22 @@ export const PlatformOrganisationsPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [list, plansData, obList] = await Promise.all([
+      const [list, plansData, obList, kpis, attentionItems] = await Promise.all([
         platformOrganisationService.listOrganisations(),
         subscriptionPlanRepository.getAll(),
-        organisationOnboardingRepository.getAll()
+        organisationOnboardingRepository.getAll(),
+        customerActivationService.getPilotKpis().catch(() => null),
+        customerActivationService.getNeedsAttentionList().catch(() => [])
       ]);
       setOrganisations(list);
       setPlans(plansData);
       setTemplates(onboardingTemplateService.listTemplates());
+      setPilotKpis(kpis);
+      const attMap = new Map<string, NeedsAttentionItem>();
+      for (const item of attentionItems) {
+        attMap.set(item.organisationId, item);
+      }
+      setAttentionMap(attMap);
       const map = new Map<string, string>();
       for (const ob of obList) {
         map.set(ob.organisationId, ob.onboardingStatus);
@@ -83,38 +107,25 @@ export const PlatformOrganisationsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    let isMounted = true;
-    Promise.all([
-      platformOrganisationService.listOrganisations(),
-      subscriptionPlanRepository.getAll(),
-      organisationOnboardingRepository.getAll()
-    ])
-      .then(([list, plansData, obList]) => {
-        if (!isMounted) return;
-        setOrganisations(list);
-        setPlans(plansData);
-        setTemplates(onboardingTemplateService.listTemplates());
-        const map = new Map<string, string>();
-        for (const ob of obList) {
-          map.set(ob.organisationId, ob.onboardingStatus);
-        }
-        setOnboardingMap(map);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError((err as Error).message || 'Failed to fetch organisations');
-        setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    handleRefresh();
   }, []);
 
   // Filtered List
   const filteredOrganisations = useMemo(() => {
     return organisations.filter((org) => {
+      // Quick Filters
+      if (quickFilter === 'founding' && !org.isFoundingPartner) return false;
+      if (quickFilter === 'attention' && !attentionMap.has(org.id)) return false;
+      if (quickFilter === 'trials' && org.tenantStatus !== 'trial') return false;
+      if (quickFilter === 'onboarding' && onboardingMap.get(org.id) === 'completed') return false;
+      if (
+        quickFilter === 'converted' &&
+        org.foundingPartnerStatus !== 'converted' &&
+        org.tenantStatus !== 'active'
+      ) {
+        return false;
+      }
+
       const matchesStatus = statusFilter === 'all' || (org.tenantStatus || 'active') === statusFilter;
       const matchesType = typeFilter === 'all' || org.organisationType === typeFilter;
       const term = search.trim().toLowerCase();
@@ -127,7 +138,7 @@ export const PlatformOrganisationsPage: React.FC = () => {
 
       return matchesStatus && matchesType && matchesSearch;
     });
-  }, [organisations, search, statusFilter, typeFilter]);
+  }, [organisations, search, statusFilter, typeFilter, quickFilter, attentionMap, onboardingMap]);
 
   const handleOpenModal = () => {
     setModalOpen(true);
@@ -282,6 +293,82 @@ export const PlatformOrganisationsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Pilot KPI Banner */}
+      <PilotKpiBanner
+        kpis={pilotKpis}
+        loading={loading}
+        onFilterNeedsAttention={() => setQuickFilter('attention')}
+        onFilterFounding={() => setQuickFilter('founding')}
+      />
+
+      {/* First 10 Founding Partner Tracker */}
+      <FoundingPartnerTrackerCard organisations={organisations} />
+
+      {/* Quick Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setQuickFilter('all')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+            quickFilter === 'all'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+          }`}
+        >
+          All Organisations ({organisations.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickFilter('founding')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+            quickFilter === 'founding'
+              ? 'bg-amber-600 text-white'
+              : 'bg-slate-800 text-amber-400 hover:bg-slate-700 border border-slate-700'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          Founding Partners ({organisations.filter((o) => o.isFoundingPartner).length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickFilter('attention')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+            quickFilter === 'attention'
+              ? 'bg-rose-600 text-white'
+              : 'bg-slate-800 text-rose-400 hover:bg-slate-700 border border-slate-700'
+          }`}
+        >
+          <AlertTriangle className="w-3.5 h-3.5" />
+          Needs Attention ({attentionMap.size})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickFilter('trials')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+            quickFilter === 'trials'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+          }`}
+        >
+          Active Trials ({organisations.filter((o) => o.tenantStatus === 'trial').length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setQuickFilter('converted')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+            quickFilter === 'converted'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-slate-800 text-emerald-400 hover:bg-slate-700 border border-slate-700'
+          }`}
+        >
+          Converted Paid
+        </button>
+      </div>
+
       {/* Filter & Search Bar */}
       <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center gap-3">
         <div className="relative flex-1">
@@ -363,7 +450,24 @@ export const PlatformOrganisationsPage: React.FC = () => {
                   return (
                     <tr key={org.id} className="hover:bg-slate-700/30 transition-colors">
                       <td className="py-3.5 px-4">
-                        <div className="font-semibold text-white">{org.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">{org.name}</span>
+                          {org.isFoundingPartner && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-amber-500/10 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                              <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                              <span>#{org.foundingPartnerNumber || '01'} Founding</span>
+                            </span>
+                          )}
+                          {attentionMap.has(org.id) && (
+                            <span
+                              className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-1"
+                              title={attentionMap.get(org.id)?.reason}
+                            >
+                              <AlertTriangle className="w-2.5 h-2.5 text-rose-400" />
+                              <span>Attention</span>
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                           <span className="font-mono text-[10px] text-slate-400">{org.id}</span>
                           {org.slug && <span className="text-[10px] text-indigo-400 font-mono">/{org.slug}</span>}

@@ -38,6 +38,8 @@ import { organisationReadinessService, type ReadinessReport } from '../../../ser
 import { organisationProvisioningService } from '../../../services/provisioning/organisationProvisioningService';
 import { STANDARD_PLATFORM_FEATURES } from '../../../config/platformFeaturesRegistry';
 import { useAuth } from '../../../contexts/AuthContext';
+import { ConversionReadinessCard } from '../components/ConversionReadinessCard';
+import { FounderNotesCard } from '../components/FounderNotesCard';
 import type {
   Organisation,
   OrganisationMembership,
@@ -558,6 +560,19 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Conversion Readiness & Commercial Action Panel */}
+          {organisation && (
+            <ConversionReadinessCard
+              organisation={organisation}
+              onRefresh={loadOrganisationData}
+            />
+          )}
+
+          {/* Founder Private Internal Notes */}
+          {organisation && (
+            <FounderNotesCard organisationId={organisation.id} />
+          )}
+
           {/* Metadata Card */}
           <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-6 shadow-sm">
             <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">

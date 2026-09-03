@@ -15,7 +15,8 @@ import {
   Package,
   Layers,
   CreditCard,
-  TrendingUp
+  TrendingUp,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
@@ -33,6 +34,7 @@ export const PlatformLayout: React.FC = () => {
   const navItems = [
     { to: '/platform', label: 'Overview', icon: LayoutDashboard, end: true },
     { to: '/platform/organisations', label: 'Organisations', icon: Building2 },
+    { to: '/platform/feedback', label: 'Pilot Feedback', icon: MessageSquare },
     { to: '/platform/plans', label: 'Plans', icon: Package },
     { to: '/platform/subscriptions', label: 'Subscriptions', icon: CreditCard },
     { to: '/platform/analytics', label: 'Commercial Analytics', icon: TrendingUp },

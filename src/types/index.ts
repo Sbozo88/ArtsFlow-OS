@@ -39,6 +39,13 @@ export interface Organisation extends BaseRecord {
   restrictionReasonType?: RestrictionReasonType;
   assignedPlanId?: string;
   lastActiveAt?: string;
+  // Founding Partner Pilot Program Fields
+  isFoundingPartner?: boolean;
+  foundingPartnerNumber?: number; // 1 to 10
+  foundingPartnerStartedAt?: string;
+  foundingPriceLockEndsAt?: string;
+  foundingPlanPrice?: number; // Cents ZAR
+  foundingPartnerStatus?: FoundingPartnerStatus;
   status: RecordStatus;
   createdAt: string;
   updatedAt: string;
@@ -643,7 +650,14 @@ export type AuditAction =
   | 'USER_SET_DEFAULT_ORGANISATION'
   | 'ORGANISATION_MEMBERSHIP_ACTIVATED'
   | 'ORGANISATION_MEMBERSHIP_DISABLED'
-  | 'ORGANISATION_MEMBERSHIP_REVOKED';
+  | 'ORGANISATION_MEMBERSHIP_REVOKED'
+  // Founding Partner Pilot Program Actions
+  | 'PLATFORM_ASSIGN_FOUNDING_PARTNER'
+  | 'PLATFORM_REMOVE_FOUNDING_PARTNER'
+  | 'PLATFORM_CREATE_FOUNDER_NOTE'
+  | 'PLATFORM_ARCHIVE_FOUNDER_NOTE'
+  | 'CUSTOMER_SUBMIT_FEEDBACK'
+  | 'PLATFORM_UPDATE_FEEDBACK_STATUS';
 
 export type AuditScopeType = 'platform' | 'organisation';
 
@@ -2752,5 +2766,177 @@ export interface PlatformDiagnosticReport {
   healthScore: number; // 0 - 100
   checkedAt: string;
 }
+
+// ============================================================================
+// Founding Partner Pilot Program & Customer Activation Interfaces
+// ============================================================================
+
+export type FoundingPartnerStatus =
+  | 'candidate'
+  | 'trial'
+  | 'active'
+  | 'converted'
+  | 'declined'
+  | 'withdrawn';
+
+export interface FoundingPartnerStats {
+  allocatedSlots: number;
+  maxSlots: number;
+  remainingSlots: number;
+  isFull: boolean;
+  activePartnersCount: number;
+  trialPartnersCount: number;
+  convertedPartnersCount: number;
+}
+
+export type UnifiedCustomerLifecycleState =
+  | 'PROSPECT'
+  | 'PROVISIONING'
+  | 'TRIAL'
+  | 'ONBOARDING'
+  | 'ACTIVE_TRIAL'
+  | 'CONVERSION_DUE'
+  | 'CUSTOMER'
+  | 'AT_RISK'
+  | 'INACTIVE';
+
+export interface ActivationScoreResult {
+  totalScore: number; // 0 - 100
+  level: 'low' | 'developing' | 'strong' | 'fully_activated';
+  label: string;
+  breakdown: {
+    orgSetup: number;            // max 15
+    adminActivated: number;      // max 10
+    learnersAdded: number;       // max 15
+    staffAdded: number;          // max 10
+    programmeCreated: number;    // max 10
+    groupCreated: number;        // max 10
+    sessionCreated: number;      // max 10
+    attendanceRecorded: number;  // max 10
+    specialistModuleUsed: number;// max 5
+    guardianActivity: number;    // max 5
+  };
+}
+
+export type NeedsAttentionCategory =
+  | 'onboarding_stalled'
+  | 'zero_learners'
+  | 'zero_sessions'
+  | 'trial_expiring'
+  | 'inactive'
+  | 'provisioning_failed'
+  | 'invitation_unaccepted'
+  | 'restricted';
+
+export interface NeedsAttentionItem {
+  organisationId: string;
+  organisationName: string;
+  category: NeedsAttentionCategory;
+  severity: 'critical' | 'warning' | 'info';
+  reason: string;
+  suggestedAction: string;
+  daysSinceProvisioned?: number;
+  daysRemaining?: number;
+}
+
+export type FounderNoteCategory =
+  | 'sales'
+  | 'onboarding'
+  | 'support'
+  | 'feedback'
+  | 'commercial'
+  | 'general';
+
+export interface FounderCustomerNote {
+  id: string;
+  organisationId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  category: FounderNoteCategory;
+  createdAt: string;
+  updatedAt: string;
+  status: 'active' | 'archived';
+}
+
+export type CustomerFeedbackCategory =
+  | 'ease_of_use'
+  | 'onboarding'
+  | 'learners'
+  | 'attendance'
+  | 'music'
+  | 'dance'
+  | 'finance'
+  | 'events'
+  | 'parent_portal'
+  | 'performance'
+  | 'missing_feature'
+  | 'bug'
+  | 'other';
+
+export type CustomerFeedbackStatus =
+  | 'new'
+  | 'reviewed'
+  | 'planned'
+  | 'resolved'
+  | 'declined';
+
+export interface CustomerFeedbackRecord {
+  id: string;
+  organisationId: string;
+  organisationName: string;
+  submittedBy: string;
+  submittedByName?: string;
+  submittedByEmail?: string;
+  category: CustomerFeedbackCategory;
+  rating: number; // 1 to 5
+  comment: string;
+  improvements?: string;
+  canContact?: boolean;
+  status: CustomerFeedbackStatus;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  internalNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversionReadinessSummary {
+  organisationId: string;
+  trialDay: number;
+  trialDaysRemaining: number;
+  activationScore: number;
+  activationLevel: 'low' | 'developing' | 'strong' | 'fully_activated';
+  onboardingPercentage: number;
+  isOnboardingComplete: boolean;
+  professionalFeaturesUsed: string[];
+  suggestedPlanId: 'plan_starter' | 'plan_professional';
+  suggestedPlanName: string;
+  rationale: string;
+  isFoundingPartner: boolean;
+  standardMonthlyPrice: number; // in ZAR
+  foundingMonthlyPrice?: number; // in ZAR
+}
+
+export interface PilotKpis {
+  foundingSlotsAllocated: number;
+  maxFoundingSlots: number;
+  trialsActive: number;
+  trialsExpiringSoon: number;
+  customersConverted: number;
+  starterCustomers: number;
+  professionalCustomers: number;
+  averageActivationScore: number;
+  averageFeedbackRating: number;
+  organisationsNeedingAttentionCount: number;
+  funnel: {
+    provisionedCount: number;
+    adminActivatedCount: number;
+    onboardingCompletedCount: number;
+    activeTrialCount: number;
+    convertedCount: number;
+  };
+}
+
 
 

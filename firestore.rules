@@ -420,6 +420,19 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    // SaaS v1.1 Founding Pilot: Internal Founder Notes (Platform Super Admin Only)
+    match /platformCustomerNotes/{noteId} {
+      allow read, write: if isPlatformAdmin();
+    }
+
+    // SaaS v1.1 Founding Pilot: Customer Feedback (Tenant submit/read own, Platform Admin manage all)
+    match /customerFeedback/{feedbackId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow create: if signedIn() && sameOrganisation(request.resource.data.organisationId) && isInternal();
+      allow update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
     match /{collectionName}/{docId} {
       allow read: if isPeopleCollection(collectionName)
         && inOrganisationOnRead() && isViewer();

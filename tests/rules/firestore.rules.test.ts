@@ -306,4 +306,77 @@ describe('Firestore tenant and authority boundaries', () => {
     // Organisation admin CANNOT list all organisations across the platform
     await assertFails(orgAdminDb.collection('organisations').get());
   });
+
+  it('enforces platform security and tenant isolation on founder notes and customer feedback', async () => {
+    await seed();
+    const superAdminDb = testEnv.authenticatedContext('super-admin').firestore();
+    const adminADb = testEnv.authenticatedContext('admin-a').firestore();
+    const adminBDb = testEnv.authenticatedContext('admin-b').firestore();
+
+    // 1. Founder Notes: Super admin only
+    await assertSucceeds(
+      superAdminDb.doc('platformCustomerNotes/note-1').set(
+        record('note-1', 'org-a', 'super-admin', {
+          authorId: 'super-admin',
+          authorName: 'Platform Lead',
+          content: 'Founding Partner interview notes',
+          category: 'commercial',
+        })
+      )
+    );
+    await assertSucceeds(superAdminDb.doc('platformCustomerNotes/note-1').get());
+
+    // School admin cannot read or write founder notes
+    await assertFails(adminADb.doc('platformCustomerNotes/note-1').get());
+    await assertFails(
+      adminADb.doc('platformCustomerNotes/note-2').set(
+        record('note-2', 'org-a', 'admin-a', {
+          authorId: 'admin-a',
+          authorName: 'School Admin',
+          content: 'Attempted note creation',
+          category: 'general',
+        })
+      )
+    );
+
+    // 2. Customer Feedback: Tenant submit and isolation
+    // Admin A can submit feedback for org-a
+    await assertSucceeds(
+      adminADb.doc('customerFeedback/fb-1').set(
+        record('fb-1', 'org-a', 'admin-a', {
+          submittedBy: 'admin-a',
+          category: 'music',
+          rating: 5,
+          comment: 'Excellent music features',
+          status: 'new',
+        })
+      )
+    );
+
+    // Cross-tenant write: Admin A CANNOT submit feedback for org-b
+    await assertFails(
+      adminADb.doc('customerFeedback/fb-cross').set(
+        record('fb-cross', 'org-b', 'admin-a', {
+          submittedBy: 'admin-a',
+          category: 'dance',
+          rating: 4,
+          comment: 'Cross tenant attempt',
+          status: 'new',
+        })
+      )
+    );
+
+    // Tenant read: Admin A can read org-a feedback
+    await assertSucceeds(adminADb.doc('customerFeedback/fb-1').get());
+
+    // Cross-tenant read: Admin B CANNOT read org-a feedback
+    await assertFails(adminBDb.doc('customerFeedback/fb-1').get());
+
+    // Platform Super Admin can read all feedback
+    await assertSucceeds(superAdminDb.doc('customerFeedback/fb-1').get());
+
+    // Tenant Admin CANNOT update feedback status (only Super Admin can review/plan/resolve)
+    await assertFails(adminADb.doc('customerFeedback/fb-1').update({ status: 'resolved' }));
+    await assertSucceeds(superAdminDb.doc('customerFeedback/fb-1').update({ status: 'reviewed' }));
+  });
 });

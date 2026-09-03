@@ -170,6 +170,7 @@ const PlatformPlansPage = lazy(() => import('./features/platform/pages/PlatformP
 const PlatformFeaturesPage = lazy(() => import('./features/platform/pages/PlatformFeaturesPage').then(m => ({ default: m.PlatformFeaturesPage })));
 const PlatformSubscriptionsPage = lazy(() => import('./features/platform/pages/PlatformSubscriptionsPage').then(m => ({ default: m.PlatformSubscriptionsPage })));
 const PlatformAnalyticsPage = lazy(() => import('./features/platform/pages/PlatformAnalyticsPage').then(m => ({ default: m.PlatformAnalyticsPage })));
+const PlatformFeedbackPage = lazy(() => import('./features/platform/pages/PlatformFeedbackPage').then(m => ({ default: m.PlatformFeedbackPage })));
 
 const PageFallback = () => (
   <div className="flex min-h-[360px] w-full items-center justify-center py-12" role="status" aria-live="polite">
@@ -229,6 +230,7 @@ function App() {
                       <Route index element={<PlatformDashboardPage />} />
                       <Route path="organisations" element={<PlatformOrganisationsPage />} />
                       <Route path="organisations/:organisationId" element={<PlatformOrganisationDetailPage />} />
+                      <Route path="feedback" element={<PlatformFeedbackPage />} />
                       <Route path="plans" element={<PlatformPlansPage />} />
                       <Route path="subscriptions" element={<PlatformSubscriptionsPage />} />
                       <Route path="analytics" element={<PlatformAnalyticsPage />} />

@@ -22,6 +22,7 @@ import { useOrganisationUsers } from '../../hooks/useOrganisationUsers';
 import { useProgrammes } from '../../hooks/useProgrammes';
 import { useAuth } from '../../contexts/AuthContext';
 import { automationRuleRepository } from '../../repositories/automationRuleRepository';
+import { SendFeedbackModal } from '../../components/ui/SendFeedbackModal';
 
 interface SetupItem {
   id: string;
@@ -40,6 +41,7 @@ export const SettingsOverviewPage: React.FC = () => {
   const { members, loading: usersLoading } = useOrganisationUsers();
   const { programmes, loading: programmesLoading } = useProgrammes();
   const [activeRulesCount, setActiveRulesCount] = useState<number>(0);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   useEffect(() => {
     if (!organisationId) return;
@@ -169,6 +171,14 @@ export const SettingsOverviewPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setFeedbackModalOpen(true)}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-sm font-semibold shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <MessageSquare className="w-4 h-4 text-indigo-600" />
+              <span>Send Pilot Feedback</span>
+            </button>
             <Link
               to="/settings/organisation"
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2"
@@ -268,6 +278,11 @@ export const SettingsOverviewPage: React.FC = () => {
           })}
         </div>
       </div>
+
+      <SendFeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+      />
     </div>
   );
 };
