@@ -21,7 +21,10 @@ export const PLATFORM_PERMISSIONS: PlatformPermission[] = [
   'platform.plans.manage',
   'platform.features.read',
   'platform.features.manage',
-  'platform.entitlements.manage'
+  'platform.entitlements.manage',
+  'platform.subscriptions.read',
+  'platform.subscriptions.manage',
+  'platform.pricing.manage'
 ];
 
 export const ALL_PERMISSIONS: Permission[] = [

@@ -149,6 +149,9 @@ import { PlatformAuditPage } from './features/platform/pages/PlatformAuditPage';
 import { PlatformSettingsPage } from './features/platform/pages/PlatformSettingsPage';
 import { PlatformPlansPage } from './features/platform/pages/PlatformPlansPage';
 import { PlatformFeaturesPage } from './features/platform/pages/PlatformFeaturesPage';
+import { PlatformSubscriptionsPage } from './features/platform/pages/PlatformSubscriptionsPage';
+import { OrganisationBillingPage } from './features/billing/pages/OrganisationBillingPage';
+import { BillingCheckoutReturnPage } from './features/billing/pages/BillingCheckoutReturnPage';
 
 function App() {
   return (
@@ -199,6 +202,7 @@ function App() {
                 <Route path="organisations" element={<PlatformOrganisationsPage />} />
                 <Route path="organisations/:organisationId" element={<PlatformOrganisationDetailPage />} />
                 <Route path="plans" element={<PlatformPlansPage />} />
+                <Route path="subscriptions" element={<PlatformSubscriptionsPage />} />
                 <Route path="features" element={<PlatformFeaturesPage />} />
                 <Route path="users" element={<PlatformUsersPage />} />
                 <Route path="health" element={<PlatformHealthPage />} />
@@ -333,6 +337,9 @@ function App() {
                 <Route path="settings/programmes" element={<ProgrammeSettingsPage />} />
                 <Route path="settings/attendance" element={<AttendanceSettingsPage />} />
                 <Route path="settings/finance" element={<FinanceSettingsPage />} />
+                <Route path="settings/billing" element={<OrganisationBillingPage />} />
+                <Route path="settings/billing/success" element={<BillingCheckoutReturnPage />} />
+                <Route path="settings/billing/cancelled" element={<BillingCheckoutReturnPage />} />
                 <Route path="settings/portal" element={<PortalSettingsPage />} />
                 <Route path="settings/staff" element={<StaffSettingsPage />} />
                 <Route path="settings/communication" element={<CommunicationSettingsPage />} />

@@ -36,6 +36,7 @@ export interface Organisation extends BaseRecord {
   restrictedAt?: string;
   restrictedBy?: string;
   restrictionReason?: string;
+  restrictionReasonType?: RestrictionReasonType;
   assignedPlanId?: string;
   lastActiveAt?: string;
   status: RecordStatus;
@@ -614,7 +615,19 @@ export type AuditAction =
   | 'PLATFORM_ASSIGN_PLAN'
   | 'PLATFORM_CREATE_ENTITLEMENT_OVERRIDE'
   | 'PLATFORM_UPDATE_ENTITLEMENT_OVERRIDE'
-  | 'PLATFORM_END_ENTITLEMENT_OVERRIDE';
+  | 'PLATFORM_END_ENTITLEMENT_OVERRIDE'
+  // SaaS 2B: Subscriptions & Billing Actions
+  | 'PLATFORM_CREATE_SUBSCRIPTION'
+  | 'PLATFORM_START_TRIAL'
+  | 'PLATFORM_ACTIVATE_SUBSCRIPTION'
+  | 'PLATFORM_MARK_SUBSCRIPTION_PAST_DUE'
+  | 'PLATFORM_CHANGE_SUBSCRIPTION_PLAN'
+  | 'PLATFORM_CANCEL_SUBSCRIPTION'
+  | 'PLATFORM_REACTIVATE_SUBSCRIPTION'
+  | 'PLATFORM_CREATE_COMPLIMENTARY_SUBSCRIPTION'
+  | 'PLATFORM_PROCESS_SAAS_BILLING_EVENT'
+  | 'PLATFORM_RESTRICT_TENANT_FOR_BILLING'
+  | 'PLATFORM_RESTORE_TENANT_AFTER_BILLING';
 
 export type AuditScopeType = 'platform' | 'organisation';
 
@@ -1867,7 +1880,10 @@ export type PlatformPermission =
   | 'platform.plans.manage'
   | 'platform.features.read'
   | 'platform.features.manage'
-  | 'platform.entitlements.manage';
+  | 'platform.entitlements.manage'
+  | 'platform.subscriptions.read'
+  | 'platform.subscriptions.manage'
+  | 'platform.pricing.manage';
 
 export type Permission =
   | 'learners.read'
@@ -2273,5 +2289,147 @@ export interface EffectiveEntitlement {
   sourceId?: string;
   overrideReason?: string;
 }
+
+// ─── SaaS 2B: Trials, Subscriptions & Commercial Billing ───────────
+
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'paused'
+  | 'cancelled'
+  | 'expired'
+  | 'incomplete';
+
+export type BillingMode = 'provider' | 'manual' | 'complimentary' | 'legacy';
+export type BillingInterval = 'monthly' | 'annual' | 'custom';
+export type RestrictionReasonType =
+  | 'trial_expired'
+  | 'billing_past_due'
+  | 'manual_platform_action'
+  | 'other';
+
+export interface Subscription {
+  id: string;
+  organisationId: string;
+  planId: string;
+  subscriptionStatus: SubscriptionStatus;
+  billingMode: BillingMode;
+  billingInterval: BillingInterval;
+  currency: string;
+  priceAmount: number; // Integer minor units (e.g. 49900 = R499.00)
+
+  trialStartedAt?: string;
+  trialEndsAt?: string;
+
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+
+  cancelAtPeriodEnd: boolean;
+  cancelledAt?: string;
+  cancellationReason?: string;
+
+  pausedAt?: string;
+  reactivatedAt?: string;
+
+  providerType?: string;
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+
+  notes?: string;
+  expiryReason?: string;
+
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export type PriceStatus = 'active' | 'inactive' | 'archived';
+
+export interface PlanPrice {
+  id: string;
+  planId: string;
+  currency: string;
+  billingInterval: BillingInterval;
+  amount: number; // Integer minor units
+  priceStatus: PriceStatus;
+  providerPriceId?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  status: RecordStatus;
+}
+
+export interface BillingCustomer {
+  id: string;
+  organisationId: string;
+  providerType: string;
+  providerCustomerId: string;
+  billingEmail?: string;
+  billingName?: string;
+  billingPhone?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RecordStatus;
+}
+
+export type CheckoutStatus =
+  | 'created'
+  | 'pending'
+  | 'completed'
+  | 'expired'
+  | 'cancelled'
+  | 'failed';
+
+export interface SaaSCheckoutSession {
+  id: string;
+  organisationId: string;
+  planId: string;
+  priceId: string;
+  providerType: string;
+  providerSessionId?: string;
+  checkoutStatus: CheckoutStatus;
+  checkoutUrl?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RecordStatus;
+}
+
+export type SaaSBillingEventType =
+  | 'checkout_completed'
+  | 'subscription_created'
+  | 'subscription_activated'
+  | 'subscription_updated'
+  | 'subscription_cancelled'
+  | 'invoice_paid'
+  | 'invoice_payment_failed'
+  | 'subscription_paused'
+  | 'subscription_resumed';
+
+export type EventProcessingStatus = 'pending' | 'processed' | 'failed' | 'ignored';
+
+export interface SaaSBillingEvent {
+  id: string;
+  organisationId?: string;
+  providerType: string;
+  providerEventId: string;
+  eventType: SaaSBillingEventType;
+  processingStatus: EventProcessingStatus;
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+  subscriptionId?: string;
+  safePayloadSummary?: Record<string, unknown>;
+  receivedAt: string;
+  processedAt?: string;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RecordStatus;
+}
+
 
 

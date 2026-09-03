@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { BaseRepository } from './BaseRepository';
 import type { Organisation } from '../types';
@@ -6,6 +6,13 @@ import type { Organisation } from '../types';
 class OrganisationRepository extends BaseRepository<Organisation> {
   constructor() {
     super('organisations');
+  }
+
+  async getAll(): Promise<Organisation[]> {
+    const snap = await getDocs(collection(db, this.collectionName));
+    return snap.docs
+      .map((d) => d.data() as Organisation)
+      .filter((o) => o.status !== 'deleted');
   }
 
   // Overload to allow getById(id) or getById(orgId, id)
