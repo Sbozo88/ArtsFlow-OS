@@ -311,6 +311,37 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    // SaaS 2B: Trials, Subscriptions & Commercial Billing Security Rules
+    match /subscriptions/{subscriptionId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow write: if isPlatformAdmin();
+    }
+
+    match /planPrices/{priceId} {
+      allow read: if signedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /billingCustomers/{customerId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow write: if isPlatformAdmin();
+    }
+
+    match /saasCheckoutSessions/{sessionId} {
+      allow read: if isPlatformAdmin() || (signedIn() && sameOrganisation(resource.data.organisationId));
+      allow create: if isPlatformAdmin() || (
+        signedIn() &&
+        role() == 'organisation_admin' &&
+        sameOrganisation(request.resource.data.organisationId)
+      );
+      allow update, delete: if isPlatformAdmin();
+    }
+
+    match /saasBillingEvents/{eventId} {
+      allow read: if isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
     match /{collectionName}/{docId} {
       allow read: if isPeopleCollection(collectionName)
         && inOrganisationOnRead() && isViewer();

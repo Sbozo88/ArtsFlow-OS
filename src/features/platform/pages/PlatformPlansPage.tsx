@@ -14,13 +14,16 @@ import {
 } from 'lucide-react';
 import { subscriptionPlanService } from '../../../services/subscriptionPlanService';
 import { platformOrganisationService } from '../../../services/platformOrganisationService';
+import { planPriceRepository } from '../../../repositories/planPriceRepository';
+import { buildStandardPlanPrices } from '../../../config/planPricesRegistry';
 import { STANDARD_PLATFORM_FEATURES } from '../../../config/platformFeaturesRegistry';
 import { useAuth } from '../../../contexts/AuthContext';
-import type { SubscriptionPlan, PlanStatus, PlanEntitlement } from '../../../types';
+import type { SubscriptionPlan, PlanStatus, PlanEntitlement, PlanPrice } from '../../../types';
 
 export const PlatformPlansPage: React.FC = () => {
   const { authUser } = useAuth();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [prices, setPrices] = useState<PlanPrice[]>([]);
   const [orgCounts, setOrgCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,11 +63,13 @@ export const PlatformPlansPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [allPlans, orgs] = await Promise.all([
+      const [allPlans, orgs, allPrices] = await Promise.all([
         subscriptionPlanService.listPlans(),
-        platformOrganisationService.listOrganisations()
+        platformOrganisationService.listOrganisations(),
+        planPriceRepository.getAll()
       ]);
       setPlans(allPlans);
+      setPrices(allPrices);
 
       // Compute org counts per plan
       const counts: Record<string, number> = {};
@@ -80,15 +85,32 @@ export const PlatformPlansPage: React.FC = () => {
     }
   };
 
+  const handleSeedPrices = async () => {
+    try {
+      setLoading(true);
+      const defaultPrices = buildStandardPlanPrices(authUser?.uid || 'super_admin');
+      for (const p of defaultPrices) {
+        await planPriceRepository.save(p);
+      }
+      await handleRefresh();
+    } catch (err) {
+      alert((err as Error).message || 'Failed to seed prices');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     Promise.all([
       subscriptionPlanService.listPlans(),
-      platformOrganisationService.listOrganisations()
+      platformOrganisationService.listOrganisations(),
+      planPriceRepository.getAll()
     ])
-      .then(([allPlans, orgs]) => {
+      .then(([allPlans, orgs, allPrices]) => {
         if (isMounted) {
           setPlans(allPlans);
+          setPrices(allPrices);
           const counts: Record<string, number> = {};
           for (const org of orgs) {
             const pId = org.assignedPlanId || 'plan_legacy_full';
@@ -300,6 +322,17 @@ export const PlatformPlansPage: React.FC = () => {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
+          {prices.length === 0 && (
+            <button
+              type="button"
+              onClick={handleSeedPrices}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors"
+            >
+              Seed Standard Test Prices
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleOpenCreateModal}
@@ -318,16 +351,16 @@ export const PlatformPlansPage: React.FC = () => {
         </div>
       )}
 
-      {/* Filter & Search */}
-      <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Plan Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800/60 p-4 border border-slate-700/70 rounded-xl shadow-sm">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           <input
             type="text"
+            placeholder="Search plans by name, code, description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search plans by name, code, or description..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
           />
         </div>
 
@@ -354,6 +387,7 @@ export const PlatformPlansPage: React.FC = () => {
               <tr>
                 <th className="px-6 py-4">Plan Name & Code</th>
                 <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Standard Pricing</th>
                 <th className="px-6 py-4">Visibility</th>
                 <th className="px-6 py-4">Assigned Organisations</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -415,6 +449,29 @@ export const PlatformPlansPage: React.FC = () => {
                         >
                           {plan.planStatus}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {(() => {
+                          const planMonthly = prices.find((p) => p.planId === plan.id && p.billingInterval === 'monthly');
+                          const planAnnual = prices.find((p) => p.planId === plan.id && p.billingInterval === 'annual');
+                          if (!planMonthly && !planAnnual) {
+                            return <span className="text-xs text-slate-500">Unpriced / Custom</span>;
+                          }
+                          return (
+                            <div className="text-xs text-slate-300 space-y-0.5">
+                              {planMonthly && (
+                                <div className="font-medium">
+                                  {planMonthly.currency} {(planMonthly.amount / 100).toFixed(2)}/mo
+                                </div>
+                              )}
+                              {planAnnual && (
+                                <div className="text-slate-400 text-[11px]">
+                                  {planAnnual.currency} {(planAnnual.amount / 100).toFixed(2)}/yr
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-xs text-slate-300">

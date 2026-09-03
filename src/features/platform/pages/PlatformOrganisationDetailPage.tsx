@@ -15,7 +15,8 @@ import {
   Package,
   Layers,
   Sliders,
-  Check
+  Check,
+  CreditCard
 } from 'lucide-react';
 import { platformOrganisationService } from '../../../services/platformOrganisationService';
 import { tenantLifecycleService } from '../../../services/tenantLifecycleService';
@@ -25,6 +26,7 @@ import { entitlementOverrideService } from '../../../services/entitlementOverrid
 import { entitlementResolverService } from '../../../services/entitlementResolverService';
 import { organisationMembershipRepository } from '../../../repositories/organisationMembershipRepository';
 import { auditLogRepository } from '../../../repositories/auditLogRepository';
+import { subscriptionRepository } from '../../../repositories/subscriptionRepository';
 import { STANDARD_PLATFORM_FEATURES } from '../../../config/platformFeaturesRegistry';
 import { useAuth } from '../../../contexts/AuthContext';
 import type {
@@ -35,7 +37,8 @@ import type {
   SubscriptionPlan,
   EffectiveEntitlement,
   OrganisationEntitlementOverride,
-  OverrideType
+  OverrideType,
+  Subscription
 } from '../../../types';
 
 export const PlatformOrganisationDetailPage: React.FC = () => {
@@ -49,6 +52,7 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
   const [assignedPlan, setAssignedPlan] = useState<SubscriptionPlan | null>(null);
   const [effectiveEntitlements, setEffectiveEntitlements] = useState<Record<string, EffectiveEntitlement>>({});
   const [overrides, setOverrides] = useState<OrganisationEntitlementOverride[]>([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,13 +89,14 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [org, mems, logs, ents, ovrs, allPlans] = await Promise.all([
+      const [org, mems, logs, ents, ovrs, allPlans, sub] = await Promise.all([
         platformOrganisationService.getOrganisation(organisationId),
         organisationMembershipRepository.getByOrganisation(organisationId),
         auditLogRepository.getByOrganisation(organisationId),
         entitlementResolverService.getOrganisationEntitlements(organisationId),
         entitlementOverrideService.listOverrides(organisationId),
-        subscriptionPlanService.listPlans()
+        subscriptionPlanService.listPlans(),
+        subscriptionRepository.getPrimarySubscription(organisationId)
       ]);
 
       if (!org) {
@@ -105,6 +110,7 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
       setEffectiveEntitlements(ents);
       setOverrides(ovrs);
       setPlans(allPlans);
+      setSubscription(sub);
 
       const resolvedPlan =
         allPlans.find((p) => p.id === (org.assignedPlanId || 'plan_legacy_full')) ||
@@ -517,6 +523,42 @@ export const PlatformOrganisationDetailPage: React.FC = () => {
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">
                 Active Entitlements
               </span>
+            </div>
+
+            {/* Commercial Subscription Summary */}
+            <div className="bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Commercial Subscription
+                  </div>
+                  <div className="text-sm font-semibold text-white mt-0.5 flex items-center gap-2">
+                    {subscription ? (
+                      <>
+                        <span className="capitalize">{subscription.subscriptionStatus}</span>
+                        <span className="text-xs font-normal text-slate-400">
+                          ({subscription.billingMode} • {subscription.currency} {(subscription.priceAmount / 100).toFixed(2)}/{subscription.billingInterval})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400 font-normal">
+                        No active commercial subscription (Legacy / Manual tier)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                to="/platform/subscriptions"
+                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1"
+              >
+                <span>Manage Subscriptions</span>
+                <span>→</span>
+              </Link>
             </div>
 
             {/* Overrides Table */}

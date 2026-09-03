@@ -42,6 +42,14 @@ export class TenantAccessService {
 
     return { allowed: true };
   }
+
+  /**
+   * Determines whether an organisation admin retains safe read-only access (e.g. to billing)
+   * while the tenant is in restricted status.
+   */
+  isReadOnlyAdminAccess(tenantStatus?: TenantStatus | string, role?: string): boolean {
+    return tenantStatus === 'restricted' && role === 'organisation_admin';
+  }
 }
 
 export const tenantAccessService = new TenantAccessService();

@@ -1,11 +1,10 @@
-import { organisationRepository } from '../repositories/organisationRepository';
 import { planEntitlementRepository } from '../repositories/planEntitlementRepository';
 import { organisationEntitlementOverrideRepository } from '../repositories/organisationEntitlementOverrideRepository';
 import { platformFeatureRepository } from '../repositories/platformFeatureRepository';
+import { subscriptionResolverService } from './billing/subscriptionResolverService';
 import { STANDARD_PLATFORM_FEATURES } from '../config/platformFeaturesRegistry';
 import { STANDARD_PLANS, buildPlanEntitlementRecords } from '../config/subscriptionPlansRegistry';
 import type {
-  Organisation,
   EffectiveEntitlement,
   PlatformFeature,
   PlanEntitlement,
@@ -50,17 +49,12 @@ export class EntitlementResolverService {
       return cached.entitlements;
     }
 
-    // 1. Resolve Organisation
-    let org: Organisation | null = null;
-    try {
-      org = await organisationRepository.getById(organisationId);
-    } catch (err) {
-      console.warn(`[EntitlementResolver] Error reading organisation '${organisationId}':`, err);
-    }
-
-    // 2. Resolve Effective Plan
-    // Fallback to legacy full access plan (plan_legacy_full) if organisation has no plan assigned
-    const planId = org?.assignedPlanId || 'plan_legacy_full';
+    // 1. Resolve Effective Plan ID
+    // Strict commercial precedence:
+    // 1. Active / trialing valid subscription plan
+    // 2. Transitional assigned plan
+    // 3. Legacy full-access plan fallback (plan_legacy_full)
+    const planId = await subscriptionResolverService.getEffectivePlanId(organisationId);
 
     // Fetch Plan Entitlements
     let planEnts: PlanEntitlement[] = [];
