@@ -17,7 +17,6 @@ jobs:
     name: Validate and deploy production
     runs-on: ubuntu-latest
     environment: production
-    if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ARTFLOW_OS != '' }}
 
     steps:
       - name: Checkout code
