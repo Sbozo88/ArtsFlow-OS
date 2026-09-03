@@ -1,0 +1,45 @@
+name: ArtsFlow OS — Scheduled Subscription Lifecycle Cron
+
+on:
+  schedule:
+    # Runs everyday at 02:00 UTC (04:00 SAST)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Execute as dry-run without writing database mutations'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  run-lifecycle:
+    name: Run Daily Subscription Lifecycle Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Execute Subscription Lifecycle Runner
+        env:
+          CRON_AUTH_EMAIL: ${{ secrets.CRON_AUTH_EMAIL || secrets.FOUNDER_EMAIL }}
+          CRON_AUTH_PASSWORD: ${{ secrets.CRON_AUTH_PASSWORD || secrets.FOUNDER_PASSWORD }}
+          NODE_ENV: production
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "Executing in dry-run mode..."
+            npx tsx scripts/saas/run-subscription-lifecycle.ts --dry-run
+          else
+            echo "Executing in live mode..."
+            npx tsx scripts/saas/run-subscription-lifecycle.ts --live
+          fi

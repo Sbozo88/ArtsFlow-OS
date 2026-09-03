@@ -5,11 +5,16 @@ import { saasSubscriptionService } from './saasSubscriptionService';
 import { SubscriptionAccessPolicyService } from './subscriptionAccessPolicyService';
 import { auditService } from '../auditService';
 
+export interface LifecycleRunOptions {
+  dryRun?: boolean;
+}
+
 export interface LifecycleRunResult {
   expiredTrials: number;
   pastDueRestricted: number;
   periodEndCancelled: number;
   processedAt: string;
+  dryRun?: boolean;
 }
 
 export const subscriptionLifecycleRunner = {
@@ -19,7 +24,8 @@ export const subscriptionLifecycleRunner = {
    * 2. Checks past-due subscriptions exceeding the grace period and restricts tenant access.
    * 3. Transitions subscriptions set to cancelAtPeriodEnd once current period concludes.
    */
-  async runDailyLifecycleCheck(): Promise<LifecycleRunResult> {
+  async runDailyLifecycleCheck(options?: LifecycleRunOptions): Promise<LifecycleRunResult> {
+    const isDryRun = !!options?.dryRun;
     const allSubs = await subscriptionRepository.getAll();
     const now = Date.now();
     const nowIso = new Date(now).toISOString();
@@ -36,7 +42,9 @@ export const subscriptionLifecycleRunner = {
         new Date(sub.trialEndsAt).getTime() <= now
       ) {
         try {
-          await saasSubscriptionService.expireTrial(sub.id);
+          if (!isDryRun) {
+            await saasSubscriptionService.expireTrial(sub.id);
+          }
           expiredTrials++;
         } catch (err) {
           console.error(`[LifecycleRunner] Error expiring trial ${sub.id}:`, err);
@@ -54,26 +62,28 @@ export const subscriptionLifecycleRunner = {
           try {
             const org = await organisationRepository.getById(sub.organisationId);
             if (org && org.tenantStatus === 'active') {
-              await tenantLifecycleService.updateTenantStatus({
-                actorId: 'system',
-                organisationId: sub.organisationId,
-                targetStatus: 'restricted',
-                reason: 'Subscription past due grace period expired.'
-              });
+              if (!isDryRun) {
+                await tenantLifecycleService.updateTenantStatus({
+                  actorId: 'system',
+                  organisationId: sub.organisationId,
+                  targetStatus: 'restricted',
+                  reason: 'Subscription past due grace period expired.'
+                });
 
-              await organisationRepository.update(sub.organisationId, 'system', {
-                restrictionReasonType: 'billing_past_due'
-              });
+                await organisationRepository.update(sub.organisationId, 'system', {
+                  restrictionReasonType: 'billing_past_due'
+                });
 
-              await auditService.log({
-                organisationId: sub.organisationId,
-                actorId: 'system',
-                action: 'PLATFORM_RESTRICT_TENANT_FOR_BILLING',
-                entityType: 'subscription',
-                entityId: sub.id,
-                scopeType: 'platform',
-                reason: 'Past-due grace period elapsed without payment recovery.'
-              });
+                await auditService.log({
+                  organisationId: sub.organisationId,
+                  actorId: 'system',
+                  action: 'PLATFORM_RESTRICT_TENANT_FOR_BILLING',
+                  entityType: 'subscription',
+                  entityId: sub.id,
+                  scopeType: 'platform',
+                  reason: 'Past-due grace period elapsed without payment recovery.'
+                });
+              }
 
               pastDueRestricted++;
             }
@@ -91,36 +101,38 @@ export const subscriptionLifecycleRunner = {
         new Date(sub.currentPeriodEnd).getTime() <= now
       ) {
         try {
-          await subscriptionRepository.update(sub.id, {
-            subscriptionStatus: 'cancelled',
-            cancelAtPeriodEnd: false,
-            cancelledAt: nowIso,
-            updatedAt: nowIso
-          });
+          if (!isDryRun) {
+            await subscriptionRepository.update(sub.id, {
+              subscriptionStatus: 'cancelled',
+              cancelAtPeriodEnd: false,
+              cancelledAt: nowIso,
+              updatedAt: nowIso
+            });
 
-          // Check if organisation has any other active subscriptions
-          const primary = await subscriptionRepository.getPrimarySubscription(sub.organisationId);
-          if (!primary || primary.subscriptionStatus === 'cancelled') {
-            const org = await organisationRepository.getById(sub.organisationId);
-            if (org && org.tenantStatus === 'active') {
-              await tenantLifecycleService.updateTenantStatus({
-                actorId: 'system',
-                organisationId: sub.organisationId,
-                targetStatus: 'restricted',
-                reason: 'Subscription cancelled at period end.'
-              });
+            // Check if organisation has any other active subscriptions
+            const primary = await subscriptionRepository.getPrimarySubscription(sub.organisationId);
+            if (!primary || primary.subscriptionStatus === 'cancelled') {
+              const org = await organisationRepository.getById(sub.organisationId);
+              if (org && org.tenantStatus === 'active') {
+                await tenantLifecycleService.updateTenantStatus({
+                  actorId: 'system',
+                  organisationId: sub.organisationId,
+                  targetStatus: 'restricted',
+                  reason: 'Subscription cancelled at period end.'
+                });
+              }
             }
-          }
 
-          await auditService.log({
-            organisationId: sub.organisationId,
-            actorId: 'system',
-            action: 'PLATFORM_CANCEL_SUBSCRIPTION',
-            entityType: 'subscription',
-            entityId: sub.id,
-            scopeType: 'platform',
-            reason: 'Subscription period concluded; status transitioned to cancelled.'
-          });
+            await auditService.log({
+              organisationId: sub.organisationId,
+              actorId: 'system',
+              action: 'PLATFORM_CANCEL_SUBSCRIPTION',
+              entityType: 'subscription',
+              entityId: sub.id,
+              scopeType: 'platform',
+              reason: 'Subscription period concluded; status transitioned to cancelled.'
+            });
+          }
 
           periodEndCancelled++;
         } catch (err) {
@@ -133,7 +145,8 @@ export const subscriptionLifecycleRunner = {
       expiredTrials,
       pastDueRestricted,
       periodEndCancelled,
-      processedAt: nowIso
+      processedAt: nowIso,
+      dryRun: isDryRun
     };
   }
 };

@@ -14,12 +14,14 @@ import {
   ChevronRight,
   X,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from 'lucide-react';
 import { subscriptionRepository } from '../../../repositories/subscriptionRepository';
 import { subscriptionPlanRepository } from '../../../repositories/subscriptionPlanRepository';
 import { organisationRepository } from '../../../repositories/organisationRepository';
 import { saasSubscriptionService } from '../../../services/billing/saasSubscriptionService';
+import { subscriptionLifecycleRunner, type LifecycleRunResult } from '../../../services/billing/subscriptionLifecycleRunner';
 import { useAuth } from '../../../contexts/AuthContext';
 import type {
   Subscription,
@@ -92,6 +94,24 @@ export const PlatformSubscriptionsPage: React.FC = () => {
       setError((err as Error).message || 'Failed to load subscription data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // On-demand Lifecycle Runner state
+  const [runningLifecycle, setRunningLifecycle] = useState(false);
+  const [lifecycleResult, setLifecycleResult] = useState<LifecycleRunResult | null>(null);
+
+  const handleRunLifecycleCheck = async () => {
+    try {
+      setRunningLifecycle(true);
+      setError(null);
+      const res = await subscriptionLifecycleRunner.runDailyLifecycleCheck();
+      setLifecycleResult(res);
+      await loadData();
+    } catch (err) {
+      setError((err as Error).message || 'Failed to execute subscription lifecycle runner');
+    } finally {
+      setRunningLifecycle(false);
     }
   };
 
@@ -401,6 +421,15 @@ export const PlatformSubscriptionsPage: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
+            onClick={handleRunLifecycleCheck}
+            disabled={runningLifecycle || loading}
+            className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/30 rounded-lg transition-colors font-medium text-sm disabled:opacity-50"
+            title="Run daily subscription lifecycle check to expire overdue trials, apply past-due grace restrictions, and process period-end cancellations"
+          >
+            <Zap className={`w-4 h-4 ${runningLifecycle ? 'animate-spin text-amber-400' : 'text-amber-400'}`} />
+            <span>{runningLifecycle ? 'Checking...' : 'Run Lifecycle Check'}</span>
+          </button>
+          <button
             onClick={loadData}
             disabled={loading}
             className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors border border-slate-700"
@@ -420,6 +449,30 @@ export const PlatformSubscriptionsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {lifecycleResult && (
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 text-sm flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div>
+              <p className="font-semibold text-white">Daily Lifecycle Check Completed</p>
+              <p className="text-xs text-emerald-400/90 mt-0.5">
+                Processed at {new Date(lifecycleResult.processedAt).toLocaleTimeString()} —{' '}
+                <span className="font-medium">{lifecycleResult.expiredTrials}</span> trial(s) expired,{' '}
+                <span className="font-medium">{lifecycleResult.pastDueRestricted}</span> past-due tenant(s) restricted,{' '}
+                <span className="font-medium">{lifecycleResult.periodEndCancelled}</span> subscription(s) concluded.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setLifecycleResult(null)}
+            className="p-1 hover:bg-emerald-500/20 text-emerald-400 rounded transition-colors"
+            title="Dismiss notification"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-sm flex items-center gap-3">
