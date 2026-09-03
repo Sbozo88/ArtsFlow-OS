@@ -34,11 +34,12 @@ export const ProtectedRoute: React.FC = () => {
 
   if (user && !organisationId) {
     if (availableOrganisations.length > 1) return <Navigate to="/select-organisation" replace />;
-    if (authUser?.platformRole === 'super_admin' && availableOrganisations.length === 0) return <Navigate to="/platform" replace />;
+    if (authUser?.platformRole === 'super_admin') return <Navigate to="/platform" replace />;
     return <Navigate to="/onboarding" replace />;
   }
 
   if (!authUser?.role || !INTERNAL_ROLES.has(authUser.role)) {
+    if (authUser?.platformRole === 'super_admin') return <Navigate to="/platform" replace />;
     return <Navigate to="/login" replace />;
   }
 
@@ -53,6 +54,10 @@ export const OnboardingRoute: React.FC = () => {
   if (!user) return <Navigate to="/login" replace />;
   if (authUser?.accountStatus === 'disabled') return <Navigate to="/access-disabled" replace />;
   
+  if (authUser?.platformRole === 'super_admin' && !organisationId) {
+    return <Navigate to="/platform" replace />;
+  }
+
   if (user && organisationId) {
     if (authUser?.role === 'guardian') return <Navigate to="/portal" replace />;
     if (authUser?.role === 'learner') return <Navigate to="/learner-portal" replace />;

@@ -12,17 +12,16 @@ import {
   School,
   LogOut,
   Sparkles,
-  Package,
   Layers,
   CreditCard,
-  TrendingUp,
-  MessageSquare
+  MessageSquare,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 
 export const PlatformLayout: React.FC = () => {
-  const { authUser, organisationId, logout } = useAuth();
+  const { authUser, organisationId, memberships, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -35,26 +34,26 @@ export const PlatformLayout: React.FC = () => {
     { to: '/platform', label: 'Overview', icon: LayoutDashboard, end: true },
     { to: '/platform/organisations', label: 'Organisations', icon: Building2 },
     { to: '/platform/feedback', label: 'Pilot Feedback', icon: MessageSquare },
-    { to: '/platform/plans', label: 'Plans', icon: Package },
+    { to: '/platform/plans', label: 'Plans & Pricing', icon: Layers },
     { to: '/platform/subscriptions', label: 'Subscriptions', icon: CreditCard },
-    { to: '/platform/analytics', label: 'Commercial Analytics', icon: TrendingUp },
-    { to: '/platform/features', label: 'Features', icon: Layers },
-    { to: '/platform/users', label: 'Users', icon: Users },
-    { to: '/platform/health', label: 'Platform Health', icon: Activity },
-    { to: '/platform/audit', label: 'Audit', icon: ShieldCheck },
-    { to: '/platform/settings', label: 'Settings', icon: Settings }
+    { to: '/platform/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/platform/features', label: 'Platform Features', icon: Sparkles },
+    { to: '/platform/users', label: 'Platform Users', icon: Users },
+    { to: '/platform/health', label: 'System Health', icon: Activity },
+    { to: '/platform/audit', label: 'Global Audit Log', icon: ShieldCheck },
+    { to: '/platform/settings', label: 'Platform Settings', icon: Settings },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
       {/* Platform Top Header */}
-      <header className="h-16 bg-slate-950 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between z-30 sticky top-0">
+      <header className="h-16 border-b border-slate-800 bg-slate-950 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-            aria-label="Toggle Navigation"
+            className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+            aria-label="Toggle navigation"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -72,14 +71,14 @@ export const PlatformLayout: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {organisationId && (
+          {(organisationId || (memberships && memberships.length > 0)) && (
             <Link
-              to="/"
+              to={organisationId ? "/" : "/select-organisation"}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors"
-              title="Open School Workspace"
+              title="Open Organisation Workspace"
             >
               <School className="w-3.5 h-3.5 text-indigo-400" />
-              <span>School Workspace</span>
+              <span>Organisation Workspace</span>
             </Link>
           )}
 

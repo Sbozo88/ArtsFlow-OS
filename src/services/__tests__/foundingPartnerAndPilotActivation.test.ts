@@ -77,7 +77,7 @@ describe('SaaS v1.1 Founding Partner Pilot & Customer Activation Test Suite', ()
     });
 
     it('assigns Founding Partner slot with 12-month price lock and unique partner number', async () => {
-      let orgState: Organisation = { ...MOCK_ORG_A };
+      const orgState: Organisation = { ...MOCK_ORG_A };
       vi.spyOn(organisationRepository, 'getById').mockImplementation(async () => orgState);
       vi.spyOn(organisationRepository, 'getAll').mockResolvedValue([MOCK_ORG_A]);
       const updateSpy = vi.spyOn(organisationRepository, 'update').mockImplementation(async (...args: unknown[]) => {

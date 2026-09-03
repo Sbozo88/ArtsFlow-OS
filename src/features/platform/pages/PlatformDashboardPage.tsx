@@ -16,6 +16,7 @@ import {
 import { platformMetricsService, type PlatformKPIs } from '../../../services/platformMetricsService';
 import { platformOrganisationService } from '../../../services/platformOrganisationService';
 import { subscriptionPlanService } from '../../../services/subscriptionPlanService';
+import { FounderAccessDiagnosticCard } from '../components/FounderAccessDiagnosticCard';
 import type { SubscriptionPlan } from '../../../types';
 
 export const PlatformDashboardPage: React.FC = () => {
@@ -123,6 +124,9 @@ export const PlatformDashboardPage: React.FC = () => {
           <span>{error}</span>
         </div>
       )}
+
+      {/* Founder / Super Admin Access Diagnostics */}
+      <FounderAccessDiagnosticCard />
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
