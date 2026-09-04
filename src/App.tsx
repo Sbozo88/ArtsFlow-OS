@@ -244,6 +244,7 @@ function App() {
 
                   {/* Public Operational Routes */}
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/forgot-password" element={<LoginPage initialForgotPassword={true} />} />
                   <Route path="/access-disabled" element={<AccessDisabledPage />} />
                   <Route path="/access-denied" element={<FeatureAccessDeniedPage />} />
                   <Route path="/consent/submit/:requestId" element={<GuardianConsentPublicPage />} />
