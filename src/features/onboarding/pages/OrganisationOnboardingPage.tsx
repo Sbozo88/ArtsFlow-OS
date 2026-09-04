@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { OrganisationOnboardingLayout } from '../layouts/OrganisationOnboardingLayout';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useActiveOrganisation } from '../../../contexts/ActiveOrganisationContext';
 import { organisationRepository } from '../../../repositories/organisationRepository';
 import { organisationSettingsRepository } from '../../../repositories/organisationSettingsRepository';
 import { organisationOnboardingService } from '../../../services/onboarding/organisationOnboardingService';
@@ -28,7 +29,9 @@ import type {
 
 export const OrganisationOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { organisationId, authUser } = useAuth();
+  const { organisationId, authUser, loading: authLoading } = useAuth();
+  const { activeOrganisationId } = useActiveOrganisation();
+  const effectiveOrgId = organisationId || activeOrganisationId;
 
   const [loading, setLoading] = useState(true);
   const [organisation, setOrganisation] = useState<Organisation | null>(null);
@@ -94,13 +97,18 @@ export const OrganisationOnboardingPage: React.FC = () => {
   const [csvValidation, setCsvValidation] = useState<LearnerImportValidationResult | null>(null);
 
   useEffect(() => {
-    if (!organisationId) return;
+    if (authLoading) return;
+    if (!effectiveOrgId) {
+      setLoading(false);
+      return;
+    }
     let isMounted = true;
+    setLoading(true);
     Promise.all([
-      organisationRepository.getById(organisationId),
-      organisationOnboardingService.getOnboarding(organisationId),
-      organisationOnboardingService.getEffectiveSteps(organisationId),
-      organisationReadinessService.evaluateReadiness(organisationId)
+      organisationRepository.getById(effectiveOrgId),
+      organisationOnboardingService.getOnboarding(effectiveOrgId),
+      organisationOnboardingService.getEffectiveSteps(effectiveOrgId),
+      organisationReadinessService.evaluateReadiness(effectiveOrgId)
     ])
       .then(([org, ob, steps, read]) => {
         if (!isMounted) return;
@@ -142,27 +150,27 @@ export const OrganisationOnboardingPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [organisationId]);
+  }, [effectiveOrgId, authLoading]);
 
   const currentStepIndex = effectiveSteps.indexOf(currentStep);
   const totalSteps = effectiveSteps.length;
 
   const handleNext = async (stepData?: Record<string, unknown>) => {
-    if (!organisationId || !authUser) return;
+    if (!effectiveOrgId || !authUser) return;
     try {
       setActionLoading(true);
       setError(null);
 
       const updated = await organisationOnboardingService.completeStep(
         authUser.uid,
-        organisationId,
+        effectiveOrgId,
         currentStep,
         stepData
       );
       setCurrentStep(updated.currentStep);
 
       // Refresh readiness
-      const newReadiness = await organisationReadinessService.evaluateReadiness(organisationId);
+      const newReadiness = await organisationReadinessService.evaluateReadiness(effectiveOrgId);
       setReadiness(newReadiness);
     } catch (err) {
       setError((err as Error).message || 'Failed to advance step');
@@ -172,14 +180,14 @@ export const OrganisationOnboardingPage: React.FC = () => {
   };
 
   const handleSkip = async () => {
-    if (!organisationId || !authUser) return;
+    if (!effectiveOrgId || !authUser) return;
     try {
       setActionLoading(true);
       setError(null);
 
       const updated = await organisationOnboardingService.skipStep(
         authUser.uid,
-        organisationId,
+        effectiveOrgId,
         currentStep
       );
       setCurrentStep(updated.currentStep);
@@ -191,16 +199,16 @@ export const OrganisationOnboardingPage: React.FC = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!organisationId || !authUser) return;
+    if (!effectiveOrgId || !authUser) return;
     try {
       setActionLoading(true);
-      await organisationRepository.update(organisationId, authUser.uid, {
+      await organisationRepository.update(effectiveOrgId, authUser.uid, {
         name: profileForm.name.trim(),
         organisationType: profileForm.organisationType.trim(),
         phone: profileForm.phone.trim() || undefined
       });
 
-      await organisationSettingsRepository.updateSection(organisationId, authUser.uid, 'profile', {
+      await organisationSettingsRepository.updateSection(effectiveOrgId, authUser.uid, 'profile', {
         name: profileForm.name.trim(),
         organisationType: profileForm.organisationType.trim(),
         country: profileForm.country,
@@ -216,10 +224,10 @@ export const OrganisationOnboardingPage: React.FC = () => {
   };
 
   const handleSaveBranding = async () => {
-    if (!organisationId || !authUser) return;
+    if (!effectiveOrgId || !authUser) return;
     try {
       setActionLoading(true);
-      await organisationSettingsRepository.updateSection(organisationId, authUser.uid, 'branding', {
+      await organisationSettingsRepository.updateSection(effectiveOrgId, authUser.uid, 'branding', {
         shortName: brandingForm.shortName.trim(),
         primaryBrandColour: brandingForm.primaryBrandColour,
         documentHeaderText: brandingForm.documentHeaderText.trim(),
@@ -233,10 +241,10 @@ export const OrganisationOnboardingPage: React.FC = () => {
   };
 
   const handleSaveAttendance = async () => {
-    if (!organisationId || !authUser) return;
+    if (!effectiveOrgId || !authUser) return;
     try {
       setActionLoading(true);
-      await organisationSettingsRepository.updateSection(organisationId, authUser.uid, 'attendance', {
+      await organisationSettingsRepository.updateSection(effectiveOrgId, authUser.uid, 'attendance', {
         lowAttendanceThresholdPercent: attendanceForm.lowAttendanceThresholdPercent,
         consecutiveAbsenceThreshold: attendanceForm.consecutiveAbsenceThreshold
       });
@@ -248,10 +256,10 @@ export const OrganisationOnboardingPage: React.FC = () => {
   };
 
   const handleSaveFinance = async () => {
-    if (!organisationId || !authUser) return;
+    if (!effectiveOrgId || !authUser) return;
     try {
       setActionLoading(true);
-      await organisationSettingsRepository.updateSection(organisationId, authUser.uid, 'finance', {
+      await organisationSettingsRepository.updateSection(effectiveOrgId, authUser.uid, 'finance', {
         defaultCurrency: financeForm.defaultCurrency,
         invoicePrefix: financeForm.invoicePrefix.trim(),
         defaultInvoiceDueDays: financeForm.defaultInvoiceDueDays
@@ -264,16 +272,16 @@ export const OrganisationOnboardingPage: React.FC = () => {
   };
 
   const handleCreateProgrammeAndGroup = async () => {
-    if (!organisationId || !authUser) return;
+    if (!effectiveOrgId || !authUser) return;
     try {
       setActionLoading(true);
-      const prog = await programmeService.createProgramme(organisationId, authUser.uid, {
+      const prog = await programmeService.createProgramme(effectiveOrgId, authUser.uid, {
         name: programmeForm.name.trim(),
         description: `Code: ${programmeForm.code.trim().toUpperCase()}`,
         programmeType: programmeForm.type
       });
 
-      await programmeGroupService.createGroup(organisationId, authUser.uid, {
+      await programmeGroupService.createGroup(effectiveOrgId, authUser.uid, {
         programmeId: prog.id,
         name: programmeForm.groupName.trim(),
         groupType: programmeForm.groupType
@@ -292,11 +300,11 @@ export const OrganisationOnboardingPage: React.FC = () => {
   };
 
   const handleGoLive = async () => {
-    if (!organisationId || !authUser) return;
+    if (!effectiveOrgId || !authUser) return;
     try {
       setActionLoading(true);
       setError(null);
-      await organisationReadinessService.completeOrganisationOnboarding(authUser.uid, organisationId);
+      await organisationReadinessService.completeOrganisationOnboarding(authUser.uid, effectiveOrgId);
       setCompletedSuccess(true);
     } catch (err) {
       setError((err as Error).message || 'Failed to complete go-live');
@@ -305,12 +313,45 @@ export const OrganisationOnboardingPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-300">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm">Loading onboarding wizard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!effectiveOrgId) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-800/90 border border-slate-700 rounded-2xl p-8 text-center space-y-6 animate-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full flex items-center justify-center mx-auto">
+            <Building2 className="w-10 h-10" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-white">No Organisation Workspace</h2>
+            <p className="text-sm text-slate-300">
+              You are signed in, but you haven't set up an organisation workspace yet. Get started with our 14-day free trial.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/start-trial')}
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30"
+            >
+              Start Free Trial & Create Workspace
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="w-full py-2.5 px-4 bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-xl font-medium text-sm transition"
+            >
+              Back to Home
+            </button>
+          </div>
         </div>
       </div>
     );
