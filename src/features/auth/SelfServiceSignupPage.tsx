@@ -145,6 +145,8 @@ export const SelfServiceSignupPage: React.FC = () => {
         friendlyMsg = 'An account with this email already exists. Please sign in or use a different email.';
       } else if (fbErr.code === 'auth/weak-password') {
         friendlyMsg = 'Password is too weak. Please choose a stronger password.';
+      } else if (fbErr.code === 'auth/unauthorized-domain') {
+        friendlyMsg = `This domain (${typeof window !== 'undefined' ? window.location.hostname : 'current'}) is not authorized in Firebase Authentication.`;
       }
       setError(friendlyMsg);
       setCurrentStage(null);

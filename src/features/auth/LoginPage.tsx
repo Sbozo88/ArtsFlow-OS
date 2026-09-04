@@ -47,6 +47,8 @@ function formatAuthError(error: unknown): string {
       return 'Google sign-in was cancelled. Please try again.';
     case 'auth/invalid-verification-code':
       return 'The SMS verification code entered is incorrect. Please try again.';
+    case 'auth/unauthorized-domain':
+      return `This domain (${typeof window !== 'undefined' ? window.location.hostname : 'current'}) is not authorized for authentication in Firebase. Please ensure it is added to Authorized Domains in Firebase Console.`;
     default: {
       const msg = (error as Error)?.message || '';
       return msg.replace(/^Firebase:\s*(Error\s*)?(\(auth\/[^)]+\)\.?\s*)?/i, '') || 'Authentication could not be completed. Please try again.';
