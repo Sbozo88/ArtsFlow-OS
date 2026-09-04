@@ -41,15 +41,22 @@ export function ActiveOrganisationProvider({ children }: { children: React.React
       return;
     }
 
-    const views = (await Promise.all(active.map(async (membership) => {
-      const organisation = await organisationRepository.getById(membership.organisationId);
-      return organisation ? { membership, organisation } : null;
-    }))).filter((view): view is OrganisationMembershipView => view !== null);
+    try {
+      const views = (await Promise.all(active.map(async (membership) => {
+        const organisation = await organisationRepository.getById(membership.organisationId).catch(() => null);
+        return organisation ? { membership, organisation } : null;
+      }))).filter((view): view is OrganisationMembershipView => view !== null);
 
-    if (requestGeneration !== generation.current) return;
-    setAvailableOrganisations(views);
-    setActiveOrganisation(views.find((view) => view.organisation.id === organisationId)?.organisation || null);
-    setIsResolvingOrganisation(false);
+      if (requestGeneration !== generation.current) return;
+      setAvailableOrganisations(views);
+      setActiveOrganisation(views.find((view) => view.organisation.id === organisationId)?.organisation || null);
+    } catch (err) {
+      console.warn('[ActiveOrganisationContext] Error resolving organisations:', err);
+    } finally {
+      if (requestGeneration === generation.current) {
+        setIsResolvingOrganisation(false);
+      }
+    }
   }, [memberships, organisationId]);
 
   useEffect(() => {
@@ -67,18 +74,25 @@ export function ActiveOrganisationProvider({ children }: { children: React.React
         return;
       }
 
-      const results = await Promise.all(
-        active.map(async (membership) => {
-          const organisation = await organisationRepository.getById(membership.organisationId);
-          return organisation ? { membership, organisation } : null;
-        })
-      );
+      try {
+        const results = await Promise.all(
+          active.map(async (membership) => {
+            const organisation = await organisationRepository.getById(membership.organisationId).catch(() => null);
+            return organisation ? { membership, organisation } : null;
+          })
+        );
 
-      if (!isMounted || requestGeneration !== generation.current) return;
-      const views = results.filter((view): view is OrganisationMembershipView => view !== null);
-      setAvailableOrganisations(views);
-      setActiveOrganisation(views.find((view) => view.organisation.id === organisationId)?.organisation || null);
-      setIsResolvingOrganisation(false);
+        if (!isMounted || requestGeneration !== generation.current) return;
+        const views = results.filter((view): view is OrganisationMembershipView => view !== null);
+        setAvailableOrganisations(views);
+        setActiveOrganisation(views.find((view) => view.organisation.id === organisationId)?.organisation || null);
+      } catch (err) {
+        console.warn('[ActiveOrganisationContext] Error in organisation resolution effect:', err);
+      } finally {
+        if (isMounted && requestGeneration === generation.current) {
+          setIsResolvingOrganisation(false);
+        }
+      }
     });
 
     return () => {

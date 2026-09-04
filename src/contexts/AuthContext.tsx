@@ -207,7 +207,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshAuth
       }}
     >
-      {!loading && children}
+      {loading ? (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white" role="status" aria-live="polite">
+          <div className="text-center space-y-3">
+            <div className="w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="text-xs font-medium text-slate-400">Starting ArtsFlow OS…</div>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

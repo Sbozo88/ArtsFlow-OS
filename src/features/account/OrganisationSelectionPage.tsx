@@ -31,7 +31,7 @@ export function OrganisationSelectionPage() {
                 <Building2 className="h-8 w-8 text-indigo-600" />
                 <h2 className="mt-4 font-semibold text-slate-900">{organisation.name}</h2>
                 <p className="mt-1 text-sm text-slate-500">{roleLabel(String(membership.role))}</p>
-                <button onClick={async () => { await switchOrganisation(organisation.id); navigate('/', { replace: true }); }} className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Open</button>
+                <button onClick={async () => { await switchOrganisation(organisation.id); navigate('/dashboard', { replace: true }); }} className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Open</button>
                 <button onClick={() => setDefaultOrganisation(organisation.id)} className="mt-2 w-full rounded-lg px-4 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50">Set as my default</button>
               </article>
             ))}

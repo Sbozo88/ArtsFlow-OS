@@ -73,7 +73,7 @@ export const PlatformLayout: React.FC = () => {
         <div className="flex items-center gap-3">
           {(organisationId || (memberships && memberships.length > 0)) && (
             <Link
-              to={organisationId ? "/" : "/select-organisation"}
+              to={organisationId ? "/dashboard" : "/select-organisation"}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors"
               title="Open Organisation Workspace"
             >

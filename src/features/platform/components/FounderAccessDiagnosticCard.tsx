@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -11,6 +11,7 @@ import {
   Key
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useActiveOrganisation } from '../../../contexts/ActiveOrganisationContext';
 import { organisationRepository } from '../../../repositories/organisationRepository';
 import { organisationMembershipRepository } from '../../../repositories/organisationMembershipRepository';
 import type { Organisation, OrganisationMembership } from '../../../types';
@@ -18,10 +19,29 @@ import type { Organisation, OrganisationMembership } from '../../../types';
 export const DEMO_ORGANISATION_ID = 'org_demo_artsflow';
 
 export const FounderAccessDiagnosticCard: React.FC = () => {
+  const navigate = useNavigate();
   const { user, authUser } = useAuth();
+  const { switchOrganisation, activeOrganisationId } = useActiveOrganisation();
   const [demoOrg, setDemoOrg] = useState<Organisation | null>(null);
   const [demoMembership, setDemoMembership] = useState<OrganisationMembership | null>(null);
   const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState(false);
+
+  const handleOpenDemoAcademy = async () => {
+    if (!demoOrg) return;
+    try {
+      setSwitching(true);
+      if (activeOrganisationId !== demoOrg.id) {
+        await switchOrganisation(demoOrg.id);
+      }
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Failed to switch to demo organisation:', err);
+      navigate('/dashboard');
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -80,14 +100,16 @@ export const FounderAccessDiagnosticCard: React.FC = () => {
         </div>
 
         {demoOrg && (
-          <Link
-            to={`/organisations/${demoOrg.id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-sm transition-colors"
+          <button
+            type="button"
+            onClick={handleOpenDemoAcademy}
+            disabled={switching}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
           >
             <School className="w-3.5 h-3.5" />
-            <span>Open Demo Academy</span>
+            <span>{switching ? 'Opening…' : 'Open Demo Academy'}</span>
             <ExternalLink className="w-3 h-3 ml-0.5 text-indigo-200" />
-          </Link>
+          </button>
         )}
       </div>
 
