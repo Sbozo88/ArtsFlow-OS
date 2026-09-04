@@ -8,6 +8,7 @@ export interface BaseRecord {
   createdBy: string;
   updatedBy: string;
   status: RecordStatus;
+  isDemoRecord?: boolean;
 }
 
 export type TenantStatus =
@@ -117,6 +118,11 @@ export interface Learner extends BaseRecord {
   learnerStatus: RecordStatus;
   notes?: string;
   photoUrl?: string;
+  sourceRegistryStatus?: string;
+  requiresVerification?: boolean;
+  verificationNote?: string;
+  demoSource?: string;
+  demoSeedVersion?: string;
 }
 
 export interface Guardian extends BaseRecord {
@@ -242,6 +248,7 @@ export interface Instrument extends BaseRecord {
   instrumentStatus: InstrumentStatus;
   storageLocation?: string;
   notes?: string;
+  isDemoAsset?: boolean;
 }
 
 export type AllocationStatus = 'active' | 'returned' | 'overdue' | 'lost' | 'cancelled';

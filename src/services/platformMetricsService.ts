@@ -35,8 +35,14 @@ export const platformMetricsService = {
     const memberships: OrganisationMembership[] = [];
     membershipsSnap.forEach((d) => memberships.push(d.data() as OrganisationMembership));
 
-    const totalUsers = usersSnap.size;
+    return this.computeKPIs(orgs, memberships, usersSnap.size);
+  },
 
+  computeKPIs(
+    orgs: Organisation[],
+    memberships: OrganisationMembership[] = [],
+    totalUsers: number = 0
+  ): PlatformKPIs {
     let activeCount = 0;
     let trialCount = 0;
     let restrictedCount = 0;
@@ -55,7 +61,7 @@ export const platformMetricsService = {
     let customerCount = 0;
 
     for (const org of orgs) {
-      if (org.isDemoTenant || org.id === 'org_demo_artsflow') {
+      if (org.isDemoTenant || org.id === 'org_demo_artsflow' || org.id === 'org_demo_tkm') {
         demoCount++;
       } else {
         customerCount++;

@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { LifecycleBanner } from './LifecycleBanner';
+import { DemoTenantBanner } from './DemoTenantBanner';
 import { cn } from '../../lib/utils';
 import { useActiveOrganisation } from '../../contexts/ActiveOrganisationContext';
 import { LoadingState } from '../ui/LoadingState';
@@ -44,6 +45,7 @@ export function Layout() {
       >
         <Header onMenuToggle={() => setMobileMenuOpen(true)} />
         <LifecycleBanner />
+        <DemoTenantBanner />
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8">
           {isSwitchingOrganisation ? (
             <div className="flex h-96 items-center justify-center" role="status" aria-live="polite">

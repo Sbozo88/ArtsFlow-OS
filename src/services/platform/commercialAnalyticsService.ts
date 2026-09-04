@@ -4,6 +4,7 @@ import { subscriptionPlanService } from '../subscriptionPlanService';
 import type {
   Organisation,
   Subscription,
+  SubscriptionPlan,
   OrganisationUsage,
   CommercialAnalyticsSummary,
   CommercialPlanMetric,
@@ -33,6 +34,15 @@ export class CommercialAnalyticsService {
     const usages: OrganisationUsage[] = [];
     usageSnap.forEach((d) => usages.push(d.data() as OrganisationUsage));
 
+    return this.calculateCommercialAnalytics(orgs, subs, usages, plans);
+  }
+
+  calculateCommercialAnalytics(
+    orgs: Organisation[],
+    subs: Subscription[],
+    usages: OrganisationUsage[],
+    plans: SubscriptionPlan[]
+  ): CommercialAnalyticsSummary {
     const orgMap = new Map<string, Organisation>();
     for (const org of orgs) {
       orgMap.set(org.id, org);
@@ -62,7 +72,7 @@ export class CommercialAnalyticsService {
 
     for (const sub of subs) {
       const org = orgMap.get(sub.organisationId);
-      if (org?.isDemoTenant || sub.organisationId === 'org_demo_artsflow') {
+      if (org?.isDemoTenant || sub.organisationId === 'org_demo_artsflow' || sub.organisationId === 'org_demo_tkm') {
         continue;
       }
       const planId = sub.planId || 'plan_starter';
@@ -132,6 +142,10 @@ export class CommercialAnalyticsService {
     const tenantsNearCapacityCount = 0;
 
     for (const u of usages) {
+      const uOrg = orgMap.get(u.organisationId);
+      if (uOrg?.isDemoTenant || u.organisationId === 'org_demo_artsflow' || u.organisationId === 'org_demo_tkm') {
+        continue;
+      }
       totalLearners += u.learnersCount || 0;
       totalStaffUsers += u.staffUsersCount || 0;
       totalStorageMb += u.storageMb || 0;
@@ -153,6 +167,9 @@ export class CommercialAnalyticsService {
     const now = Date.now();
 
     for (const org of orgs) {
+      if (org.isDemoTenant || org.id === 'org_demo_artsflow' || org.id === 'org_demo_tkm') {
+        continue;
+      }
       const orgSub = subs.find((s) => s.organisationId === org.id);
 
       if (org.tenantStatus === 'suspended') {
