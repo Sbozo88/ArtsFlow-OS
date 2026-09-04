@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { selfServiceProvisioningService } from '../provisioning/selfServiceProvisioningService';
-import { organisationReadinessService } from '../onboarding/organisationReadinessService';
-import { entitlementResolverService } from '../entitlementResolverService';
 import { customerActivationService } from '../platform/customerActivationService';
 import { STANDARD_PLANS } from '../../config/subscriptionPlansRegistry';
 import { getDoc, setDoc } from 'firebase/firestore';
@@ -183,7 +181,7 @@ describe('ArtsFlow OS v1.1 — Founder Acceptance Test & Pilot Launch Verificati
         lastName: 'Molefe',
         email: 'nomsa.molefe@example.com',
         mobileNumber: '+27 82 555 1234',
-        relationship: 'mother',
+        notes: 'mother',
         status: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -209,16 +207,15 @@ describe('ArtsFlow OS v1.1 — Founder Acceptance Test & Pilot Launch Verificati
       const session: Session = {
         id: 'ses_001',
         organisationId: testOrgId,
-        programmeId: 'prg_strings_01',
         groupId: 'grp_violin_beginners',
-        title: 'Violin Foundation Class 1',
-        sessionDate: '2026-09-05',
+        date: '2026-09-05',
         startTime: '14:00',
         endTime: '15:00',
         status: 'active',
         sessionStatus: 'scheduled',
         sessionType: 'lesson',
         teacherIds: [],
+        notes: 'Violin Foundation Class 1',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: testUserId,
@@ -232,7 +229,6 @@ describe('ArtsFlow OS v1.1 — Founder Acceptance Test & Pilot Launch Verificati
         learnerId: learner.id,
         status: 'active',
         attendanceStatus: 'present',
-        markedAt: new Date().toISOString(),
         markedBy: testUserId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -256,8 +252,9 @@ describe('ArtsFlow OS v1.1 — Founder Acceptance Test & Pilot Launch Verificati
       const instrument: Instrument = {
         id: 'inst_vln_01',
         organisationId: testOrgId,
-        type: 'Violin',
-        makeModel: 'Yamaha V5 4/4',
+        instrumentType: 'Violin',
+        make: 'Yamaha',
+        model: 'V5 4/4',
         serialNumber: 'YV5-99823',
         assetNumber: 'YV5-99823',
         ownershipType: 'organisation_owned',
@@ -308,6 +305,7 @@ describe('ArtsFlow OS v1.1 — Founder Acceptance Test & Pilot Launch Verificati
         assessmentType: 'informal',
         overallScore: 88,
         teacherComment: 'Excellent intonation and bow control.',
+        status: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: testUserId,
@@ -346,6 +344,7 @@ describe('ArtsFlow OS v1.1 — Founder Acceptance Test & Pilot Launch Verificati
         technique: 85,
         overallScore: 87.5,
         teacherComment: 'Great energy and spatial awareness.',
+        status: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: testUserId,
